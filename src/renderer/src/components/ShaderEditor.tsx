@@ -1,7 +1,10 @@
 import Editor, { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
 import type { JSX } from "react";
+import { editorFrame } from "../app-shell.css";
 import { useAppStore } from "../store/app-store";
+import { defineShadilyMonacoTheme, SHADILY_MONACO_THEME } from "../theme";
+import { Panel } from "./Panel";
 
 loader.config({ monaco });
 
@@ -19,29 +22,29 @@ export const ShaderEditor = (): JSX.Element => {
   const setShaderSource = useAppStore((state) => state.setShaderSource);
 
   return (
-    <section className="panel">
-      <div className="panel-header">
-        <div>
-          <p className="panel-eyebrow">Shader Source</p>
-          <h2>Fragment shader</h2>
-        </div>
-      </div>
-      <div className="editor-frame">
-        <Editor
-          defaultLanguage="cpp"
-          defaultValue={starterShader}
-          language="cpp"
-          theme="vs-dark"
-          value={shaderSource}
-          onChange={(value) => setShaderSource(value ?? starterShader)}
-          options={{
-            minimap: { enabled: false },
-            fontSize: 14,
-            roundedSelection: false,
-            scrollBeyondLastLine: false,
-          }}
-        />
-      </div>
-    </section>
+    <Panel
+      eyebrow="Shader Source"
+      title="Fragment shader"
+      bodyClassName={editorFrame}
+    >
+      <Editor
+        beforeMount={(instance) => defineShadilyMonacoTheme(instance)}
+        defaultLanguage="cpp"
+        defaultValue={starterShader}
+        language="cpp"
+        theme={SHADILY_MONACO_THEME}
+        value={shaderSource}
+        onChange={(value) => setShaderSource(value ?? starterShader)}
+        options={{
+          minimap: { enabled: false },
+          fontSize: 14,
+          padding: {
+            top: 20,
+          },
+          roundedSelection: false,
+          scrollBeyondLastLine: false,
+        }}
+      />
+    </Panel>
   );
 };

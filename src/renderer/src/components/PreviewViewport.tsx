@@ -1,5 +1,7 @@
 import { type JSX, useEffect, useRef } from "react";
 import * as THREE from "three";
+import { previewFrame, viewportHost } from "../app-shell.css";
+import { Panel } from "./Panel";
 
 export const PreviewViewport = (): JSX.Element => {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -74,14 +76,12 @@ export const PreviewViewport = (): JSX.Element => {
   }, []);
 
   return (
-    <section className="panel">
-      <div className="panel-header">
-        <div>
-          <p className="panel-eyebrow">Live Preview</p>
-          <h2>Three.js viewport</h2>
-        </div>
-      </div>
-      <div className="preview-frame" ref={hostRef} />
-    </section>
+    <Panel
+      eyebrow="Live Preview"
+      title="Three.js viewport"
+      bodyClassName={previewFrame}
+    >
+      <div className={viewportHost} ref={hostRef} />
+    </Panel>
   );
 };
