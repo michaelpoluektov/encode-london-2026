@@ -4,6 +4,7 @@ import { themeVars } from "../theme";
 export const panel = style({
   display: "grid",
   gridTemplateRows: "auto minmax(0, 1fr)",
+  height: "100%",
   minHeight: 0,
   border: `1px solid ${themeVars.color.border.standard}`,
   borderRadius: themeVars.radius.lg,
@@ -50,5 +51,6 @@ export const panelTitle = style({
 });
 
 export const panelBody = style({
+  height: "100%",
   minHeight: 0,
 });
