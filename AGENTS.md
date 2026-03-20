@@ -12,6 +12,8 @@ You are developing an LLM enabled shader editor. Details in `REQUIREMENTS.md` an
 - Full type annotations across application code
 - Prefer a functional/declarative style when applicable
 - Strict linter/formatter setup
+- Re-use existing shared components, theme tokens, and layout primitives before creating new UI code
+- If a screen needs a new UI treatment, extend the shared component or token set first rather than introducing feature-local controls/text styles
 - Prefer modelling recoverable failures as typed result values rather than exception-driven control flow
 - Use a structured concurrency helper when applicable, keep detached background tasks explicit and narrowly scoped
 - All external boundaries validated with `zod`
@@ -21,5 +23,6 @@ You are developing an LLM enabled shader editor. Details in `REQUIREMENTS.md` an
 ## Review guidelines
 
 - Verify that code quality guidelines above are met
+- Treat duplicated UI patterns, feature-local styling of standard controls/text, and bypassing shared primitives as review findings
 - If a large part of the code base is implemented in an existing library, bring it up in review and suggest a refactor.
 - To keep things maintainable, prefer not adding more code whenever possible. Refactors should usually reduce the logic/complexity of the code base.

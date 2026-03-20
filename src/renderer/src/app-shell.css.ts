@@ -31,10 +31,6 @@ export const footerBar = style({
 
 export const shellTitle = style({
   margin: 0,
-  fontSize: themeVars.font.size.md,
-  fontWeight: themeVars.font.weight.medium,
-  lineHeight: themeVars.font.lineHeight.tight,
-  letterSpacing: 0,
 });
 
 export const headerActions = style({
@@ -48,30 +44,6 @@ export const panelToggleGroup = style({
   display: "flex",
   flexWrap: "wrap",
   gap: themeVars.space[2],
-});
-
-export const panelToggle = style({
-  padding: `${themeVars.space[1]} ${themeVars.space[4]}`,
-  border: `1px solid ${themeVars.color.border.standard}`,
-  borderRadius: themeVars.radius.sm,
-  background: "transparent",
-  color: themeVars.color.text.secondary,
-  fontSize: themeVars.font.size.xs,
-  fontWeight: themeVars.font.weight.regular,
-  letterSpacing: 0,
-  transition: `border-color ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}, color ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}, background ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
-  selectors: {
-    "&:hover": {
-      borderColor: themeVars.color.border.strong,
-      color: themeVars.color.text.primary,
-    },
-  },
-});
-
-export const panelToggleActive = style({
-  background: themeVars.color.surface.accentMuted,
-  borderColor: themeVars.color.border.accent,
-  color: themeVars.color.text.primary,
 });
 
 export const layoutViewport = style({

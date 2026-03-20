@@ -1,15 +1,17 @@
 import type { JSX, ReactNode } from "react";
+import { cx } from "../lib/cx";
 import type { WorkspacePanelId, WorkspaceRegionId } from "../store/app-store";
 import { Panel } from "./Panel";
+import { Button } from "./ui/Button";
+import { Select } from "./ui/Select";
+import { Text } from "./ui/Text";
+import { EmptyState, Well } from "./ui/Well";
 import {
   workspaceRegionActions,
   workspaceRegionBody,
-  workspaceRegionButton,
   workspaceRegionEmpty,
   workspaceRegionHeader,
-  workspaceRegionSelect,
   workspaceRegionTab,
-  workspaceRegionTabActive,
   workspaceRegionTabs,
 } from "./workspace-region.css";
 
@@ -18,7 +20,6 @@ type WorkspaceRegionProps = {
   readonly children: ReactNode;
   readonly panelIds: readonly WorkspacePanelId[];
   readonly region: WorkspaceRegionId;
-  readonly regionLabel: string;
   readonly renderPanelTitle: (panelId: WorkspacePanelId) => string;
   readonly onClosePanel: (panelId: WorkspacePanelId) => void;
   readonly onMovePanel: (
@@ -35,7 +36,6 @@ export const WorkspaceRegion = ({
   children,
   panelIds,
   region,
-  regionLabel,
   renderPanelTitle,
   onClosePanel,
   onMovePanel,
@@ -47,12 +47,10 @@ export const WorkspaceRegion = ({
 
   return (
     <Panel
-      eyebrow={regionLabel}
       actions={
         activePanelId === null ? null : (
           <div className={workspaceRegionActions}>
-            <select
-              className={workspaceRegionSelect}
+            <Select
               onChange={(event) => {
                 onMovePanel(
                   activePanelId,
@@ -66,17 +64,17 @@ export const WorkspaceRegion = ({
                   {region}
                 </option>
               ))}
-            </select>
-            <button
+            </Select>
+            <Button
               aria-label={`Close ${activePanelTitle}`}
-              className={workspaceRegionButton}
               onClick={() => {
                 onClosePanel(activePanelId);
               }}
-              type="button"
+              square
+              variant="icon"
             >
               X
-            </button>
+            </Button>
           </div>
         )
       }
@@ -89,26 +87,31 @@ export const WorkspaceRegion = ({
       {hasTabs ? (
         <div className={workspaceRegionTabs}>
           {panelIds.map((panelId) => (
-            <button
+            <Button
               key={panelId}
-              className={[
-                workspaceRegionTab,
-                activePanelId === panelId ? workspaceRegionTabActive : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
+              active={activePanelId === panelId}
+              className={cx(workspaceRegionTab)}
               onClick={() => {
                 onSelectPanel(panelId);
               }}
-              type="button"
+              variant="tab"
             >
               {renderPanelTitle(panelId)}
-            </button>
+            </Button>
           ))}
         </div>
       ) : null}
       {activePanelId === null ? (
-        <div className={workspaceRegionEmpty}>No panel open in this region</div>
+        <EmptyState className={workspaceRegionEmpty}>
+          <Well>
+            <Text as="span" tone="muted" variant="label">
+              Empty region
+            </Text>
+            <Text as="p" tone="secondary" variant="body">
+              No panel is open in this workspace region.
+            </Text>
+          </Well>
+        </EmptyState>
       ) : (
         children
       )}

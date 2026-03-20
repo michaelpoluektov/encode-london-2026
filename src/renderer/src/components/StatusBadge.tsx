@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { statusBadge, statusLabel, statusTone } from "./status-badge.css";
+import { Text } from "./ui/Text";
 
 type StatusTone = keyof typeof statusTone;
 
@@ -15,7 +16,11 @@ export const StatusBadge = ({
   tone = "neutral",
 }: StatusBadgeProps): JSX.Element => (
   <div className={[statusBadge, statusTone[tone]].join(" ")}>
-    <span className={statusLabel}>{label}</span>
-    <strong>{value}</strong>
+    <Text as="span" className={statusLabel} variant="label">
+      {label}
+    </Text>
+    <Text as="strong" tone="default" variant="caption">
+      {value}
+    </Text>
   </div>
 );

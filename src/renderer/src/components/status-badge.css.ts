@@ -5,12 +5,10 @@ export const statusBadge = style({
   display: "inline-flex",
   alignItems: "center",
   gap: themeVars.space[2],
-  minHeight: "32px",
+  minHeight: themeVars.size.controlMd,
   padding: `0 ${themeVars.space[3]}`,
   borderRadius: themeVars.radius.pill,
   border: `1px solid ${themeVars.color.border.subtle}`,
-  fontSize: themeVars.font.size.sm,
-  fontWeight: themeVars.font.weight.medium,
 });
 
 export const statusTone = styleVariants({

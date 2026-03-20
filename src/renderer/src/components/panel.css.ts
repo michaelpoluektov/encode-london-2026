@@ -8,7 +8,7 @@ export const panel = style({
   minHeight: 0,
   border: `1px solid ${themeVars.color.border.standard}`,
   borderRadius: 0,
-  background: themeVars.color.background.panel,
+  background: themeVars.color.background.panelRaised,
   boxShadow: themeVars.shadow.panel,
   overflow: "hidden",
 });
@@ -37,20 +37,8 @@ export const panelTitleBlock = style({
   flex: "1 1 12rem",
 });
 
-export const panelEyebrow = style({
-  margin: 0,
-  color: themeVars.color.text.muted,
-  letterSpacing: "0.04em",
-  fontSize: themeVars.font.size.xs,
-  fontWeight: themeVars.font.weight.medium,
-});
-
 export const panelTitle = style({
   margin: 0,
-  color: themeVars.color.text.primary,
-  fontSize: themeVars.font.size.md,
-  fontWeight: themeVars.font.weight.medium,
-  lineHeight: themeVars.font.lineHeight.tight,
 });
 
 export const panelBody = style({

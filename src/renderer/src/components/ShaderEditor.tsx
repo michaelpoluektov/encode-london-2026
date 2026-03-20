@@ -4,7 +4,11 @@ import type { JSX } from "react";
 import { editorFrame } from "../app-shell.css";
 import { GLSL_LANGUAGE_ID, registerGlslLanguage } from "../monaco-glsl";
 import { useAppStore } from "../store/app-store";
-import { defineShadilyMonacoTheme, SHADILY_MONACO_THEME } from "../theme";
+import {
+  darkThemeValues,
+  defineShadilyMonacoTheme,
+  SHADILY_MONACO_THEME,
+} from "../theme";
 
 loader.config({ monaco });
 
@@ -30,10 +34,11 @@ export const ShaderEditor = (): JSX.Element => {
           }
         }}
         options={{
+          fontFamily: darkThemeValues.font.family.mono,
+          fontSize: Number.parseInt(darkThemeValues.font.size.sm, 10),
           minimap: { enabled: false },
-          fontSize: 14,
           padding: {
-            top: 20,
+            top: Number.parseInt(darkThemeValues.size.editorPaddingTop, 10),
           },
           roundedSelection: false,
           scrollBeyondLastLine: false,

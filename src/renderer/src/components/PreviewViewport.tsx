@@ -6,6 +6,7 @@ import {
   STARTER_FRAGMENT_SHADER,
 } from "../shader-source";
 import { useAppStore } from "../store/app-store";
+import { darkThemeValues } from "../theme";
 
 const createPreviewMaterial = (fragmentShader: string): THREE.ShaderMaterial =>
   new THREE.ShaderMaterial({
@@ -51,7 +52,7 @@ export const PreviewViewport = (): JSX.Element => {
     }
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#09101f");
+    scene.background = new THREE.Color(darkThemeValues.color.preview.scene);
 
     const camera = new THREE.PerspectiveCamera(
       55,
@@ -75,8 +76,15 @@ export const PreviewViewport = (): JSX.Element => {
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
-    const hemiLight = new THREE.HemisphereLight("#fdf2c8", "#17304d", 1.6);
-    const keyLight = new THREE.DirectionalLight("#ffffff", 2.4);
+    const hemiLight = new THREE.HemisphereLight(
+      darkThemeValues.color.preview.lightWarm,
+      darkThemeValues.color.preview.lightCool,
+      1.6,
+    );
+    const keyLight = new THREE.DirectionalLight(
+      darkThemeValues.color.preview.lightKey,
+      2.4,
+    );
     keyLight.position.set(2, 3, 4);
     scene.add(hemiLight, keyLight);
 
