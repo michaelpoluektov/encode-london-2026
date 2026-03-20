@@ -212,9 +212,9 @@ export const App = (): JSX.Element => {
       </section>
       <footer className={footerBar}>
         <div className={shellFrame}>
-          <Text as="span" tone="muted" variant="code">
-            Panels can be resized, closed from the header, and moved between
-            main, side, and bottom regions.
+          <Text as="span" tone="muted" variant="caption">
+            Panels can be resized and moved between regions via the header
+            controls.
           </Text>
         </div>
       </footer>

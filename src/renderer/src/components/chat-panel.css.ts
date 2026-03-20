@@ -8,10 +8,6 @@ export const chatPanel = style({
   minHeight: 0,
 });
 
-export const chatPanelIntro = style({
-  padding: `${themeVars.space[4]} ${themeVars.space[4]} 0`,
-});
-
 export const chatPanelWell = style({
   width: "100%",
   maxWidth: "28rem",

@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type { BootstrapPayload } from "../../../shared/contracts";
-import { STARTER_FRAGMENT_SHADER } from "../shader-source";
 
 export const WORKSPACE_PANEL_IDS = ["source", "preview", "chat"] as const;
 export type WorkspacePanelId = (typeof WORKSPACE_PANEL_IDS)[number];
@@ -118,14 +117,12 @@ const defaultActiveWorkspacePanels = deriveActiveWorkspacePanels(
 
 type AppState = {
   readonly bootstrap: BootstrapPayload | null;
-  readonly shaderSource: string;
   readonly shellPaneSizes: readonly number[];
   readonly workspaceColumnSizes: readonly number[];
   readonly workspaceRowSizes: readonly number[];
   readonly workspacePanels: WorkspacePanelsState;
   readonly activeWorkspacePanels: ActiveWorkspacePanelsState;
   readonly setBootstrap: (bootstrap: BootstrapPayload) => void;
-  readonly setShaderSource: (shaderSource: string) => void;
   readonly setShellPaneSizes: (shellPaneSizes: readonly number[]) => void;
   readonly setWorkspaceColumnSizes: (
     workspaceColumnSizes: readonly number[],
@@ -146,12 +143,10 @@ export const useAppStore = create<AppState>((set) => ({
   activeWorkspacePanels: defaultActiveWorkspacePanels,
   bootstrap: null,
   shellPaneSizes: [18, 82],
-  shaderSource: STARTER_FRAGMENT_SHADER,
   workspaceColumnSizes: [72, 28],
   workspacePanels: defaultWorkspacePanels,
   workspaceRowSizes: [66, 34],
   setBootstrap: (bootstrap) => set({ bootstrap }),
-  setShaderSource: (shaderSource) => set({ shaderSource }),
   setShellPaneSizes: (shellPaneSizes) => set({ shellPaneSizes }),
   setWorkspaceColumnSizes: (workspaceColumnSizes) =>
     set({ workspaceColumnSizes }),
@@ -198,13 +193,6 @@ export const useAppStore = create<AppState>((set) => ({
   moveWorkspacePanel: (panelId, region) =>
     set((state) => {
       const currentPanel = state.workspacePanels[panelId];
-      const workspacePanels: WorkspacePanelsState = {
-        ...state.workspacePanels,
-        [panelId]: {
-          isOpen: true,
-          region,
-        },
-      };
 
       if (currentPanel.isOpen && currentPanel.region === region) {
         return {
@@ -215,13 +203,19 @@ export const useAppStore = create<AppState>((set) => ({
         };
       }
 
+      const workspacePanels: WorkspacePanelsState = {
+        ...state.workspacePanels,
+        [panelId]: {
+          isOpen: true,
+          region,
+        },
+      };
+
       return {
         activeWorkspacePanels: deriveActiveWorkspacePanels(
           workspacePanels,
           state.activeWorkspacePanels,
-          {
-            [region]: panelId,
-          },
+          { [region]: panelId },
         ),
         workspacePanels,
       };

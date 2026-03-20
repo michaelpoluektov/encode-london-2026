@@ -1,7 +1,9 @@
 import { join } from "node:path";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import type { ProjectSavePayload } from "../shared/contracts";
 import { bootstrapPayloadSchema } from "../shared/contracts";
 import { getCodexRuntimeState } from "./services/codex-runtime";
+import * as projectService from "./services/project-service";
 
 if (process.platform === "linux") {
   // Prefer Chromium's Ozone backend so Wayland sessions use the native path.
@@ -39,6 +41,44 @@ app.whenReady().then(async () => {
       platform: process.platform,
       codex: getCodexRuntimeState(),
     }),
+  );
+
+  ipcMain.handle("project:pickFolder", async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ["openDirectory", "createDirectory"],
+    });
+    return canceled ? null : filePaths[0];
+  });
+
+  ipcMain.handle(
+    "project:create",
+    async (_e, parentDir: string, name: string) => {
+      return projectService.createProject(parentDir, name);
+    },
+  );
+
+  ipcMain.handle("project:open", async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ["openDirectory"],
+    });
+    if (canceled) return null;
+    return projectService.openProject(filePaths[0]);
+  });
+
+  ipcMain.handle("project:save", async (_e, payload: ProjectSavePayload) => {
+    await projectService.saveProject(
+      payload.folderPath,
+      payload.manifest,
+      payload.shaders,
+    );
+  });
+
+  ipcMain.handle("project:openPath", async (_e, folderPath: string) => {
+    return projectService.openProject(folderPath);
+  });
+
+  ipcMain.handle("project:getRecents", () =>
+    projectService.getRecentProjects(),
   );
 
   await createMainWindow();

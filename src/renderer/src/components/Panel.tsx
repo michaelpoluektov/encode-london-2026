@@ -29,7 +29,7 @@ export const Panel = ({
   bodyClassName,
   headerClassName,
 }: PanelProps): JSX.Element => {
-  const hasHeader = title !== undefined || actions !== undefined;
+  const hasHeader = title != null || actions != null;
   const bodyClassNames = cx(panelBody, bodyClassName);
   const headerClassNames = cx(panelHeader, headerClassName);
 

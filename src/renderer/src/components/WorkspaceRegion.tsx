@@ -1,5 +1,4 @@
 import type { JSX, ReactNode } from "react";
-import { cx } from "../lib/cx";
 import type { WorkspacePanelId, WorkspaceRegionId } from "../store/app-store";
 import { Panel } from "./Panel";
 import { Button } from "./ui/Button";
@@ -31,6 +30,12 @@ type WorkspaceRegionProps = {
 
 const regionOptions: readonly WorkspaceRegionId[] = ["main", "side", "bottom"];
 
+const regionLabels: Record<WorkspaceRegionId, string> = {
+  bottom: "Bottom",
+  main: "Main",
+  side: "Side",
+};
+
 export const WorkspaceRegion = ({
   activePanelId,
   children,
@@ -42,7 +47,7 @@ export const WorkspaceRegion = ({
   onSelectPanel,
 }: WorkspaceRegionProps): JSX.Element => {
   const activePanelTitle =
-    activePanelId === null ? "Empty" : renderPanelTitle(activePanelId);
+    activePanelId === null ? undefined : renderPanelTitle(activePanelId);
   const hasTabs = panelIds.length > 1;
 
   return (
@@ -61,7 +66,7 @@ export const WorkspaceRegion = ({
             >
               {regionOptions.map((region) => (
                 <option key={region} value={region}>
-                  {region}
+                  {regionLabels[region]}
                 </option>
               ))}
             </Select>
@@ -73,7 +78,7 @@ export const WorkspaceRegion = ({
               square
               variant="icon"
             >
-              X
+              ×
             </Button>
           </div>
         )
@@ -90,7 +95,7 @@ export const WorkspaceRegion = ({
             <Button
               key={panelId}
               active={activePanelId === panelId}
-              className={cx(workspaceRegionTab)}
+              className={workspaceRegionTab}
               onClick={() => {
                 onSelectPanel(panelId);
               }}

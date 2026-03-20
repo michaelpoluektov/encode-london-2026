@@ -5,17 +5,20 @@ import {
   PREVIEW_VERTEX_SHADER,
   STARTER_FRAGMENT_SHADER,
 } from "../shader-source";
-import { useAppStore } from "../store/app-store";
+import { useProjectStore } from "../store/project-store";
 import { darkThemeValues } from "../theme";
 
-const createPreviewMaterial = (fragmentShader: string): THREE.ShaderMaterial =>
+const createPreviewMaterial = (
+  fragmentShader: string,
+  vertexShader: string,
+): THREE.ShaderMaterial =>
   new THREE.ShaderMaterial({
     fragmentShader,
     side: THREE.DoubleSide,
     uniforms: {
       u_time: { value: 0 },
     },
-    vertexShader: PREVIEW_VERTEX_SHADER,
+    vertexShader,
   });
 
 const formatShaderError = (
@@ -34,8 +37,14 @@ const formatShaderError = (
 };
 
 export const PreviewViewport = (): JSX.Element => {
-  const shaderSource = useAppStore((state) => state.shaderSource);
-  const deferredShaderSource = useDeferredValue(shaderSource);
+  const project = useProjectStore((s) => s.project);
+
+  const fragmentSource = project?.shaders.fragment ?? STARTER_FRAGMENT_SHADER;
+  const vertexSource = project?.shaders.vertex ?? PREVIEW_VERTEX_SHADER;
+
+  const deferredFragment = useDeferredValue(fragmentSource);
+  const deferredVertex = useDeferredValue(vertexSource);
+
   const hostRef = useRef<HTMLDivElement | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -72,7 +81,10 @@ export const PreviewViewport = (): JSX.Element => {
     host.append(renderer.domElement);
 
     const geometry = new THREE.TorusKnotGeometry(0.55, 0.2, 160, 24);
-    const material = createPreviewMaterial(STARTER_FRAGMENT_SHADER);
+    const material = createPreviewMaterial(
+      STARTER_FRAGMENT_SHADER,
+      PREVIEW_VERTEX_SHADER,
+    );
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
@@ -150,7 +162,10 @@ export const PreviewViewport = (): JSX.Element => {
       return;
     }
 
-    const candidateMaterial = createPreviewMaterial(deferredShaderSource);
+    const candidateMaterial = createPreviewMaterial(
+      deferredFragment,
+      deferredVertex,
+    );
     const compileScene = new THREE.Scene();
     const compileMesh = new THREE.Mesh(mesh.geometry, candidateMaterial);
     compileScene.add(compileMesh);
@@ -186,7 +201,7 @@ export const PreviewViewport = (): JSX.Element => {
     if (shaderError !== null) {
       candidateMaterial.dispose();
       console.error(
-        "The fragment shader did not compile. The previous valid shader is still rendering.\n\n%s",
+        "The shader did not compile. The previous valid shader is still rendering.\n\n%s",
         shaderError,
       );
       return;
@@ -195,7 +210,7 @@ export const PreviewViewport = (): JSX.Element => {
     const previousMaterial = mesh.material;
     mesh.material = candidateMaterial;
     previousMaterial.dispose();
-  }, [deferredShaderSource]);
+  }, [deferredFragment, deferredVertex]);
 
   return (
     <div className={previewFrame}>
