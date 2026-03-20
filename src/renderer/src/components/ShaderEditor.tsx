@@ -5,7 +5,6 @@ import { editorFrame } from "../app-shell.css";
 import { GLSL_LANGUAGE_ID, registerGlslLanguage } from "../monaco-glsl";
 import { useAppStore } from "../store/app-store";
 import { defineShadilyMonacoTheme, SHADILY_MONACO_THEME } from "../theme";
-import { Panel } from "./Panel";
 
 loader.config({ monaco });
 
@@ -14,16 +13,13 @@ export const ShaderEditor = (): JSX.Element => {
   const setShaderSource = useAppStore((state) => state.setShaderSource);
 
   return (
-    <Panel
-      eyebrow="Shader Source"
-      title="Fragment shader"
-      bodyClassName={editorFrame}
-    >
+    <div className={editorFrame}>
       <Editor
         beforeMount={(instance) => {
           registerGlslLanguage(instance);
           defineShadilyMonacoTheme(instance);
         }}
+        height="100%"
         language={GLSL_LANGUAGE_ID}
         path="file:///project/material.frag"
         theme={SHADILY_MONACO_THEME}
@@ -43,6 +39,6 @@ export const ShaderEditor = (): JSX.Element => {
           scrollBeyondLastLine: false,
         }}
       />
-    </Panel>
+    </div>
   );
 };
