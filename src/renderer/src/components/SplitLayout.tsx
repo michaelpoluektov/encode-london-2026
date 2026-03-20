@@ -21,22 +21,24 @@ export const SplitLayout = ({
   panes,
   defaultSizes,
   onChange,
-}: SplitLayoutProps): JSX.Element => (
-  <div className={splitLayout}>
-    <Allotment
-      defaultSizes={defaultSizes as number[] | undefined}
-      onChange={onChange}
-    >
-      {panes.map((pane) => (
-        <Allotment.Pane
-          key={pane.id}
-          minSize={pane.minSize}
-          preferredSize={pane.preferredSize}
-          snap={pane.snap}
-        >
-          {pane.content}
-        </Allotment.Pane>
-      ))}
-    </Allotment>
-  </div>
-);
+}: SplitLayoutProps): JSX.Element => {
+  const allotmentDefaultSizes =
+    defaultSizes === undefined ? undefined : [...defaultSizes];
+
+  return (
+    <div className={splitLayout}>
+      <Allotment defaultSizes={allotmentDefaultSizes} onChange={onChange}>
+        {panes.map((pane) => (
+          <Allotment.Pane
+            key={pane.id}
+            minSize={pane.minSize}
+            preferredSize={pane.preferredSize}
+            snap={pane.snap}
+          >
+            {pane.content}
+          </Allotment.Pane>
+        ))}
+      </Allotment>
+    </div>
+  );
+};
