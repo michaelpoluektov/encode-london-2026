@@ -1,3 +1,7 @@
+# Shadily
+
+You are developing an LLM enabled shader editor. Details in `REQUIREMENTS.md` and `ARCHITECTURE.md`.
+
 ## DevOps guidance
 
 - For every code change request, create a new branch and a worktree in `.worktrees/`
