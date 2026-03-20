@@ -39,6 +39,8 @@
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "@openai/codex-sdk": "latest",
+    "@vanilla-extract/css": "^1.20.0",
+    "allotment": "^1.20.5",
     "monaco-editor": "^0.52.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -52,6 +54,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.180.0",
+    "@vanilla-extract/vite-plugin": "^5.2.1",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "^37.10.3",
     "electron-builder": "^26.8.1",

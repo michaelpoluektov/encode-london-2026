@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import react from "@vitejs/plugin-react";
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 
@@ -52,6 +53,7 @@ export default defineConfig(() => {
       },
       plugins: [
         ...(enableReactDevTools ? [standaloneReactDevToolsPlugin] : []),
+        vanillaExtractPlugin(),
         react(),
       ],
     },

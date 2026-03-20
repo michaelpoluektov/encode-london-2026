@@ -4,8 +4,12 @@ import type { BootstrapPayload } from "../../../shared/contracts";
 type AppState = {
   readonly bootstrap: BootstrapPayload | null;
   readonly shaderSource: string;
+  readonly workspacePaneSizes: readonly number[];
   readonly setBootstrap: (bootstrap: BootstrapPayload) => void;
   readonly setShaderSource: (shaderSource: string) => void;
+  readonly setWorkspacePaneSizes: (
+    workspacePaneSizes: readonly number[],
+  ) => void;
 };
 
 const starterShader = `uniform float u_time;
@@ -20,6 +24,8 @@ void main() {
 export const useAppStore = create<AppState>((set) => ({
   bootstrap: null,
   shaderSource: starterShader,
+  workspacePaneSizes: [58, 42],
   setBootstrap: (bootstrap) => set({ bootstrap }),
   setShaderSource: (shaderSource) => set({ shaderSource }),
+  setWorkspacePaneSizes: (workspacePaneSizes) => set({ workspacePaneSizes }),
 }));
