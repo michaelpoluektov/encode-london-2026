@@ -124,6 +124,21 @@ export const openProject = async (
   return { folderPath, manifest, shaders: { fragment, vertex } };
 };
 
+export const readShaders = (
+  folderPath: string,
+  manifest: ShadilyManifest,
+): { fragment: string; vertex: string } => {
+  const fragment = readFileSync(
+    join(folderPath, manifest.shaders.fragment),
+    "utf-8",
+  );
+  const vertex = readFileSync(
+    join(folderPath, manifest.shaders.vertex),
+    "utf-8",
+  );
+  return { fragment, vertex };
+};
+
 export const saveProject = async (
   folderPath: string,
   manifest: ShadilyManifest,

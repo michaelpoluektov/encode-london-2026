@@ -23,6 +23,8 @@ export const startSession = (folderPath: string): void => {
   activeThread = codex.startThread({
     workingDirectory: folderPath,
     skipGitRepoCheck: true,
+    sandboxMode: "workspace-write",
+    approvalPolicy: "never",
   });
 };
 

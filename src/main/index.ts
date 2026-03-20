@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
-import type { ProjectSavePayload } from "../shared/contracts";
+import type { ProjectSavePayload, ShadilyManifest } from "../shared/contracts";
 import { bootstrapPayloadSchema } from "../shared/contracts";
 import * as codexRuntime from "./services/codex-runtime";
 import * as projectService from "./services/project-service";
@@ -85,6 +85,12 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("project:getRecents", () =>
     projectService.getRecentProjects(),
+  );
+
+  ipcMain.handle(
+    "project:readShaders",
+    (_e, folderPath: string, manifest: ShadilyManifest) =>
+      projectService.readShaders(folderPath, manifest),
   );
 
   ipcMain.handle("chat:send", async (event, prompt: string) => {

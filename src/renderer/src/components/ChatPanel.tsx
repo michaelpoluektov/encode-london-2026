@@ -1,10 +1,13 @@
 import { type JSX, type KeyboardEvent, useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useChatStore } from "../store/chat-store";
 import { useProjectStore } from "../store/project-store";
 import {
   chatEmpty,
   chatFileChange,
   chatInputArea,
+  chatMarkdown,
   chatMessageBubbleAssistant,
   chatMessageBubbleUser,
   chatMessages,
@@ -16,16 +19,34 @@ import {
 import { Button } from "./ui/Button";
 import { Text } from "./ui/Text";
 
+const AssistantBubble = ({
+  content,
+  className,
+}: {
+  content: string;
+  className: string;
+}): JSX.Element => (
+  <div className={className}>
+    <div className={chatMarkdown}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    </div>
+  </div>
+);
+
 export const ChatPanel = (): JSX.Element => {
-  const { messages, isGenerating, streamingText, recentFileChanges, sendMessage, cancelGeneration } =
-    useChatStore();
+  const {
+    messages,
+    isGenerating,
+    streamingText,
+    recentFileChanges,
+    sendMessage,
+    cancelGeneration,
+  } = useChatStore();
   const project = useProjectStore((s) => s.project);
 
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Scroll to bottom on new messages / streaming
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingText]);
@@ -52,7 +73,8 @@ export const ChatPanel = (): JSX.Element => {
         <div className={chatEmpty}>
           {project ? (
             <Text as="p" tone="muted" variant="caption">
-              Ask Codex to edit your shaders. It can read and write files in the project.
+              Ask Codex to edit your shaders. It can read and write files in
+              the project.
             </Text>
           ) : (
             <Text as="p" tone="muted" variant="caption">
@@ -62,23 +84,27 @@ export const ChatPanel = (): JSX.Element => {
         </div>
       ) : (
         <div className={chatMessages}>
-          {messages.map((msg) => (
-            <div key={msg.id} className={chatMessageRow}>
-              <div
-                className={
-                  msg.role === "user"
-                    ? chatMessageBubbleUser
-                    : chatMessageBubbleAssistant
-                }
-              >
-                {msg.content}
+          {messages.map((msg) =>
+            msg.role === "user" ? (
+              <div key={msg.id} className={chatMessageRow}>
+                <div className={chatMessageBubbleUser}>{msg.content}</div>
               </div>
-            </div>
-          ))}
+            ) : (
+              <div key={msg.id} className={chatMessageRow}>
+                <AssistantBubble
+                  content={msg.content}
+                  className={chatMessageBubbleAssistant}
+                />
+              </div>
+            ),
+          )}
 
           {isGenerating && streamingText && (
             <div className={chatMessageRow}>
-              <div className={chatStreamingBubble}>{streamingText}</div>
+              <AssistantBubble
+                content={streamingText}
+                className={chatStreamingBubble}
+              />
             </div>
           )}
 
@@ -94,7 +120,6 @@ export const ChatPanel = (): JSX.Element => {
 
       <div className={chatInputArea}>
         <textarea
-          ref={textareaRef}
           className={chatTextarea}
           value={input}
           onChange={(e) => setInput(e.target.value)}
