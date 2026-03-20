@@ -6,7 +6,6 @@ import {
   STARTER_FRAGMENT_SHADER,
 } from "../shader-source";
 import { useAppStore } from "../store/app-store";
-import { Panel } from "./Panel";
 import {
   diagnosticsCard,
   diagnosticsDetail,
@@ -14,7 +13,6 @@ import {
   diagnosticsSummary,
   previewLayout,
 } from "./preview-viewport.css";
-import { StatusBadge } from "./StatusBadge";
 
 type PreviewStatus =
   | {
@@ -86,7 +84,7 @@ export const PreviewViewport = (): JSX.Element => {
 
     const camera = new THREE.PerspectiveCamera(
       55,
-      host.clientWidth / host.clientHeight,
+      Math.max(host.clientWidth, 1) / Math.max(host.clientHeight, 1),
       0.1,
       100,
     );
@@ -94,7 +92,10 @@ export const PreviewViewport = (): JSX.Element => {
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(host.clientWidth, host.clientHeight);
+    renderer.setSize(
+      Math.max(host.clientWidth, 1),
+      Math.max(host.clientHeight, 1),
+    );
     host.append(renderer.domElement);
 
     const geometry = new THREE.TorusKnotGeometry(0.55, 0.2, 160, 24);
@@ -111,13 +112,19 @@ export const PreviewViewport = (): JSX.Element => {
     cameraRef.current = camera;
     meshRef.current = mesh;
 
-    const resizeObserver = new ResizeObserver(() => {
-      const width = host.clientWidth;
-      const height = host.clientHeight;
+    const syncViewportSize = (): void => {
+      const width = Math.max(host.clientWidth, 1);
+      const height = Math.max(host.clientHeight, 1);
 
-      camera.aspect = width / Math.max(height, 1);
+      camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height);
+    };
+
+    syncViewportSize();
+
+    const resizeObserver = new ResizeObserver(() => {
+      syncViewportSize();
     });
 
     resizeObserver.observe(host);
@@ -223,32 +230,8 @@ export const PreviewViewport = (): JSX.Element => {
     });
   }, [deferredShaderSource]);
 
-  const previewStatusTone =
-    previewStatus.kind === "ready"
-      ? "success"
-      : previewStatus.kind === "error"
-        ? "warning"
-        : "accent";
-  const previewStatusValue =
-    previewStatus.kind === "ready"
-      ? "ready"
-      : previewStatus.kind === "error"
-        ? "error"
-        : "compiling";
-
   return (
-    <Panel
-      eyebrow="Live Preview"
-      title="Three.js viewport"
-      bodyClassName={previewFrame}
-      actions={
-        <StatusBadge
-          label="Shader"
-          value={previewStatusValue}
-          tone={previewStatusTone}
-        />
-      }
-    >
+    <div className={previewFrame}>
       <div className={previewLayout}>
         <div className={viewportHost} ref={hostRef} />
         <section className={diagnosticsCard}>
@@ -259,6 +242,6 @@ export const PreviewViewport = (): JSX.Element => {
           ) : null}
         </section>
       </div>
-    </Panel>
+    </div>
   );
 };
