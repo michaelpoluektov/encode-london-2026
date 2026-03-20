@@ -3,11 +3,72 @@ import {
   type CodexRuntimeState,
   codexRuntimeSchema,
 } from "../../shared/contracts";
+import type { FileChangeInfo } from "../../shared/contracts";
 
-// Scaffold shortcut: importing the SDK proves the package is bundled, not that
-// a real Codex runtime session can be started successfully.
+const codex = new Codex();
+
+type CodexThread = ReturnType<typeof codex.startThread>;
+
+let activeThread: CodexThread | null = null;
+let activeAbortController: AbortController | null = null;
+
 export const getCodexRuntimeState = (): CodexRuntimeState =>
   codexRuntimeSchema.parse({
     available: typeof Codex === "function",
     mode: "placeholder",
   });
+
+export const startSession = (folderPath: string): void => {
+  activeAbortController?.abort();
+  activeThread = codex.startThread({
+    workingDirectory: folderPath,
+    skipGitRepoCheck: true,
+  });
+};
+
+export const stopSession = (): void => {
+  activeAbortController?.abort();
+  activeAbortController = null;
+  activeThread = null;
+};
+
+export const sendMessage = async (
+  prompt: string,
+  onChunk: (text: string) => void,
+  onFileChange: (changes: FileChangeInfo[]) => void,
+): Promise<string> => {
+  if (!activeThread) throw new Error("No active Codex session");
+
+  activeAbortController = new AbortController();
+  const { events } = await activeThread.runStreamed(prompt, {
+    signal: activeAbortController.signal,
+  });
+
+  let finalText = "";
+
+  for await (const event of events) {
+    if (
+      (event.type === "item.updated" || event.type === "item.completed") &&
+      event.item.type === "agent_message"
+    ) {
+      finalText = event.item.text;
+      onChunk(finalText);
+    }
+
+    if (
+      event.type === "item.completed" &&
+      event.item.type === "file_change"
+    ) {
+      onFileChange(event.item.changes);
+    }
+
+    if (event.type === "turn.completed" || event.type === "turn.failed") {
+      break;
+    }
+  }
+
+  activeAbortController = null;
+  return finalText;
+};
+
+export const hasActiveSession = (): boolean => activeThread !== null;

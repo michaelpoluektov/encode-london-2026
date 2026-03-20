@@ -52,3 +52,16 @@ export type ProjectSavePayload = {
   manifest: ShadilyManifest;
   shaders: { fragment: string; vertex: string };
 };
+
+export type ChatRole = "user" | "assistant";
+
+export type ChatMessage = {
+  id: string;
+  role: ChatRole;
+  content: string;
+};
+
+export type FileChangeInfo = {
+  path: string;
+  kind: "add" | "delete" | "update";
+};

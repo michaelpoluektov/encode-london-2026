@@ -3,6 +3,7 @@ import type {
   ProjectOpenResult,
   ProjectSavePayload,
   RecentProject,
+  FileChangeInfo,
 } from "../shared/contracts";
 import {
   type BootstrapPayload,
@@ -27,6 +28,24 @@ const shadilyDesktopApi = {
       ipcRenderer.invoke("project:save", payload),
     getRecents: (): Promise<RecentProject[]> =>
       ipcRenderer.invoke("project:getRecents"),
+  },
+  chat: {
+    send: (prompt: string): Promise<void> =>
+      ipcRenderer.invoke("chat:send", prompt),
+    stop: (): Promise<void> => ipcRenderer.invoke("chat:stop"),
+    onChunk: (cb: (text: string) => void): (() => void) => {
+      const handler = (_e: Electron.IpcRendererEvent, text: string) => cb(text);
+      ipcRenderer.on("chat:chunk", handler);
+      return () => ipcRenderer.removeListener("chat:chunk", handler);
+    },
+    onFileChange: (cb: (changes: FileChangeInfo[]) => void): (() => void) => {
+      const handler = (
+        _e: Electron.IpcRendererEvent,
+        changes: FileChangeInfo[],
+      ) => cb(changes);
+      ipcRenderer.on("chat:file-change", handler);
+      return () => ipcRenderer.removeListener("chat:file-change", handler);
+    },
   },
 };
 
