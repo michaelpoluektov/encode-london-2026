@@ -1,19 +1,19 @@
 import type { JSX, ReactNode } from "react";
+import { cx } from "../lib/cx";
 import {
   panel,
   panelBody,
-  panelEyebrow,
   panelHeader,
   panelTitle,
   panelTitleBlock,
   panelTone,
 } from "./panel.css";
+import { Text } from "./ui/Text";
 
 type PanelTone = keyof typeof panelTone;
 
 type PanelProps = {
   readonly children: ReactNode;
-  readonly eyebrow?: string;
   readonly title?: string;
   readonly actions?: ReactNode;
   readonly tone?: PanelTone;
@@ -23,27 +23,26 @@ type PanelProps = {
 
 export const Panel = ({
   children,
-  eyebrow,
   title,
   actions,
   tone = "default",
   bodyClassName,
   headerClassName,
 }: PanelProps): JSX.Element => {
-  const hasHeader =
-    eyebrow !== undefined || title !== undefined || actions !== undefined;
-  const bodyClassNames = [panelBody, bodyClassName].filter(Boolean).join(" ");
-  const headerClassNames = [panelHeader, headerClassName]
-    .filter(Boolean)
-    .join(" ");
+  const hasHeader = title !== undefined || actions !== undefined;
+  const bodyClassNames = cx(panelBody, bodyClassName);
+  const headerClassNames = cx(panelHeader, headerClassName);
 
   return (
-    <section className={[panel, panelTone[tone]].join(" ")}>
+    <section className={cx(panel, panelTone[tone])}>
       {hasHeader ? (
         <header className={headerClassNames}>
           <div className={panelTitleBlock}>
-            {eyebrow ? <p className={panelEyebrow}>{eyebrow}</p> : null}
-            {title ? <h2 className={panelTitle}>{title}</h2> : null}
+            {title ? (
+              <Text as="h2" className={panelTitle} variant="title">
+                {title}
+              </Text>
+            ) : null}
           </div>
           {actions}
         </header>

@@ -9,6 +9,11 @@ export const themeRoot = style({
   ].join(", "),
   color: themeVars.color.text.primary,
   fontFamily: themeVars.font.family.sans,
+  fontSize: themeVars.font.size.sm,
+  lineHeight: themeVars.font.lineHeight.normal,
+  textRendering: "optimizeLegibility",
+  WebkitFontSmoothing: "antialiased",
+  MozOsxFontSmoothing: "grayscale",
 });
 
 globalStyle("html", {
@@ -22,6 +27,8 @@ globalStyle("body", {
   background: "transparent",
   color: themeVars.color.text.primary,
   fontFamily: themeVars.font.family.sans,
+  fontSize: themeVars.font.size.sm,
+  lineHeight: themeVars.font.lineHeight.normal,
 });
 
 globalStyle("#root", {
@@ -34,6 +41,15 @@ globalStyle("*, *::before, *::after", {
 
 globalStyle("button, input, textarea, select", {
   font: "inherit",
+  color: "inherit",
+});
+
+globalStyle("button", {
+  cursor: "pointer",
+});
+
+globalStyle("h1, h2, h3, h4, h5, h6, p", {
+  margin: 0,
 });
 
 globalStyle("::selection", {

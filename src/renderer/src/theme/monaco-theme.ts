@@ -22,8 +22,9 @@ export const defineShadilyMonacoTheme = (monaco: typeof Monaco): void => {
       "editorCursor.foreground": darkThemeValues.color.editor.cursor,
       "editorLineNumber.foreground": darkThemeValues.color.editor.gutter,
       "editorLineNumber.activeForeground": darkThemeValues.color.text.secondary,
-      "editorIndentGuide.background": "#14223b",
-      "editorIndentGuide.activeBackground": "#1e3458",
+      "editorIndentGuide.background": darkThemeValues.color.editor.indentGuide,
+      "editorIndentGuide.activeBackground":
+        darkThemeValues.color.editor.activeIndentGuide,
       "editorWidget.background": darkThemeValues.color.background.panel,
       "editorWidget.border": darkThemeValues.color.border.standard,
       "minimap.background": darkThemeValues.color.editor.background,

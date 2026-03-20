@@ -1,46 +1,39 @@
 import type { JSX } from "react";
 import { Panel } from "./Panel";
 import {
-  projectItem,
-  projectItemActive,
-  projectItemName,
-  projectItemPath,
   projectList,
   projectSection,
-  projectSectionLabel,
   projectSidebar,
 } from "./project-sidebar.css";
+import { NavItem } from "./ui/NavItem";
+import { Stack } from "./ui/Stack";
+import { Text } from "./ui/Text";
 
 export const ProjectSidebar = (): JSX.Element => (
   <Panel title="Project">
-    <div className={projectSidebar}>
+    <Stack className={projectSidebar} gap={4}>
       <section className={projectSection}>
-        <span className={projectSectionLabel}>Workspace</span>
+        <Text as="span" variant="label">
+          Workspace
+        </Text>
         <div className={projectList}>
-          <div className={[projectItem, projectItemActive].join(" ")}>
-            <span className={projectItemName}>material.frag</span>
-            <span className={projectItemPath}>/project/material.frag</span>
-          </div>
-          <div className={projectItem}>
-            <span className={projectItemName}>material.vert</span>
-            <span className={projectItemPath}>/project/material.vert</span>
-          </div>
-          <div className={projectItem}>
-            <span className={projectItemName}>captures/</span>
-            <span className={projectItemPath}>/project/captures</span>
-          </div>
+          <NavItem
+            active
+            subtitle="/project/material.frag"
+            title="material.frag"
+          />
+          <NavItem subtitle="/project/material.vert" title="material.vert" />
+          <NavItem subtitle="/project/captures" title="captures/" />
         </div>
       </section>
       <section className={projectSection}>
-        <span className={projectSectionLabel}>Project View</span>
+        <Text as="span" variant="label">
+          Project View
+        </Text>
         <div className={projectList}>
-          <div className={projectItem}>
-            <span className={projectItemName}>
-              Placeholder for files, assets, and iteration history
-            </span>
-          </div>
+          <NavItem title="Placeholder for files, assets, and iteration history" />
         </div>
       </section>
-    </div>
+    </Stack>
   </Panel>
 );

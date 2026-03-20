@@ -29,17 +29,6 @@ export const workspacePanelDefinitions = {
   }
 >;
 
-export const workspaceRegionDefinitions = {
-  main: { label: "Main" },
-  side: { label: "Side" },
-  bottom: { label: "Bottom" },
-} as const satisfies Record<
-  WorkspaceRegionId,
-  {
-    readonly label: string;
-  }
->;
-
 type WorkspacePanelLayout = {
   readonly isOpen: boolean;
   readonly region: WorkspaceRegionId;

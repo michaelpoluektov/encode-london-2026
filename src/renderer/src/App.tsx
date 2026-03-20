@@ -5,8 +5,6 @@ import {
   headerActions,
   headerBar,
   layoutViewport,
-  panelToggle,
-  panelToggleActive,
   panelToggleGroup,
   shellFrame,
   shellTitle,
@@ -17,6 +15,8 @@ import { PreviewViewport } from "./components/PreviewViewport";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { ShaderEditor } from "./components/ShaderEditor";
 import { SplitLayout } from "./components/SplitLayout";
+import { Button } from "./components/ui/Button";
+import { Text } from "./components/ui/Text";
 import { WorkspaceRegion } from "./components/WorkspaceRegion";
 import {
   useAppStore,
@@ -24,7 +24,6 @@ import {
   type WorkspacePanelId,
   type WorkspaceRegionId,
   workspacePanelDefinitions,
-  workspaceRegionDefinitions,
 } from "./store/app-store";
 
 const normalizePaneSizes = (sizes: readonly number[]): number[] => {
@@ -99,7 +98,6 @@ export const App = (): JSX.Element => {
         activePanelId={activePanelId}
         panelIds={panelIds}
         region={region}
-        regionLabel={workspaceRegionDefinitions[region].label}
         renderPanelTitle={(panelId) => workspacePanelDefinitions[panelId].title}
         onClosePanel={toggleWorkspacePanel}
         onMovePanel={moveWorkspacePanel}
@@ -141,7 +139,9 @@ export const App = (): JSX.Element => {
   return (
     <main className={appShell}>
       <header className={headerBar}>
-        <h1 className={shellTitle}>Shadily</h1>
+        <Text as="h1" className={shellTitle} variant="title">
+          Shadily
+        </Text>
         <div className={headerActions}>
           <div className={panelToggleGroup}>
             {(Object.keys(workspacePanelDefinitions) as WorkspacePanelId[]).map(
@@ -149,21 +149,16 @@ export const App = (): JSX.Element => {
                 const panel = workspacePanels[panelId];
 
                 return (
-                  <button
+                  <Button
                     key={panelId}
-                    className={[
-                      panelToggle,
-                      panel.isOpen ? panelToggleActive : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
+                    active={panel.isOpen}
                     onClick={() => {
                       toggleWorkspacePanel(panelId);
                     }}
-                    type="button"
+                    variant="outline"
                   >
                     {workspacePanelDefinitions[panelId].title}
-                  </button>
+                  </Button>
                 );
               },
             )}
@@ -217,8 +212,10 @@ export const App = (): JSX.Element => {
       </section>
       <footer className={footerBar}>
         <div className={shellFrame}>
-          Panels can be resized, closed from the header, and moved between main,
-          side, and bottom regions.
+          <Text as="span" tone="muted" variant="code">
+            Panels can be resized, closed from the header, and moved between
+            main, side, and bottom regions.
+          </Text>
         </div>
       </footer>
     </main>
