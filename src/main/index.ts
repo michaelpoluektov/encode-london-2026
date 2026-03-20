@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import type { ProjectSavePayload } from "../shared/contracts";
 import { bootstrapPayloadSchema } from "../shared/contracts";
-import { getCodexRuntimeState } from "./services/codex-runtime";
+import * as codexRuntime from "./services/codex-runtime";
 import * as projectService from "./services/project-service";
 
 if (process.platform === "linux") {
@@ -39,7 +39,7 @@ app.whenReady().then(async () => {
     bootstrapPayloadSchema.parse({
       appName: "Shadily",
       platform: process.platform,
-      codex: getCodexRuntimeState(),
+      codex: codexRuntime.getCodexRuntimeState(),
     }),
   );
 
@@ -53,7 +53,9 @@ app.whenReady().then(async () => {
   ipcMain.handle(
     "project:create",
     async (_e, parentDir: string, name: string) => {
-      return projectService.createProject(parentDir, name);
+      const result = await projectService.createProject(parentDir, name);
+      if (result) codexRuntime.startSession(result.folderPath);
+      return result;
     },
   );
 
@@ -62,7 +64,9 @@ app.whenReady().then(async () => {
       properties: ["openDirectory"],
     });
     if (canceled) return null;
-    return projectService.openProject(filePaths[0]);
+    const result = await projectService.openProject(filePaths[0]);
+    if (result) codexRuntime.startSession(result.folderPath);
+    return result;
   });
 
   ipcMain.handle("project:save", async (_e, payload: ProjectSavePayload) => {
@@ -74,12 +78,26 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle("project:openPath", async (_e, folderPath: string) => {
-    return projectService.openProject(folderPath);
+    const result = await projectService.openProject(folderPath);
+    if (result) codexRuntime.startSession(result.folderPath);
+    return result;
   });
 
   ipcMain.handle("project:getRecents", () =>
     projectService.getRecentProjects(),
   );
+
+  ipcMain.handle("chat:send", async (event, prompt: string) => {
+    await codexRuntime.sendMessage(
+      prompt,
+      (text) => event.sender.send("chat:chunk", text),
+      (changes) => event.sender.send("chat:file-change", changes),
+    );
+  });
+
+  ipcMain.handle("chat:stop", () => {
+    codexRuntime.stopSession();
+  });
 
   await createMainWindow();
 

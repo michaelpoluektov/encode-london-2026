@@ -2,6 +2,7 @@
 
 import type {
   BootstrapPayload,
+  FileChangeInfo,
   ProjectOpenResult,
   ProjectSavePayload,
   RecentProject,
@@ -25,6 +26,12 @@ declare global {
         openPath: (folderPath: string) => Promise<ProjectOpenResult | null>;
         save: (payload: ProjectSavePayload) => Promise<void>;
         getRecents: () => Promise<RecentProject[]>;
+      };
+      chat: {
+        send: (prompt: string) => Promise<void>;
+        stop: () => Promise<void>;
+        onChunk: (cb: (text: string) => void) => () => void;
+        onFileChange: (cb: (changes: FileChangeInfo[]) => void) => () => void;
       };
     };
   }
