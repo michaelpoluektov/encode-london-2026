@@ -1,2 +1,7 @@
 .worktrees
 .references
+node_modules
+dist
+out
+*.tsbuildinfo
+.DS_Store
