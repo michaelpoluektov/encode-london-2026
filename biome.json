@@ -1,0 +1,30 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.8/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!**/.references",
+      "!**/.worktrees",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/out",
+      "!**/release"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space"
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always"
+    }
+  }
+}
