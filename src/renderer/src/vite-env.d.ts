@@ -6,6 +6,7 @@ import type {
   ProjectOpenResult,
   ProjectSavePayload,
   RecentProject,
+  ShadilyManifest,
 } from "../../shared/contracts";
 
 declare global {
@@ -26,6 +27,10 @@ declare global {
         openPath: (folderPath: string) => Promise<ProjectOpenResult | null>;
         save: (payload: ProjectSavePayload) => Promise<void>;
         getRecents: () => Promise<RecentProject[]>;
+        readShaders: (
+          folderPath: string,
+          manifest: ShadilyManifest,
+        ) => Promise<{ fragment: string; vertex: string }>;
       };
       chat: {
         send: (prompt: string) => Promise<void>;

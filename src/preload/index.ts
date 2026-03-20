@@ -4,6 +4,7 @@ import type {
   ProjectSavePayload,
   RecentProject,
   FileChangeInfo,
+  ShadilyManifest,
 } from "../shared/contracts";
 import {
   type BootstrapPayload,
@@ -28,6 +29,11 @@ const shadilyDesktopApi = {
       ipcRenderer.invoke("project:save", payload),
     getRecents: (): Promise<RecentProject[]> =>
       ipcRenderer.invoke("project:getRecents"),
+    readShaders: (
+      folderPath: string,
+      manifest: ShadilyManifest,
+    ): Promise<{ fragment: string; vertex: string }> =>
+      ipcRenderer.invoke("project:readShaders", folderPath, manifest),
   },
   chat: {
     send: (prompt: string): Promise<void> =>

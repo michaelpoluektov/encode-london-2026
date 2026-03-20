@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+import { globalStyle, style } from "@vanilla-extract/css";
 import { themeVars } from "../theme";
 
 export const chatPanel = style({
@@ -29,7 +29,6 @@ export const chatMessageBubble = style({
   borderRadius: themeVars.radius.md,
   maxWidth: "85%",
   wordBreak: "break-word",
-  whiteSpace: "pre-wrap",
   fontFamily: themeVars.font.family.sans,
   fontSize: themeVars.font.size.sm,
   lineHeight: themeVars.font.lineHeight.relaxed,
@@ -41,6 +40,7 @@ export const chatMessageBubbleUser = style([
     alignSelf: "flex-end",
     background: themeVars.color.surface.accentMuted,
     color: themeVars.color.text.primary,
+    whiteSpace: "pre-wrap",
   },
 ]);
 
@@ -64,6 +64,48 @@ export const chatStreamingBubble = style([
     opacity: 0.85,
   },
 ]);
+
+// Markdown content inside assistant bubbles
+export const chatMarkdown = style({
+  fontFamily: themeVars.font.family.sans,
+  fontSize: themeVars.font.size.sm,
+  lineHeight: themeVars.font.lineHeight.relaxed,
+  color: "inherit",
+});
+
+globalStyle(`${chatMarkdown} p`, { margin: 0 });
+globalStyle(`${chatMarkdown} p + p`, { marginTop: themeVars.space[2] });
+globalStyle(`${chatMarkdown} pre`, {
+  margin: `${themeVars.space[2]} 0 0`,
+  padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
+  background: themeVars.color.background.panelInset,
+  border: `1px solid ${themeVars.color.border.subtle}`,
+  borderRadius: themeVars.radius.sm,
+  overflowX: "auto",
+});
+globalStyle(`${chatMarkdown} pre code`, {
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+  lineHeight: themeVars.font.lineHeight.relaxed,
+  background: "none",
+  padding: 0,
+  borderRadius: 0,
+  color: themeVars.color.text.code,
+});
+globalStyle(`${chatMarkdown} code`, {
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+  background: themeVars.color.background.panelInset,
+  padding: `1px ${themeVars.space[1]}`,
+  borderRadius: themeVars.radius.sm,
+  color: themeVars.color.text.code,
+});
+globalStyle(`${chatMarkdown} ul, ${chatMarkdown} ol`, {
+  margin: `${themeVars.space[1]} 0`,
+  paddingLeft: themeVars.space[4],
+});
+globalStyle(`${chatMarkdown} li`, { margin: `${themeVars.space[1]} 0` });
+globalStyle(`${chatMarkdown} strong`, { fontWeight: themeVars.font.weight.strong });
 
 export const chatFileChange = style({
   alignSelf: "flex-start",
