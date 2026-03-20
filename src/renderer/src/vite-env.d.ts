@@ -1,6 +1,11 @@
 /// <reference types="vite/client" />
 
-import type { BootstrapPayload } from "../../shared/contracts";
+import type {
+  BootstrapPayload,
+  ProjectOpenResult,
+  ProjectSavePayload,
+  RecentProject,
+} from "../../shared/contracts";
 
 declare global {
   interface MonacoWorkerEnvironment {
@@ -10,6 +15,17 @@ declare global {
   interface Window {
     shadily: {
       getBootstrapPayload: () => Promise<BootstrapPayload>;
+      project: {
+        pickFolder: () => Promise<string | null>;
+        create: (
+          dir: string,
+          name: string,
+        ) => Promise<ProjectOpenResult | null>;
+        open: () => Promise<ProjectOpenResult | null>;
+        openPath: (folderPath: string) => Promise<ProjectOpenResult | null>;
+        save: (payload: ProjectSavePayload) => Promise<void>;
+        getRecents: () => Promise<RecentProject[]>;
+      };
     };
   }
 
