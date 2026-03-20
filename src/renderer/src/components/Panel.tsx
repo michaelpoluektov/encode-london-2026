@@ -18,6 +18,7 @@ type PanelProps = {
   readonly actions?: ReactNode;
   readonly tone?: PanelTone;
   readonly bodyClassName?: string;
+  readonly headerClassName?: string;
 };
 
 export const Panel = ({
@@ -27,15 +28,19 @@ export const Panel = ({
   actions,
   tone = "default",
   bodyClassName,
+  headerClassName,
 }: PanelProps): JSX.Element => {
   const hasHeader =
     eyebrow !== undefined || title !== undefined || actions !== undefined;
   const bodyClassNames = [panelBody, bodyClassName].filter(Boolean).join(" ");
+  const headerClassNames = [panelHeader, headerClassName]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <section className={[panel, panelTone[tone]].join(" ")}>
       {hasHeader ? (
-        <header className={panelHeader}>
+        <header className={headerClassNames}>
           <div className={panelTitleBlock}>
             {eyebrow ? <p className={panelEyebrow}>{eyebrow}</p> : null}
             {title ? <h2 className={panelTitle}>{title}</h2> : null}

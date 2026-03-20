@@ -7,7 +7,7 @@ export const panel = style({
   height: "100%",
   minHeight: 0,
   border: `1px solid ${themeVars.color.border.standard}`,
-  borderRadius: themeVars.radius.lg,
+  borderRadius: 0,
   background: themeVars.color.background.panel,
   boxShadow: themeVars.shadow.panel,
   overflow: "hidden",

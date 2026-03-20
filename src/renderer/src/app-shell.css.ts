@@ -100,17 +100,16 @@ export const previewFrame = style({
   height: "100%",
   minHeight: 0,
   minWidth: 0,
-  padding: themeVars.space[4],
+  overflow: "hidden",
+  padding: 0,
 });
 
 export const viewportHost = style({
   height: "100%",
-  minHeight: "140px",
+  minHeight: 0,
   minWidth: 0,
   overflow: "hidden",
   background: themeVars.color.preview.background,
-  border: `1px solid ${themeVars.color.border.subtle}`,
-  borderRadius: themeVars.radius.md,
   position: "relative",
 });
 
