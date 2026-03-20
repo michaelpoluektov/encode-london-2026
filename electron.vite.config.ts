@@ -8,8 +8,8 @@ const standaloneReactDevToolsPlugin = {
   apply: "serve" as const,
   transformIndexHtml(html: string) {
     const transformedHtml = html.replace(
-      "script-src 'self';",
-      "script-src 'self' http://localhost:8097;",
+      "script-src 'self' 'unsafe-eval';",
+      "script-src 'self' 'unsafe-eval' http://localhost:8097;",
     );
 
     return {
