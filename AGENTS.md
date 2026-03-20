@@ -4,8 +4,7 @@ You are developing an LLM enabled shader editor. Details in `REQUIREMENTS.md` an
 
 ## DevOps guidance
 
-- For every code change request, create a new branch and a worktree in `.worktrees/`
-- After finishing a feature implementation, run type checker and linter, then ask a subagent to review the changes before merging
+- After finishing a feature implementation, run type checker and linter, then review changes against review guidelines.
 - Keep reference code and documentation (libraries that implement similar features, potential dependencies etc.) in `.references`. Read documentation/implementation details from there, rather than using web search too often. If you need to reference something, clone the appropriate repository/documentation in `.references`.
 
 ## Code quality guidelines
