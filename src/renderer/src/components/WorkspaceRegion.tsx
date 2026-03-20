@@ -6,6 +6,7 @@ import {
   workspaceRegionBody,
   workspaceRegionButton,
   workspaceRegionEmpty,
+  workspaceRegionHeader,
   workspaceRegionSelect,
   workspaceRegionTab,
   workspaceRegionTabActive,
@@ -42,6 +43,7 @@ export const WorkspaceRegion = ({
 }: WorkspaceRegionProps): JSX.Element => {
   const activePanelTitle =
     activePanelId === null ? "Empty" : renderPanelTitle(activePanelId);
+  const hasTabs = panelIds.length > 1;
 
   return (
     <Panel
@@ -66,21 +68,25 @@ export const WorkspaceRegion = ({
               ))}
             </select>
             <button
+              aria-label={`Close ${activePanelTitle}`}
               className={workspaceRegionButton}
               onClick={() => {
                 onClosePanel(activePanelId);
               }}
               type="button"
             >
-              Close
+              X
             </button>
           </div>
         )
       }
+      headerClassName={workspaceRegionHeader}
       title={activePanelTitle}
-      bodyClassName={workspaceRegionBody}
+      bodyClassName={
+        hasTabs ? workspaceRegionBody.tabbed : workspaceRegionBody.single
+      }
     >
-      {panelIds.length <= 1 ? null : (
+      {hasTabs ? (
         <div className={workspaceRegionTabs}>
           {panelIds.map((panelId) => (
             <button
@@ -100,7 +106,7 @@ export const WorkspaceRegion = ({
             </button>
           ))}
         </div>
-      )}
+      ) : null}
       {activePanelId === null ? (
         <div className={workspaceRegionEmpty}>No panel open in this region</div>
       ) : (

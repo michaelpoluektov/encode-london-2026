@@ -1,18 +1,25 @@
-import { style } from "@vanilla-extract/css";
+import { style, styleVariants } from "@vanilla-extract/css";
 import { themeVars } from "../theme";
+
+export const workspaceRegionHeader = style({
+  alignItems: "center",
+  flexWrap: "nowrap",
+});
 
 export const workspaceRegionActions = style({
   display: "flex",
   alignItems: "center",
-  flexWrap: "wrap",
+  flexWrap: "nowrap",
   gap: themeVars.space[2],
   justifyContent: "flex-end",
   minWidth: 0,
+  flexShrink: 0,
 });
 
 export const workspaceRegionSelect = style({
   minWidth: "4.75rem",
-  padding: `${themeVars.space[1]} ${themeVars.space[3]}`,
+  height: "28px",
+  padding: `0 ${themeVars.space[3]}`,
   border: `1px solid ${themeVars.color.border.standard}`,
   borderRadius: themeVars.radius.sm,
   background: themeVars.color.background.canvas,
@@ -23,14 +30,19 @@ export const workspaceRegionSelect = style({
 });
 
 export const workspaceRegionButton = style({
-  padding: `${themeVars.space[1]} ${themeVars.space[3]}`,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "28px",
+  height: "28px",
+  padding: 0,
   border: `1px solid ${themeVars.color.border.standard}`,
   borderRadius: themeVars.radius.sm,
   background: themeVars.color.background.canvas,
   color: themeVars.color.text.secondary,
   fontFamily: themeVars.font.family.mono,
   fontSize: themeVars.font.size.xs,
-  textTransform: "none",
+  lineHeight: "1",
   selectors: {
     "&:hover": {
       borderColor: themeVars.color.border.strong,
@@ -52,7 +64,7 @@ export const workspaceRegionTabs = style({
 export const workspaceRegionTab = style({
   padding: `${themeVars.space[2]} ${themeVars.space[4]}`,
   border: "none",
-  borderRadius: `${themeVars.radius.sm} ${themeVars.radius.sm} 0 0`,
+  borderRadius: 0,
   background: "transparent",
   color: themeVars.color.text.secondary,
   fontSize: themeVars.font.size.xs,
@@ -74,12 +86,21 @@ export const workspaceRegionTabActive = style({
   color: themeVars.color.text.primary,
 });
 
-export const workspaceRegionBody = style({
-  display: "grid",
-  gridTemplateRows: "auto minmax(0, 1fr)",
-  minHeight: 0,
-  minWidth: 0,
-  overflow: "hidden",
+export const workspaceRegionBody = styleVariants({
+  single: {
+    display: "grid",
+    gridTemplateRows: "minmax(0, 1fr)",
+    minHeight: 0,
+    minWidth: 0,
+    overflow: "hidden",
+  },
+  tabbed: {
+    display: "grid",
+    gridTemplateRows: "auto minmax(0, 1fr)",
+    minHeight: 0,
+    minWidth: 0,
+    overflow: "hidden",
+  },
 });
 
 export const workspaceRegionEmpty = style({

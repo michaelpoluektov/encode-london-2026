@@ -1,4 +1,4 @@
-import { type JSX, useDeferredValue, useEffect, useRef, useState } from "react";
+import { type JSX, useDeferredValue, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { previewFrame, viewportHost } from "../app-shell.css";
 import {
@@ -6,30 +6,6 @@ import {
   STARTER_FRAGMENT_SHADER,
 } from "../shader-source";
 import { useAppStore } from "../store/app-store";
-import {
-  diagnosticsCard,
-  diagnosticsDetail,
-  diagnosticsEyebrow,
-  diagnosticsSummary,
-  previewLayout,
-} from "./preview-viewport.css";
-
-type PreviewStatus =
-  | {
-      readonly kind: "compiling";
-      readonly summary: string;
-      readonly detail: string | null;
-    }
-  | {
-      readonly kind: "ready";
-      readonly summary: string;
-      readonly detail: string | null;
-    }
-  | {
-      readonly kind: "error";
-      readonly summary: string;
-      readonly detail: string;
-    };
 
 const createPreviewMaterial = (fragmentShader: string): THREE.ShaderMaterial =>
   new THREE.ShaderMaterial({
@@ -66,11 +42,6 @@ export const PreviewViewport = (): JSX.Element => {
     THREE.TorusKnotGeometry,
     THREE.Material
   > | null>(null);
-  const [previewStatus, setPreviewStatus] = useState<PreviewStatus>({
-    kind: "compiling",
-    summary: "Compiling starter shader.",
-    detail: null,
-  });
 
   useEffect(() => {
     const host = hostRef.current;
@@ -89,6 +60,7 @@ export const PreviewViewport = (): JSX.Element => {
       100,
     );
     camera.position.set(0, 0.6, 2.4);
+    camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -170,12 +142,6 @@ export const PreviewViewport = (): JSX.Element => {
       return;
     }
 
-    setPreviewStatus({
-      kind: "compiling",
-      summary: "Compiling fragment shader.",
-      detail: null,
-    });
-
     const candidateMaterial = createPreviewMaterial(deferredShaderSource);
     const compileScene = new THREE.Scene();
     const compileMesh = new THREE.Mesh(mesh.geometry, candidateMaterial);
@@ -211,37 +177,21 @@ export const PreviewViewport = (): JSX.Element => {
 
     if (shaderError !== null) {
       candidateMaterial.dispose();
-      setPreviewStatus({
-        kind: "error",
-        summary:
-          "The fragment shader did not compile. The previous valid shader is still rendering.",
-        detail: shaderError,
-      });
+      console.error(
+        "The fragment shader did not compile. The previous valid shader is still rendering.\n\n%s",
+        shaderError,
+      );
       return;
     }
 
     const previousMaterial = mesh.material;
     mesh.material = candidateMaterial;
     previousMaterial.dispose();
-    setPreviewStatus({
-      kind: "ready",
-      summary: "Rendering the current fragment shader.",
-      detail: null,
-    });
   }, [deferredShaderSource]);
 
   return (
     <div className={previewFrame}>
-      <div className={previewLayout}>
-        <div className={viewportHost} ref={hostRef} />
-        <section className={diagnosticsCard}>
-          <p className={diagnosticsEyebrow}>Preview status</p>
-          <p className={diagnosticsSummary}>{previewStatus.summary}</p>
-          {previewStatus.detail ? (
-            <pre className={diagnosticsDetail}>{previewStatus.detail}</pre>
-          ) : null}
-        </section>
-      </div>
+      <div className={viewportHost} ref={hostRef} />
     </div>
   );
 };
