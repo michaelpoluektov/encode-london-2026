@@ -8,12 +8,10 @@
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
-    "dev:with-devtools": "sh -c 'react-devtools >/tmp/shadily-react-devtools.log 2>&1 & devtools_pid=$!; trap \"kill $devtools_pid\" EXIT; ENABLE_REACT_DEVTOOLS=true electron-vite dev'",
     "build": "electron-vite build",
     "start": "electron-vite preview --skipBuild",
     "dist": "bun run build && electron-builder",
     "dist:dir": "bun run build && electron-builder --dir",
-    "react-devtools": "react-devtools",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "lint": "biome check .",
     "format": "biome format --write ."
@@ -59,7 +57,6 @@
     "electron": "^37.10.3",
     "electron-builder": "^26.8.1",
     "electron-vite": "^4.0.0",
-    "react-devtools": "^7.0.1",
     "typescript": "^5.9.3"
   }
 }
