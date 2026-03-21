@@ -6,6 +6,7 @@ export const DEFAULT_PROJECT_FILE_PATHS = {
   graph: "graph.json",
   manifest: "shadily.json",
   nodesDir: "nodes",
+  vertex: "vertex.vert",
 } as const;
 
 export const DEFAULT_AGENTS_MD = `# Shadily Shader Project

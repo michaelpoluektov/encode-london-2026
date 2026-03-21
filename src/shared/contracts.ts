@@ -41,6 +41,7 @@ export const projectOpenResultSchema = z.object({
   folderPath: z.string().min(1),
   manifest: shadilyManifestSchema,
   graphSource: z.string(),
+  vertexSource: z.string(),
   tree: z.array(projectTreeNodeSchema),
 });
 
@@ -102,6 +103,7 @@ export const projectSavePayloadSchema = z.object({
   folderPath: projectFolderPathSchema,
   manifest: shadilyManifestSchema,
   graphSource: z.string(),
+  vertexSource: z.string(),
 });
 
 export type ProjectSavePayload = z.infer<typeof projectSavePayloadSchema>;

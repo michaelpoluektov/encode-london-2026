@@ -113,6 +113,7 @@ app.whenReady().then(async () => {
       parsedPayload.folderPath,
       parsedPayload.manifest,
       parsedPayload.graphSource,
+      parsedPayload.vertexSource,
     );
   });
 
