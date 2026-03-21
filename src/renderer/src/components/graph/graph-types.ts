@@ -2,6 +2,9 @@ import type {
   ColorValue,
   CustomNode,
   GraphNodeDefinition,
+  Vec2Value,
+  Vec3Value,
+  Vec4Value,
 } from "./internal/json-schema";
 
 export type GlslValueType = "bool" | "float" | "int" | "vec2" | "vec3" | "vec4";
@@ -11,7 +14,13 @@ export type GraphSourceLoader = (
   node: CustomNode,
 ) => Promise<string> | string;
 
-export type GraphInputValue = ColorValue | number;
+export type GraphInputValue =
+  | ColorValue
+  | Vec2Value
+  | Vec3Value
+  | Vec4Value
+  | boolean
+  | number;
 
 export type ValidatedGraphNode = {
   readonly displayName: string;

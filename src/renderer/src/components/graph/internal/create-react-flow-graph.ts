@@ -5,8 +5,17 @@ import type {
   ValidatedGraph,
   ValidatedGraphNode,
 } from "../graph-types";
-import type { ColorValue, GraphNodeDefinition } from "./json-schema";
+import type {
+  ColorValue,
+  GraphNodeDefinition,
+  Vec2Value,
+  Vec3Value,
+  Vec4Value,
+} from "./json-schema";
 import {
+  type BoolGraphFlowNode,
+  BoolGraphNode,
+  type BoolGraphNodeData,
   type ColorGraphFlowNode,
   ColorGraphNode,
   type ColorGraphNodeData,
@@ -20,6 +29,18 @@ import {
   GlFragColorGraphNode,
   type GlFragColorGraphNodeData,
   GRAPH_NODE_OUTPUT_HANDLE_ID,
+  type IntGraphFlowNode,
+  IntGraphNode,
+  type IntGraphNodeData,
+  type Vec2GraphFlowNode,
+  Vec2GraphNode,
+  type Vec2GraphNodeData,
+  type Vec3GraphFlowNode,
+  Vec3GraphNode,
+  type Vec3GraphNodeData,
+  type Vec4GraphFlowNode,
+  Vec4GraphNode,
+  type Vec4GraphNodeData,
 } from "./nodes";
 
 const NODE_WIDTH = 240;
@@ -27,23 +48,34 @@ const BASE_NODE_HEIGHT = 88;
 const INPUT_ROW_HEIGHT = 40;
 const DETAIL_ROW_HEIGHT = 28;
 const CONTROL_ROW_HEIGHT = 44;
+const CONTROL_ROW_GAP_HEIGHT = 8;
 const SECTION_GAP_HEIGHT = 20;
 
 type FlowGraphNode =
+  | BoolGraphFlowNode
   | ColorGraphFlowNode
   | CustomGraphFlowNode
   | FloatGraphFlowNode
-  | GlFragColorGraphFlowNode;
+  | GlFragColorGraphFlowNode
+  | IntGraphFlowNode
+  | Vec2GraphFlowNode
+  | Vec3GraphFlowNode
+  | Vec4GraphFlowNode;
 
 type CreateFlowElementsOptions = {
   readonly onInputValueChange: (flowId: string, value: GraphInputValue) => void;
 };
 
 export const graphNodeTypes = {
+  bool: BoolGraphNode,
   color: ColorGraphNode,
   custom: CustomGraphNode,
   float: FloatGraphNode,
   glFragColor: GlFragColorGraphNode,
+  int: IntGraphNode,
+  vec2: Vec2GraphNode,
+  vec3: Vec3GraphNode,
+  vec4: Vec4GraphNode,
 } satisfies NodeTypes;
 
 const getRenderedInputs = (
@@ -54,32 +86,62 @@ const getRenderedInputs = (
       return node.inputs;
     case "glFragColor":
       return node.inputs;
+    case "bool":
     case "color":
-      return {};
     case "float":
+    case "int":
+    case "vec2":
+    case "vec3":
+    case "vec4":
       return {};
   }
 };
 
 const getRenderedDetailCount = (node: GraphNodeDefinition): number => {
   switch (node.kind) {
+    case "bool":
     case "color":
     case "custom":
     case "float":
     case "glFragColor":
+    case "int":
+    case "vec2":
+    case "vec3":
+    case "vec4":
       return 1;
   }
 };
 
-const getRenderedControlHeight = (node: GraphNodeDefinition): number => {
+const getRenderedControlRowCount = (node: GraphNodeDefinition): number => {
   switch (node.kind) {
+    case "bool":
     case "color":
     case "float":
-      return CONTROL_ROW_HEIGHT;
+    case "int":
+      return 1;
     case "custom":
     case "glFragColor":
       return 0;
+    case "vec2":
+      return 2;
+    case "vec3":
+      return 3;
+    case "vec4":
+      return 4;
   }
+};
+
+const getRenderedControlHeight = (node: GraphNodeDefinition): number => {
+  const controlRowCount = getRenderedControlRowCount(node);
+
+  if (controlRowCount === 0) {
+    return 0;
+  }
+
+  return (
+    controlRowCount * CONTROL_ROW_HEIGHT +
+    (controlRowCount - 1) * CONTROL_ROW_GAP_HEIGHT
+  );
 };
 
 const getEstimatedNodeHeight = (node: ValidatedGraphNode): number => {
@@ -135,34 +197,122 @@ const createDagreGraph = (
   return dagreGraph;
 };
 
+const createBaseNode = (
+  flowId: string,
+  position: { x: number; y: number },
+) => ({
+  connectable: false,
+  draggable: false,
+  focusable: false,
+  id: flowId,
+  position,
+  selectable: false,
+  style: {
+    pointerEvents: "all" as const,
+    width: NODE_WIDTH,
+  },
+});
+
+const cloneColorValue = (value: ColorValue): ColorValue => ({
+  a: value.a,
+  b: value.b,
+  g: value.g,
+  r: value.r,
+});
+
+const cloneVec2Value = (value: Vec2Value): Vec2Value => ({
+  x: value.x,
+  y: value.y,
+});
+
+const cloneVec3Value = (value: Vec3Value): Vec3Value => ({
+  x: value.x,
+  y: value.y,
+  z: value.z,
+});
+
+const cloneVec4Value = (value: Vec4Value): Vec4Value => ({
+  w: value.w,
+  x: value.x,
+  y: value.y,
+  z: value.z,
+});
+
+const createInputValueChangeHandler =
+  <Value>(
+    flowId: string,
+    options: CreateFlowElementsOptions,
+  ): ((nextValue: Value) => void) =>
+  (nextValue) => {
+    options.onInputValueChange(flowId, nextValue as GraphInputValue);
+  };
+
+const replaceNodeData = <NodeType extends FlowGraphNode>(
+  node: NodeType,
+  data: NodeType["data"],
+): NodeType => ({
+  ...node,
+  data,
+});
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isColorValue = (value: unknown): value is ColorValue =>
+  isRecord(value) &&
+  typeof value.r === "number" &&
+  typeof value.g === "number" &&
+  typeof value.b === "number" &&
+  typeof value.a === "number";
+
+const isVec2Value = (value: unknown): value is Vec2Value =>
+  isRecord(value) && typeof value.x === "number" && typeof value.y === "number";
+
+const isVec3Value = (value: unknown): value is Vec3Value =>
+  isRecord(value) &&
+  typeof value.x === "number" &&
+  typeof value.y === "number" &&
+  typeof value.z === "number";
+
+const isVec4Value = (value: unknown): value is Vec4Value =>
+  isRecord(value) &&
+  typeof value.x === "number" &&
+  typeof value.y === "number" &&
+  typeof value.z === "number" &&
+  typeof value.w === "number";
+
 const createFlowNode = (
   node: ValidatedGraphNode,
   position: { x: number; y: number },
   options: CreateFlowElementsOptions,
 ): FlowGraphNode => {
-  const baseNode = {
-    connectable: false,
-    draggable: false,
-    focusable: false,
-    id: node.flowId,
-    position,
-    selectable: false,
-    style: {
-      pointerEvents: "all" as const,
-      width: NODE_WIDTH,
-    },
-  };
+  const baseNode = createBaseNode(node.flowId, position);
 
   switch (node.definition.kind) {
+    case "bool": {
+      const data: BoolGraphNodeData = {
+        definition: node.definition,
+        onValueChange: createInputValueChangeHandler<boolean>(
+          node.flowId,
+          options,
+        ),
+        value: node.definition.defaultValue,
+      };
+
+      return {
+        ...baseNode,
+        data,
+        type: "bool",
+      };
+    }
     case "color": {
       const data: ColorGraphNodeData = {
         definition: node.definition,
-        onValueChange: (nextValue) => {
-          options.onInputValueChange(node.flowId, nextValue);
-        },
-        value: {
-          ...node.definition.defaultValue,
-        },
+        onValueChange: createInputValueChangeHandler<ColorValue>(
+          node.flowId,
+          options,
+        ),
+        value: cloneColorValue(node.definition.defaultValue),
       };
 
       return {
@@ -185,9 +335,10 @@ const createFlowNode = (
     case "float": {
       const data: FloatGraphNodeData = {
         definition: node.definition,
-        onValueChange: (nextValue) => {
-          options.onInputValueChange(node.flowId, nextValue);
-        },
+        onValueChange: createInputValueChangeHandler<number>(
+          node.flowId,
+          options,
+        ),
         value: node.definition.defaultValue,
       };
 
@@ -206,6 +357,70 @@ const createFlowNode = (
         ...baseNode,
         data,
         type: "glFragColor",
+      };
+    }
+    case "int": {
+      const data: IntGraphNodeData = {
+        definition: node.definition,
+        onValueChange: createInputValueChangeHandler<number>(
+          node.flowId,
+          options,
+        ),
+        value: node.definition.defaultValue,
+      };
+
+      return {
+        ...baseNode,
+        data,
+        type: "int",
+      };
+    }
+    case "vec2": {
+      const data: Vec2GraphNodeData = {
+        definition: node.definition,
+        onValueChange: createInputValueChangeHandler<Vec2Value>(
+          node.flowId,
+          options,
+        ),
+        value: cloneVec2Value(node.definition.defaultValue),
+      };
+
+      return {
+        ...baseNode,
+        data,
+        type: "vec2",
+      };
+    }
+    case "vec3": {
+      const data: Vec3GraphNodeData = {
+        definition: node.definition,
+        onValueChange: createInputValueChangeHandler<Vec3Value>(
+          node.flowId,
+          options,
+        ),
+        value: cloneVec3Value(node.definition.defaultValue),
+      };
+
+      return {
+        ...baseNode,
+        data,
+        type: "vec3",
+      };
+    }
+    case "vec4": {
+      const data: Vec4GraphNodeData = {
+        definition: node.definition,
+        onValueChange: createInputValueChangeHandler<Vec4Value>(
+          node.flowId,
+          options,
+        ),
+        value: cloneVec4Value(node.definition.defaultValue),
+      };
+
+      return {
+        ...baseNode,
+        data,
+        type: "vec4",
       };
     }
   }
@@ -261,37 +476,53 @@ export const updateFlowNodeValue = (
   flowId: string,
   value: GraphInputValue,
 ): FlowGraphNode[] =>
-  nodes.map((node) => {
+  nodes.map<FlowGraphNode>((node) => {
     if (node.id !== flowId) {
       return node;
     }
 
-    if (node.type === "float" && typeof value === "number") {
-      return {
-        ...node,
-        data: {
-          ...node.data,
-          value,
-        },
-      };
+    switch (node.type) {
+      case "bool":
+        return typeof value === "boolean"
+          ? replaceNodeData(node, { ...node.data, value })
+          : node;
+      case "color":
+        return isColorValue(value)
+          ? replaceNodeData(node, {
+              ...node.data,
+              value: cloneColorValue(value),
+            })
+          : node;
+      case "float":
+      case "int":
+        return typeof value === "number"
+          ? replaceNodeData(node, { ...node.data, value })
+          : node;
+      case "vec2":
+        return isVec2Value(value)
+          ? replaceNodeData(node, {
+              ...node.data,
+              value: cloneVec2Value(value),
+            })
+          : node;
+      case "vec3":
+        return isVec3Value(value)
+          ? replaceNodeData(node, {
+              ...node.data,
+              value: cloneVec3Value(value),
+            })
+          : node;
+      case "vec4":
+        return isVec4Value(value)
+          ? replaceNodeData(node, {
+              ...node.data,
+              value: cloneVec4Value(value),
+            })
+          : node;
+      case "custom":
+      case "glFragColor":
+        return node;
+      default:
+        return node;
     }
-
-    if (node.type === "color" && typeof value === "object" && value !== null) {
-      const nextValue: ColorValue = {
-        a: value.a,
-        b: value.b,
-        g: value.g,
-        r: value.r,
-      };
-
-      return {
-        ...node,
-        data: {
-          ...node.data,
-          value: nextValue,
-        },
-      };
-    }
-
-    return node;
   });
