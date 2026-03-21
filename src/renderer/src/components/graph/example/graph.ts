@@ -17,7 +17,7 @@ const exampleGraph = graphSchema.parse({
     {
       defaultValue: 0.35,
       instanceName: "roughness",
-      kind: "clampedFloat",
+      kind: "float",
       max: 1,
       min: 0,
       uniformName: "u_roughness",
@@ -25,7 +25,7 @@ const exampleGraph = graphSchema.parse({
     {
       defaultValue: 0.7,
       instanceName: "intensity",
-      kind: "clampedFloat",
+      kind: "float",
       max: 1,
       min: 0,
       uniformName: "u_intensity",

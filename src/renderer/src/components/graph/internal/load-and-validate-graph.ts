@@ -7,7 +7,6 @@ import type {
   ValidatedGraphNode,
 } from "../graph-types";
 import type {
-  ClampedFloatNode,
   ColorNode,
   CustomNode,
   FloatNode,
@@ -150,7 +149,6 @@ const getNodeInputs = (
       return node.inputs;
     case "glFragColor":
       return node.inputs;
-    case "clampedFloat":
     case "color":
     case "float":
       return {};
@@ -195,15 +193,10 @@ const resolveSourceNodeInstanceName = (
 };
 
 const inferStaticNodeTypeInfo = (
-  node: FloatNode | ClampedFloatNode | ColorNode | GlFragColorNode,
+  node: FloatNode | ColorNode | GlFragColorNode,
 ): InferredNodeTypeInfo => {
   switch (node.kind) {
     case "float":
-      return {
-        inputTypes: new Map(),
-        outputType: "float",
-      };
-    case "clampedFloat":
       return {
         inputTypes: new Map(),
         outputType: "float",
@@ -387,7 +380,6 @@ const inferNodeTypeInfo = async (
     case "custom":
       return inferCustomNodeTypeInfo(node, loadCustomNodeSource);
     case "glFragColor":
-    case "clampedFloat":
     case "color":
     case "float":
       return {

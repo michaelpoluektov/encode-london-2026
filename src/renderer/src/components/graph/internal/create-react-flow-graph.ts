@@ -3,8 +3,6 @@ import { type Edge, MarkerType, type NodeTypes } from "@xyflow/react";
 import type { ValidatedGraph, ValidatedGraphNode } from "../graph-types";
 import type { GraphNodeDefinition } from "./json-schema";
 import {
-  type ClampedFloatGraphFlowNode,
-  ClampedFloatGraphNode,
   type ColorGraphFlowNode,
   ColorGraphNode,
   type CustomGraphFlowNode,
@@ -23,14 +21,12 @@ const DETAIL_ROW_HEIGHT = 28;
 const SECTION_GAP_HEIGHT = 20;
 
 type FlowGraphNode =
-  | ClampedFloatGraphFlowNode
   | ColorGraphFlowNode
   | CustomGraphFlowNode
   | FloatGraphFlowNode
   | GlFragColorGraphFlowNode;
 
 export const graphNodeTypes = {
-  clampedFloat: ClampedFloatGraphNode,
   color: ColorGraphNode,
   custom: CustomGraphNode,
   float: FloatGraphNode,
@@ -45,8 +41,6 @@ const getRenderedInputs = (
       return node.inputs;
     case "glFragColor":
       return node.inputs;
-    case "clampedFloat":
-      return {};
     case "color":
       return {};
     case "float":
@@ -54,9 +48,20 @@ const getRenderedInputs = (
   }
 };
 
+const getRenderedDetailCount = (node: GraphNodeDefinition): number => {
+  switch (node.kind) {
+    case "float":
+      return node.min !== undefined || node.max !== undefined ? 2 : 1;
+    case "color":
+    case "custom":
+    case "glFragColor":
+      return 1;
+  }
+};
+
 const getEstimatedNodeHeight = (node: ValidatedGraphNode): number => {
   const inputCount = Object.keys(getRenderedInputs(node.definition)).length;
-  const detailCount = 1;
+  const detailCount = getRenderedDetailCount(node.definition);
 
   let height =
     BASE_NODE_HEIGHT +
@@ -118,12 +123,6 @@ const createFlowNode = (
   };
 
   switch (node.definition.kind) {
-    case "clampedFloat":
-      return {
-        ...baseNode,
-        data: node.definition,
-        type: "clampedFloat",
-      };
     case "color":
       return {
         ...baseNode,
