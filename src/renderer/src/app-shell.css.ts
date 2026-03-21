@@ -3,19 +3,8 @@ import { themeVars } from "./theme";
 
 export const appShell = style({
   display: "grid",
-  gridTemplateRows: `${themeVars.size.headerBarHeight} minmax(0, 1fr) ${themeVars.size.footerBarHeight}`,
+  gridTemplateRows: `minmax(0, 1fr) ${themeVars.size.footerBarHeight}`,
   minHeight: "100vh",
-});
-
-export const headerBar = style({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: themeVars.space[4],
-  minWidth: 0,
-  padding: `0 ${themeVars.space[5]}`,
-  borderBottom: `1px solid ${themeVars.color.border.standard}`,
-  background: themeVars.color.background.panelMuted,
 });
 
 export const footerBar = style({
@@ -27,11 +16,6 @@ export const footerBar = style({
   color: themeVars.color.text.muted,
   fontFamily: themeVars.font.family.mono,
   fontSize: themeVars.font.size.xs,
-});
-
-export const shellTitle = style({
-  margin: 0,
-  flex: 1,
 });
 
 export const layoutViewport = style({

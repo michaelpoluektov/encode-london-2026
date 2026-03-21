@@ -75,7 +75,6 @@ export const themeVars = createThemeContract({
   },
   size: {
     footerBarHeight: null,
-    headerBarHeight: null,
     panelHeaderHeight: null,
     panelMinHeight: null,
     editorMinWidth: null,
