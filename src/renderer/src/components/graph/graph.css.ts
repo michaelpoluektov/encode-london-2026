@@ -34,4 +34,21 @@ globalStyle(`${graphCanvas} .react-flow`, {
 globalStyle(`${graphCanvas} .react-flow__node`, {
   borderRadius: themeVars.radius.md,
   overflow: "visible",
+  userSelect: "none",
+});
+
+globalStyle(`${graphCanvas} .react-flow__viewport`, {
+  userSelect: "none",
+});
+
+globalStyle(`${graphCanvas} .react-flow__pane`, {
+  cursor: "grab",
+});
+
+globalStyle(`${graphCanvas} .react-flow__pane.dragging`, {
+  cursor: "grabbing",
+});
+
+globalStyle(`${graphCanvas} input`, {
+  userSelect: "text",
 });

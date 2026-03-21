@@ -1,25 +1,25 @@
 import type { JSX } from "react";
-import type { CustomNode } from "../json-schema";
 import {
   createGraphNodeInputs,
   type GraphFlowNode,
   type GraphFlowNodeProps,
   GraphNodeFrame,
 } from "./GraphNode";
+import type { CustomGraphNodeData } from "./node-data";
 
-export type CustomGraphFlowNode = GraphFlowNode<CustomNode, "custom">;
+export type CustomGraphFlowNode = GraphFlowNode<CustomGraphNodeData, "custom">;
 
 export const CustomGraphNode = ({
   data,
-}: GraphFlowNodeProps<CustomNode, "custom">): JSX.Element => (
+}: GraphFlowNodeProps<CustomGraphNodeData, "custom">): JSX.Element => (
   <GraphNodeFrame
     details={[
       {
         label: "File",
-        value: data.filepath,
+        value: data.definition.filepath,
       },
     ]}
-    inputs={createGraphNodeInputs(Object.keys(data.inputs))}
-    title={data.instanceName}
+    inputs={createGraphNodeInputs(Object.keys(data.definition.inputs))}
+    title={data.definition.instanceName}
   />
 );

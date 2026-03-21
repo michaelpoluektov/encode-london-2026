@@ -3,6 +3,7 @@ import type { JSX, ReactNode } from "react";
 import { Text } from "../../../ui/Text";
 import {
   graphNodeCard,
+  graphNodeControls,
   graphNodeDetailRow,
   graphNodeDetails,
   graphNodeHeader,
@@ -26,6 +27,7 @@ export type GraphNodeDetail = {
 };
 
 export type GraphNodeFrameProps = {
+  readonly controls?: ReactNode;
   readonly details?: readonly GraphNodeDetail[];
   readonly hasOutput?: boolean;
   readonly inputs?: readonly GraphNodeInput[];
@@ -44,6 +46,7 @@ export const createGraphNodeInputs = (
   }));
 
 export const GraphNodeFrame = ({
+  controls,
   details = [],
   hasOutput = true,
   inputs = [],
@@ -94,6 +97,10 @@ export const GraphNodeFrame = ({
             </div>
           ))}
         </div>
+      ) : null}
+
+      {controls ? (
+        <div className={`${graphNodeControls} nopan`}>{controls}</div>
       ) : null}
 
       {hasOutput ? (
