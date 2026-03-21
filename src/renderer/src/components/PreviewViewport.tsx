@@ -1,12 +1,15 @@
 import { type JSX, useDeferredValue, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { previewFrame, viewportHost } from "../app-shell.css";
+import { registerPreviewCaptureHandler } from "../preview-capture";
 import {
   PREVIEW_VERTEX_SHADER,
   STARTER_FRAGMENT_SHADER,
 } from "../shader-source";
 import { useProjectStore } from "../store/project-store";
 import { darkThemeValues } from "../theme";
+
+const PREVIEW_CAPTURE_SIZE = 200;
 
 const createPreviewMaterial = (
   fragmentShader: string,
@@ -36,6 +39,38 @@ const formatShaderError = (
   return lines.join("\n\n");
 };
 
+const encodeCaptureDataUrl = (
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+): string | null => {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+
+  if (context === null) {
+    return null;
+  }
+
+  const flippedPixels = new Uint8ClampedArray(width * height * 4);
+
+  for (let y = 0; y < height; y += 1) {
+    const sourceOffset = y * width * 4;
+    const destinationOffset = (height - y - 1) * width * 4;
+
+    flippedPixels.set(
+      pixels.subarray(sourceOffset, sourceOffset + width * 4),
+      destinationOffset,
+    );
+  }
+
+  context.putImageData(new ImageData(flippedPixels, width, height), 0, 0);
+
+  return canvas.toDataURL("image/png");
+};
+
 export const PreviewViewport = (): JSX.Element => {
   const project = useProjectStore((s) => s.project);
 
@@ -46,12 +81,68 @@ export const PreviewViewport = (): JSX.Element => {
   const deferredVertex = useDeferredValue(vertexSource);
 
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const meshRef = useRef<THREE.Mesh<
-    THREE.TorusKnotGeometry,
+    THREE.SphereGeometry,
     THREE.Material
   > | null>(null);
+
+  useEffect(
+    () =>
+      registerPreviewCaptureHandler(async () => {
+        const scene = sceneRef.current;
+        const renderer = rendererRef.current;
+        const camera = cameraRef.current;
+
+        if (scene === null || renderer === null || camera === null) {
+          return null;
+        }
+
+        const renderTarget = new THREE.WebGLRenderTarget(
+          PREVIEW_CAPTURE_SIZE,
+          PREVIEW_CAPTURE_SIZE,
+        );
+        const pixels = new Uint8Array(
+          PREVIEW_CAPTURE_SIZE * PREVIEW_CAPTURE_SIZE * 4,
+        );
+        const previousRenderTarget = renderer.getRenderTarget();
+        const previousAspect = camera.aspect;
+
+        try {
+          camera.aspect = 1;
+          camera.updateProjectionMatrix();
+
+          renderer.setRenderTarget(renderTarget);
+          renderer.render(scene, camera);
+          renderer.readRenderTargetPixels(
+            renderTarget,
+            0,
+            0,
+            PREVIEW_CAPTURE_SIZE,
+            PREVIEW_CAPTURE_SIZE,
+            pixels,
+          );
+
+          return encodeCaptureDataUrl(
+            pixels,
+            PREVIEW_CAPTURE_SIZE,
+            PREVIEW_CAPTURE_SIZE,
+          );
+        } catch (error) {
+          console.error("Failed to capture the preview viewport.", error);
+          return null;
+        } finally {
+          camera.aspect = previousAspect;
+          camera.updateProjectionMatrix();
+          renderer.setRenderTarget(previousRenderTarget);
+          renderTarget.dispose();
+          renderer.render(scene, camera);
+        }
+      }),
+    [],
+  );
 
   useEffect(() => {
     const host = hostRef.current;
@@ -80,7 +171,7 @@ export const PreviewViewport = (): JSX.Element => {
     );
     host.append(renderer.domElement);
 
-    const geometry = new THREE.TorusKnotGeometry(0.55, 0.2, 160, 24);
+    const geometry = new THREE.SphereGeometry(1, 256, 128);
     const material = createPreviewMaterial(
       STARTER_FRAGMENT_SHADER,
       PREVIEW_VERTEX_SHADER,
@@ -100,6 +191,7 @@ export const PreviewViewport = (): JSX.Element => {
     keyLight.position.set(2, 3, 4);
     scene.add(hemiLight, keyLight);
 
+    sceneRef.current = scene;
     rendererRef.current = renderer;
     cameraRef.current = camera;
     meshRef.current = mesh;
@@ -125,8 +217,8 @@ export const PreviewViewport = (): JSX.Element => {
     const clock = new THREE.Clock();
 
     const renderFrame = (): void => {
-      mesh.rotation.x += 0.004;
-      mesh.rotation.y += 0.007;
+      mesh.rotation.x;
+      mesh.rotation.y += 0.001;
       const activeMaterial = mesh.material;
       if (activeMaterial instanceof THREE.ShaderMaterial) {
         const timeUniform = activeMaterial.uniforms.u_time;
@@ -147,6 +239,7 @@ export const PreviewViewport = (): JSX.Element => {
       mesh.material.dispose();
       renderer.dispose();
       host.textContent = "";
+      sceneRef.current = null;
       rendererRef.current = null;
       cameraRef.current = null;
       meshRef.current = null;

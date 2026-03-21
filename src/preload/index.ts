@@ -1,14 +1,19 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
+  ChatAttachPreviewContextResult,
+  FileChangeInfo,
   ProjectOpenResult,
+  ProjectSaveCapturePayload,
+  ProjectSaveCaptureResult,
   ProjectSavePayload,
   RecentProject,
-  FileChangeInfo,
   ShadilyManifest,
 } from "../shared/contracts";
 import {
   type BootstrapPayload,
   bootstrapPayloadSchema,
+  chatAttachPreviewContextResultSchema,
+  projectSaveCaptureResultSchema,
 } from "../shared/contracts";
 
 const shadilyDesktopApi = {
@@ -27,6 +32,12 @@ const shadilyDesktopApi = {
       ipcRenderer.invoke("project:openPath", folderPath),
     save: (payload: ProjectSavePayload): Promise<void> =>
       ipcRenderer.invoke("project:save", payload),
+    saveCapture: async (
+      payload: ProjectSaveCapturePayload,
+    ): Promise<ProjectSaveCaptureResult> =>
+      projectSaveCaptureResultSchema.parse(
+        await ipcRenderer.invoke("project:saveCapture", payload),
+      ),
     getRecents: (): Promise<RecentProject[]> =>
       ipcRenderer.invoke("project:getRecents"),
     readShaders: (
@@ -38,6 +49,12 @@ const shadilyDesktopApi = {
   chat: {
     send: (prompt: string): Promise<void> =>
       ipcRenderer.invoke("chat:send", prompt),
+    attachPreviewContext: async (
+      imagePath: string,
+    ): Promise<ChatAttachPreviewContextResult> =>
+      chatAttachPreviewContextResultSchema.parse(
+        await ipcRenderer.invoke("chat:attachPreviewContext", { imagePath }),
+      ),
     stop: (): Promise<void> => ipcRenderer.invoke("chat:stop"),
     onChunk: (cb: (text: string) => void): (() => void) => {
       const handler = (_e: Electron.IpcRendererEvent, text: string) => cb(text);

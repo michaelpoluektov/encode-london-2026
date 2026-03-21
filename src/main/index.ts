@@ -1,7 +1,11 @@
 import { join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import type { ProjectSavePayload, ShadilyManifest } from "../shared/contracts";
-import { bootstrapPayloadSchema } from "../shared/contracts";
+import {
+  bootstrapPayloadSchema,
+  chatAttachPreviewContextPayloadSchema,
+  projectSaveCapturePayloadSchema,
+} from "../shared/contracts";
 import * as codexRuntime from "./services/codex-runtime";
 import * as projectService from "./services/project-service";
 
@@ -77,6 +81,11 @@ app.whenReady().then(async () => {
     );
   });
 
+  ipcMain.handle("project:saveCapture", async (_e, payload: unknown) => {
+    const parsedPayload = projectSaveCapturePayloadSchema.parse(payload);
+    return projectService.saveCapture(parsedPayload);
+  });
+
   ipcMain.handle("project:openPath", async (_e, folderPath: string) => {
     const result = await projectService.openProject(folderPath);
     if (result) codexRuntime.startSession(result.folderPath);
@@ -101,8 +110,20 @@ app.whenReady().then(async () => {
     );
   });
 
+  ipcMain.handle(
+    "chat:attachPreviewContext",
+    async (event, payload: unknown) => {
+      const parsedPayload =
+        chatAttachPreviewContextPayloadSchema.parse(payload);
+      return codexRuntime.attachPreviewContext(
+        parsedPayload.imagePath,
+        (changes) => event.sender.send("chat:file-change", changes),
+      );
+    },
+  );
+
   ipcMain.handle("chat:stop", () => {
-    codexRuntime.stopSession();
+    codexRuntime.abortActiveTurn();
   });
 
   await createMainWindow();

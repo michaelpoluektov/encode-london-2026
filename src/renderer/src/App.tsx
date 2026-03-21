@@ -11,6 +11,7 @@ import {
   workspaceShell,
 } from "./app-shell.css";
 import { ChatPanel } from "./components/ChatPanel";
+import { GraphPanel } from "./components/GraphPanel";
 import { PreviewViewport } from "./components/PreviewViewport";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { ShaderEditor } from "./components/ShaderEditor";
@@ -84,6 +85,8 @@ export const App = (): JSX.Element => {
         return <ChatPanel />;
       case "preview":
         return <PreviewViewport />;
+      case "graph":
+        return <GraphPanel />;
       case "source":
         return <ShaderEditor />;
     }
