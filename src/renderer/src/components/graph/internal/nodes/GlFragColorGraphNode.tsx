@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import type { GlFragColorNode } from "../../dag/dag-schema";
+import type { GlFragColorNode } from "../../../../dag/dag-schema";
 import {
   createGraphNodeInputs,
   type GraphFlowNode,

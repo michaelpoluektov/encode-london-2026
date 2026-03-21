@@ -53,7 +53,7 @@ export const EXAMPLE_DAG_GRAPH: DagGraph = dagGraphSchema.parse({
       uniformName: "u_accent_color",
     },
     {
-      filepath: "nodes/wave.glsl",
+      filepath: "./nodes/wave.glsl",
       inputs: {
         frequency: "frequency",
         time: "time",
@@ -62,7 +62,7 @@ export const EXAMPLE_DAG_GRAPH: DagGraph = dagGraphSchema.parse({
       kind: "custom",
     },
     {
-      filepath: "nodes/noise.glsl",
+      filepath: "./nodes/noise.glsl",
       inputs: {
         frequency: "frequency",
         time: "time",
@@ -71,7 +71,7 @@ export const EXAMPLE_DAG_GRAPH: DagGraph = dagGraphSchema.parse({
       kind: "custom",
     },
     {
-      filepath: "nodes/remap.glsl",
+      filepath: "./nodes/remap.glsl",
       inputs: {
         signal: "wave",
       },
@@ -79,7 +79,7 @@ export const EXAMPLE_DAG_GRAPH: DagGraph = dagGraphSchema.parse({
       kind: "custom",
     },
     {
-      filepath: "nodes/mask.glsl",
+      filepath: "./nodes/mask.glsl",
       inputs: {
         intensity: "intensity",
         pattern: "noise",
@@ -88,7 +88,7 @@ export const EXAMPLE_DAG_GRAPH: DagGraph = dagGraphSchema.parse({
       kind: "custom",
     },
     {
-      filepath: "nodes/blend.glsl",
+      filepath: "./nodes/blend.glsl",
       inputs: {
         base: "remap",
         mask: "mask",
@@ -97,7 +97,17 @@ export const EXAMPLE_DAG_GRAPH: DagGraph = dagGraphSchema.parse({
       kind: "custom",
     },
     {
-      filepath: "nodes/shade.glsl",
+      filepath: "./nodes/tint.glsl",
+      inputs: {
+        accent: "accentColor",
+        base: "baseColor",
+        mask: "mask",
+      },
+      instanceName: "tint",
+      kind: "custom",
+    },
+    {
+      filepath: "./nodes/shade.glsl",
       inputs: {
         detail: "noise",
         roughness: "roughness",
@@ -105,16 +115,6 @@ export const EXAMPLE_DAG_GRAPH: DagGraph = dagGraphSchema.parse({
         tint: "tint",
       },
       instanceName: "shade",
-      kind: "custom",
-    },
-    {
-      filepath: "nodes/tint.glsl",
-      inputs: {
-        accent: "accentColor",
-        base: "baseColor",
-        mask: "mask",
-      },
-      instanceName: "tint",
       kind: "custom",
     },
     {

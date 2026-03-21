@@ -1,6 +1,6 @@
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
 import type { JSX, ReactNode } from "react";
-import { Text } from "../ui/Text";
+import { Text } from "../../../ui/Text";
 import {
   graphNodeCard,
   graphNodeDetailRow,

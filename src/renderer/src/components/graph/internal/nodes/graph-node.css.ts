@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { themeVars } from "../../theme";
+import { themeVars } from "../../../../theme";
 
 export const graphNodeRoot = style({
   position: "relative",
