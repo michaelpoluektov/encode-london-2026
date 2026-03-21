@@ -11,10 +11,12 @@ type PaneCollapseState = Record<CollapsiblePaneId, boolean>;
 
 type AppState = {
   readonly collapsedPanes: PaneCollapseState;
+  readonly isPreviewDiagnosticOpen: boolean;
   readonly shellPaneSizes: readonly number[];
   readonly workspaceColumnSizes: readonly number[];
   readonly workspaceLeftRowSizes: readonly number[];
   readonly workspaceRightRowSizes: readonly number[];
+  readonly togglePreviewDiagnosticOpen: () => void;
   readonly togglePaneCollapsed: (paneId: CollapsiblePaneId) => void;
   readonly setShellPaneSizes: (shellPaneSizes: readonly number[]) => void;
   readonly setWorkspaceColumnSizes: (
@@ -36,10 +38,15 @@ export const useAppStore = create<AppState>((set) => ({
     chat: false,
     render: false,
   },
+  isPreviewDiagnosticOpen: false,
   shellPaneSizes: [18, 82],
   workspaceColumnSizes: [50, 50],
   workspaceLeftRowSizes: [50, 50],
   workspaceRightRowSizes: [50, 50],
+  togglePreviewDiagnosticOpen: () =>
+    set((state) => ({
+      isPreviewDiagnosticOpen: !state.isPreviewDiagnosticOpen,
+    })),
   togglePaneCollapsed: (paneId) =>
     set((state) => ({
       collapsedPanes: {

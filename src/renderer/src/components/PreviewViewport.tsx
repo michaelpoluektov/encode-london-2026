@@ -1,43 +1,28 @@
 import { type JSX, useDeferredValue, useEffect, useRef } from "react";
 import * as THREE from "three";
-import { previewFrame, viewportHost } from "../app-shell.css";
+import {
+  DEFAULT_FRAGMENT_SHADER,
+  DEFAULT_VERTEX_SHADER,
+} from "../../../shared/default-project";
+import {
+  previewFrame,
+  previewFrameStale,
+  viewportHost,
+} from "../app-shell.css";
+import { cx } from "../lib/cx";
 import { registerPreviewCaptureHandler } from "../preview-capture";
 import {
-  PREVIEW_VERTEX_SHADER,
-  STARTER_FRAGMENT_SHADER,
-} from "../shader-source";
-import { useProjectStore } from "../store/project-store";
+  compilePreviewMaterial,
+  createPreviewMaterial,
+} from "../preview-compile";
+import { createPreviewRevision, usePreviewStore } from "../store/preview-store";
+import {
+  getProjectShaderSource,
+  useProjectStore,
+} from "../store/project-store";
 import { darkThemeValues } from "../theme";
 
 const PREVIEW_CAPTURE_SIZE = 200;
-
-const createPreviewMaterial = (
-  fragmentShader: string,
-  vertexShader: string,
-): THREE.ShaderMaterial =>
-  new THREE.ShaderMaterial({
-    fragmentShader,
-    side: THREE.DoubleSide,
-    uniforms: {
-      u_time: { value: 0 },
-    },
-    vertexShader,
-  });
-
-const formatShaderError = (
-  gl: WebGLRenderingContext,
-  program: WebGLProgram,
-  vertexShader: WebGLShader,
-  fragmentShader: WebGLShader,
-): string => {
-  const lines = [
-    gl.getProgramInfoLog(program)?.trim(),
-    gl.getShaderInfoLog(fragmentShader)?.trim(),
-    gl.getShaderInfoLog(vertexShader)?.trim(),
-  ].filter((line): line is string => line !== undefined && line.length > 0);
-
-  return lines.join("\n\n");
-};
 
 const encodeCaptureDataUrl = (
   pixels: Uint8Array,
@@ -72,13 +57,20 @@ const encodeCaptureDataUrl = (
 };
 
 export const PreviewViewport = (): JSX.Element => {
-  const project = useProjectStore((s) => s.project);
-
-  const fragmentSource = project?.shaders.fragment ?? STARTER_FRAGMENT_SHADER;
-  const vertexSource = project?.shaders.vertex ?? PREVIEW_VERTEX_SHADER;
+  const fragmentSource = useProjectStore((state) =>
+    getProjectShaderSource(state.project, "fragment"),
+  );
+  const vertexSource = useProjectStore((state) =>
+    getProjectShaderSource(state.project, "vertex"),
+  );
+  const isPreviewStale = usePreviewStore((state) => state.isStale);
 
   const deferredFragment = useDeferredValue(fragmentSource);
   const deferredVertex = useDeferredValue(vertexSource);
+  const deferredRevision = createPreviewRevision(
+    deferredFragment,
+    deferredVertex,
+  );
 
   const hostRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -173,8 +165,8 @@ export const PreviewViewport = (): JSX.Element => {
 
     const geometry = new THREE.SphereGeometry(1, 256, 128);
     const material = createPreviewMaterial(
-      STARTER_FRAGMENT_SHADER,
-      PREVIEW_VERTEX_SHADER,
+      DEFAULT_FRAGMENT_SHADER,
+      DEFAULT_VERTEX_SHADER,
     );
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
@@ -255,58 +247,31 @@ export const PreviewViewport = (): JSX.Element => {
       return;
     }
 
-    const candidateMaterial = createPreviewMaterial(
+    usePreviewStore.getState().markAttempted(deferredRevision);
+
+    const compileResult = compilePreviewMaterial(
+      renderer,
+      camera,
+      mesh.geometry,
       deferredFragment,
       deferredVertex,
     );
-    const compileScene = new THREE.Scene();
-    const compileMesh = new THREE.Mesh(mesh.geometry, candidateMaterial);
-    compileScene.add(compileMesh);
 
-    const previousShaderErrorHandler = renderer.debug.onShaderError;
-    let shaderError: string | null = null;
-
-    renderer.debug.onShaderError = (
-      gl,
-      program,
-      vertexShader,
-      fragmentShader,
-    ) => {
-      shaderError = formatShaderError(
-        gl,
-        program,
-        vertexShader,
-        fragmentShader,
-      );
-    };
-
-    try {
-      renderer.compile(compileScene, camera);
-    } catch (error) {
-      shaderError =
-        error instanceof Error
-          ? error.message
-          : "Three.js shader compilation failed.";
-    } finally {
-      renderer.debug.onShaderError = previousShaderErrorHandler;
-    }
-
-    if (shaderError !== null) {
-      candidateMaterial.dispose();
-      console.error(
-        "The shader did not compile. The previous valid shader is still rendering.\n\n%s",
-        shaderError,
-      );
+    if (compileResult.kind === "error") {
+      usePreviewStore
+        .getState()
+        .markStale(deferredRevision, compileResult.message);
       return;
     }
 
     const previousMaterial = mesh.material;
-    mesh.material = candidateMaterial;
+    mesh.material = compileResult.material;
     previousMaterial.dispose();
-  }, [deferredFragment, deferredVertex]);
+    usePreviewStore.getState().markReady(deferredRevision);
+  }, [deferredFragment, deferredRevision, deferredVertex]);
 
   return (
-    <div className={previewFrame}>
+    <div className={cx(previewFrame, isPreviewStale && previewFrameStale)}>
       <div className={viewportHost} ref={hostRef} />
     </div>
   );

@@ -28,7 +28,7 @@ declare global {
         ) => Promise<ProjectOpenResult | null>;
         open: () => Promise<ProjectOpenResult | null>;
         reload: (folderPath: string) => Promise<ProjectOpenResult>;
-        save: (payload: ProjectSavePayload) => Promise<void>;
+        save: (payload: ProjectSavePayload) => Promise<ProjectOpenResult>;
         saveCapture: (
           payload: ProjectSaveCapturePayload,
         ) => Promise<ProjectSaveCaptureResult>;

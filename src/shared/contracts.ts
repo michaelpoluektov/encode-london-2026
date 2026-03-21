@@ -69,11 +69,13 @@ export const bootstrapPayloadSchema = z.object({
 
 export type BootstrapPayload = z.infer<typeof bootstrapPayloadSchema>;
 
-export type ProjectSavePayload = {
-  folderPath: string;
-  manifest: ShadilyManifest;
-  shaders: { fragment: string; vertex: string };
-};
+export const projectSavePayloadSchema = z.object({
+  folderPath: z.string().min(1),
+  manifest: shadilyManifestSchema,
+  shaders: z.object({ fragment: z.string(), vertex: z.string() }),
+});
+
+export type ProjectSavePayload = z.infer<typeof projectSavePayloadSchema>;
 
 export const projectEntryRequestSchema = z.object({
   folderPath: z.string().min(1),

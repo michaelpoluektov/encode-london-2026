@@ -21,22 +21,10 @@ import {
   type ShadilyManifest,
   shadilyManifestSchema,
 } from "../../shared/contracts";
-
-const DEFAULT_FRAGMENT_SHADER = `uniform float u_time;
-varying vec2 vUv;
-
-void main() {
-  vec2 uv = vUv;
-  vec3 color = 0.5 + 0.5 * cos(u_time + uv.xyx + vec3(0.0, 2.0, 4.0));
-  gl_FragColor = vec4(color, 1.0);
-}`;
-
-const DEFAULT_VERTEX_SHADER = `varying vec2 vUv;
-
-void main() {
-  vUv = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}`;
+import {
+  createDefaultProjectContents,
+  DEFAULT_PROJECT_FILE_PATHS,
+} from "../../shared/default-project";
 
 const getConfigPath = (): string =>
   join(app.getPath("userData"), "config.json");
@@ -283,40 +271,31 @@ export const createProject = async (
 ): Promise<ProjectOpenResult> => {
   const folderPath = join(parentDir, name);
   mkdirSync(folderPath, { recursive: true });
-  mkdirSync(join(folderPath, "captures"), { recursive: true });
+  mkdirSync(join(folderPath, DEFAULT_PROJECT_FILE_PATHS.capturesDir), {
+    recursive: true,
+  });
 
-  const now = new Date().toISOString();
-  const manifest: ShadilyManifest = {
-    name,
-    version: "1",
-    shaders: { fragment: "material.frag", vertex: "material.vert" },
-    preview: { mesh: "torusKnot" },
-    created: now,
-    modified: now,
-  };
+  const { manifest, shaders } = createDefaultProjectContents(name);
 
   writeFileSync(
-    join(folderPath, "shadily.json"),
+    join(folderPath, DEFAULT_PROJECT_FILE_PATHS.manifest),
     JSON.stringify(manifest, null, 2),
     "utf-8",
   );
   writeFileSync(
-    join(folderPath, "material.frag"),
-    DEFAULT_FRAGMENT_SHADER,
+    join(folderPath, manifest.shaders.fragment),
+    shaders.fragment,
     "utf-8",
   );
   writeFileSync(
-    join(folderPath, "material.vert"),
-    DEFAULT_VERTEX_SHADER,
+    join(folderPath, manifest.shaders.vertex),
+    shaders.vertex,
     "utf-8",
   );
 
   addRecentProject({ name, path: folderPath });
 
-  return createProjectOpenResult(folderPath, manifest, {
-    fragment: DEFAULT_FRAGMENT_SHADER,
-    vertex: DEFAULT_VERTEX_SHADER,
-  });
+  return createProjectOpenResult(folderPath, manifest, shaders);
 };
 
 export const openProject = async (
@@ -387,7 +366,7 @@ export const saveProject = async (
   folderPath: string,
   manifest: ShadilyManifest,
   shaders: { fragment: string; vertex: string },
-): Promise<void> => {
+): Promise<ProjectOpenResult> => {
   const updated: ShadilyManifest = {
     ...manifest,
     modified: new Date().toISOString(),
@@ -407,6 +386,8 @@ export const saveProject = async (
     JSON.stringify(updated, null, 2),
     "utf-8",
   );
+
+  return createProjectOpenResult(folderPath, updated, shaders);
 };
 
 export const saveCapture = async ({

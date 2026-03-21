@@ -2,19 +2,27 @@ import { create } from "zustand";
 import type {
   ProjectEntryResult,
   ProjectOpenResult,
+  ProjectSavePayload,
+  ProjectTextEntryResult,
   ProjectTreeNode,
   ShadilyManifest,
 } from "../../../shared/contracts";
+import {
+  DEFAULT_FRAGMENT_SHADER,
+  DEFAULT_VERTEX_SHADER,
+} from "../../../shared/default-project";
 
-type ProjectDocuments = Record<string, ProjectEntryResult>;
+type ShaderFileKey = "fragment" | "vertex";
+type ProjectSavedFiles = Record<string, ProjectEntryResult>;
+type ProjectDraftFiles = Record<string, string>;
 
-type ProjectState = {
-  folderPath: string;
-  manifest: ShadilyManifest;
-  shaders: { fragment: string; vertex: string };
-  tree: ProjectTreeNode[];
-  selectedEntryPath: string | null;
-  documents: ProjectDocuments;
+export type ProjectState = {
+  readonly folderPath: string;
+  readonly manifest: ShadilyManifest;
+  readonly tree: ProjectTreeNode[];
+  readonly selectedEntryPath: string | null;
+  readonly savedFiles: ProjectSavedFiles;
+  readonly draftFiles: ProjectDraftFiles;
 };
 
 type ProjectStore = {
@@ -22,12 +30,13 @@ type ProjectStore = {
 
   readonly openProject: (result: ProjectOpenResult) => void;
   readonly refreshProject: (result: ProjectOpenResult) => void;
+  readonly commitSavedProject: (result: ProjectOpenResult) => void;
   readonly selectEntry: (path: string) => void;
-  readonly setDocument: (document: ProjectEntryResult) => void;
-  readonly updateShader: (file: "fragment" | "vertex", source: string) => void;
+  readonly setSavedDocument: (document: ProjectEntryResult) => void;
+  readonly updateDraft: (path: string, content: string) => void;
 };
 
-const normalizeProjectPath = (path: string): string =>
+export const normalizeProjectPath = (path: string): string =>
   path.replaceAll("\\", "/");
 
 const hasFilePath = (
@@ -65,7 +74,7 @@ const findFirstFilePath = (
 const createShaderDocument = (
   path: string,
   content: string,
-): ProjectEntryResult => ({
+): ProjectTextEntryResult => ({
   path: normalizeProjectPath(path),
   kind: "text",
   language: "glsl",
@@ -73,13 +82,18 @@ const createShaderDocument = (
   content,
 });
 
+const getShaderDocumentPath = (
+  manifest: ShadilyManifest,
+  file: ShaderFileKey,
+): string => normalizeProjectPath(manifest.shaders[file]);
+
 const getDefaultSelectedEntryPath = (
   tree: readonly ProjectTreeNode[],
   manifest: ShadilyManifest,
 ): string | null => {
   const preferredPaths = [
-    normalizeProjectPath(manifest.shaders.fragment),
-    normalizeProjectPath(manifest.shaders.vertex),
+    getShaderDocumentPath(manifest, "fragment"),
+    getShaderDocumentPath(manifest, "vertex"),
   ];
 
   for (const preferredPath of preferredPaths) {
@@ -91,17 +105,68 @@ const getDefaultSelectedEntryPath = (
   return findFirstFilePath(tree);
 };
 
+const filterSavedFiles = (
+  savedFiles: ProjectSavedFiles,
+  tree: readonly ProjectTreeNode[],
+): ProjectSavedFiles =>
+  Object.fromEntries(
+    Object.entries(savedFiles).filter(([path]) => hasFilePath(tree, path)),
+  );
+
+const createSavedFiles = (
+  result: ProjectOpenResult,
+  previousProject: ProjectState | null,
+): ProjectSavedFiles => {
+  const savedFiles = filterSavedFiles(
+    previousProject?.savedFiles ?? {},
+    result.tree,
+  );
+  const fragmentPath = getShaderDocumentPath(result.manifest, "fragment");
+  const vertexPath = getShaderDocumentPath(result.manifest, "vertex");
+
+  return {
+    ...savedFiles,
+    [fragmentPath]: createShaderDocument(fragmentPath, result.shaders.fragment),
+    [vertexPath]: createShaderDocument(vertexPath, result.shaders.vertex),
+  };
+};
+
+const filterDraftFiles = (
+  draftFiles: ProjectDraftFiles,
+  tree: readonly ProjectTreeNode[],
+  savedFiles: ProjectSavedFiles,
+): ProjectDraftFiles =>
+  Object.fromEntries(
+    Object.entries(draftFiles).filter(([path, draftContent]) => {
+      if (!hasFilePath(tree, path)) {
+        return false;
+      }
+
+      const savedDocument = savedFiles[path];
+
+      if (
+        savedDocument === undefined ||
+        savedDocument.kind !== "text" ||
+        !savedDocument.isEditable
+      ) {
+        return false;
+      }
+
+      return savedDocument.content !== draftContent;
+    }),
+  );
+
 const createProjectState = (
   result: ProjectOpenResult,
   previousProject: ProjectState | null,
+  mode: "open" | "refresh" | "commit",
 ): ProjectState => {
   const tree = result.tree;
-  const fragmentPath = normalizeProjectPath(result.manifest.shaders.fragment);
-  const vertexPath = normalizeProjectPath(result.manifest.shaders.vertex);
-  const documents = {
-    [fragmentPath]: createShaderDocument(fragmentPath, result.shaders.fragment),
-    [vertexPath]: createShaderDocument(vertexPath, result.shaders.vertex),
-  } satisfies ProjectDocuments;
+  const savedFiles = createSavedFiles(result, previousProject);
+  const draftFiles =
+    mode === "open"
+      ? {}
+      : filterDraftFiles(previousProject?.draftFiles ?? {}, tree, savedFiles);
 
   const preferredSelection =
     previousProject?.selectedEntryPath !== null &&
@@ -110,28 +175,100 @@ const createProjectState = (
       ? previousProject.selectedEntryPath
       : null;
 
+  if (mode === "commit") {
+    delete draftFiles[getShaderDocumentPath(result.manifest, "fragment")];
+    delete draftFiles[getShaderDocumentPath(result.manifest, "vertex")];
+  }
+
   return {
     folderPath: result.folderPath,
     manifest: result.manifest,
-    shaders: result.shaders,
     tree,
     selectedEntryPath:
       preferredSelection ?? getDefaultSelectedEntryPath(tree, result.manifest),
-    documents,
+    savedFiles,
+    draftFiles,
   };
 };
+
+export const getSavedProjectDocument = (
+  project: ProjectState,
+  path: string,
+): ProjectEntryResult | null =>
+  project.savedFiles[normalizeProjectPath(path)] ?? null;
+
+export const getProjectDocument = (
+  project: ProjectState,
+  path: string,
+): ProjectEntryResult | null => {
+  const normalizedPath = normalizeProjectPath(path);
+  const savedDocument = project.savedFiles[normalizedPath] ?? null;
+
+  if (savedDocument === null || savedDocument.kind !== "text") {
+    return savedDocument;
+  }
+
+  const draftContent = project.draftFiles[normalizedPath];
+
+  return draftContent === undefined
+    ? savedDocument
+    : {
+        ...savedDocument,
+        content: draftContent,
+      };
+};
+
+export const getProjectShaderSource = (
+  project: ProjectState | null,
+  file: ShaderFileKey,
+): string => {
+  if (project === null) {
+    return file === "fragment"
+      ? DEFAULT_FRAGMENT_SHADER
+      : DEFAULT_VERTEX_SHADER;
+  }
+
+  const document = getProjectDocument(
+    project,
+    getShaderDocumentPath(project.manifest, file),
+  );
+
+  if (document?.kind !== "text") {
+    return file === "fragment"
+      ? DEFAULT_FRAGMENT_SHADER
+      : DEFAULT_VERTEX_SHADER;
+  }
+
+  return document.content;
+};
+
+export const createProjectSavePayload = (
+  project: ProjectState,
+): ProjectSavePayload => ({
+  folderPath: project.folderPath,
+  manifest: project.manifest,
+  shaders: {
+    fragment: getProjectShaderSource(project, "fragment"),
+    vertex: getProjectShaderSource(project, "vertex"),
+  },
+});
 
 export const useProjectStore = create<ProjectStore>((set) => ({
   project: null,
 
   openProject: (result) =>
     set({
-      project: createProjectState(result, null),
+      project: createProjectState(result, null, "open"),
     }),
 
   refreshProject: (result) =>
     set((state) => ({
-      project: createProjectState(result, state.project),
+      project: createProjectState(result, state.project, "refresh"),
+    })),
+
+  commitSavedProject: (result) =>
+    set((state) => ({
+      project: createProjectState(result, state.project, "commit"),
     })),
 
   selectEntry: (path) =>
@@ -154,7 +291,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
       };
     }),
 
-  setDocument: (document) =>
+  setSavedDocument: (document) =>
     set((state) => {
       if (state.project === null) {
         return state;
@@ -166,39 +303,61 @@ export const useProjectStore = create<ProjectStore>((set) => ({
         return state;
       }
 
+      const nextSavedDocument = {
+        ...document,
+        path: projectPath,
+      };
+      const nextDraftFiles = { ...state.project.draftFiles };
+
+      if (
+        nextSavedDocument.kind === "text" &&
+        nextDraftFiles[projectPath] === nextSavedDocument.content
+      ) {
+        delete nextDraftFiles[projectPath];
+      }
+
       return {
         project: {
           ...state.project,
-          documents: {
-            ...state.project.documents,
-            [projectPath]: {
-              ...document,
-              path: projectPath,
-            },
+          savedFiles: {
+            ...state.project.savedFiles,
+            [projectPath]: nextSavedDocument,
           },
+          draftFiles: nextDraftFiles,
         },
       };
     }),
 
-  updateShader: (file, source) =>
+  updateDraft: (path, content) =>
     set((state) => {
-      if (state.project === null) return state;
+      if (state.project === null) {
+        return state;
+      }
 
-      const shaderPath = normalizeProjectPath(
-        state.project.manifest.shaders[file],
-      );
+      const projectPath = normalizeProjectPath(path);
+      const savedDocument = state.project.savedFiles[projectPath];
+
+      if (
+        !hasFilePath(state.project.tree, projectPath) ||
+        savedDocument === undefined ||
+        savedDocument.kind !== "text" ||
+        !savedDocument.isEditable
+      ) {
+        return state;
+      }
+
+      const nextDraftFiles = { ...state.project.draftFiles };
+
+      if (savedDocument.content === content) {
+        delete nextDraftFiles[projectPath];
+      } else {
+        nextDraftFiles[projectPath] = content;
+      }
 
       return {
         project: {
           ...state.project,
-          shaders: {
-            ...state.project.shaders,
-            [file]: source,
-          },
-          documents: {
-            ...state.project.documents,
-            [shaderPath]: createShaderDocument(shaderPath, source),
-          },
+          draftFiles: nextDraftFiles,
         },
       };
     }),

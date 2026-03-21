@@ -68,7 +68,7 @@ const refreshTouchedProject = async (
         path: selectedPath,
       });
 
-      useProjectStore.getState().setDocument(refreshedDocument);
+      useProjectStore.getState().setSavedDocument(refreshedDocument);
     }
   } catch {
     // non-fatal — user can manually reload
