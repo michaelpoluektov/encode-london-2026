@@ -2,17 +2,19 @@ import { contextBridge, ipcRenderer } from "electron";
 import type {
   ChatAttachPreviewContextResult,
   FileChangeInfo,
+  ProjectEntryRequest,
+  ProjectEntryResult,
   ProjectOpenResult,
   ProjectSaveCapturePayload,
   ProjectSaveCaptureResult,
   ProjectSavePayload,
-  RecentProject,
-  ShadilyManifest,
 } from "../shared/contracts";
 import {
   type BootstrapPayload,
   bootstrapPayloadSchema,
   chatAttachPreviewContextResultSchema,
+  projectEntryResultSchema,
+  projectOpenResultSchema,
   projectSaveCaptureResultSchema,
 } from "../shared/contracts";
 
@@ -24,12 +26,21 @@ const shadilyDesktopApi = {
   project: {
     pickFolder: (): Promise<string | null> =>
       ipcRenderer.invoke("project:pickFolder"),
-    create: (dir: string, name: string): Promise<ProjectOpenResult | null> =>
-      ipcRenderer.invoke("project:create", dir, name),
-    open: (): Promise<ProjectOpenResult | null> =>
-      ipcRenderer.invoke("project:open"),
-    openPath: (folderPath: string): Promise<ProjectOpenResult | null> =>
-      ipcRenderer.invoke("project:openPath", folderPath),
+    create: async (
+      dir: string,
+      name: string,
+    ): Promise<ProjectOpenResult | null> => {
+      const result = await ipcRenderer.invoke("project:create", dir, name);
+      return result === null ? null : projectOpenResultSchema.parse(result);
+    },
+    open: async (): Promise<ProjectOpenResult | null> => {
+      const result = await ipcRenderer.invoke("project:open");
+      return result === null ? null : projectOpenResultSchema.parse(result);
+    },
+    reload: async (folderPath: string): Promise<ProjectOpenResult> =>
+      projectOpenResultSchema.parse(
+        await ipcRenderer.invoke("project:reload", folderPath),
+      ),
     save: (payload: ProjectSavePayload): Promise<void> =>
       ipcRenderer.invoke("project:save", payload),
     saveCapture: async (
@@ -38,13 +49,12 @@ const shadilyDesktopApi = {
       projectSaveCaptureResultSchema.parse(
         await ipcRenderer.invoke("project:saveCapture", payload),
       ),
-    getRecents: (): Promise<RecentProject[]> =>
-      ipcRenderer.invoke("project:getRecents"),
-    readShaders: (
-      folderPath: string,
-      manifest: ShadilyManifest,
-    ): Promise<{ fragment: string; vertex: string }> =>
-      ipcRenderer.invoke("project:readShaders", folderPath, manifest),
+    readEntry: async (
+      payload: ProjectEntryRequest,
+    ): Promise<ProjectEntryResult> =>
+      projectEntryResultSchema.parse(
+        await ipcRenderer.invoke("project:readEntry", payload),
+      ),
   },
   chat: {
     send: (prompt: string): Promise<void> =>

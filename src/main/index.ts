@@ -1,9 +1,10 @@
 import { join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
-import type { ProjectSavePayload, ShadilyManifest } from "../shared/contracts";
+import type { ProjectSavePayload } from "../shared/contracts";
 import {
   bootstrapPayloadSchema,
   chatAttachPreviewContextPayloadSchema,
+  projectEntryRequestSchema,
   projectSaveCapturePayloadSchema,
 } from "../shared/contracts";
 import * as codexRuntime from "./services/codex-runtime";
@@ -39,13 +40,20 @@ const createMainWindow = async (): Promise<BrowserWindow> => {
 };
 
 app.whenReady().then(async () => {
-  ipcMain.handle("app:get-bootstrap-payload", () =>
-    bootstrapPayloadSchema.parse({
+  ipcMain.handle("app:get-bootstrap-payload", async () => {
+    const initialProject = await projectService.openMostRecentProject();
+
+    if (initialProject !== null) {
+      codexRuntime.startSession(initialProject.folderPath);
+    }
+
+    return bootstrapPayloadSchema.parse({
       appName: "Shadily",
       platform: process.platform,
       codex: codexRuntime.getCodexRuntimeState(),
-    }),
-  );
+      initialProject,
+    });
+  });
 
   ipcMain.handle("project:pickFolder", async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
@@ -86,20 +94,12 @@ app.whenReady().then(async () => {
     return projectService.saveCapture(parsedPayload);
   });
 
-  ipcMain.handle("project:openPath", async (_e, folderPath: string) => {
-    const result = await projectService.openProject(folderPath);
-    if (result) codexRuntime.startSession(result.folderPath);
-    return result;
-  });
-
-  ipcMain.handle("project:getRecents", () =>
-    projectService.getRecentProjects(),
+  ipcMain.handle("project:reload", (_e, folderPath: string) =>
+    projectService.reloadProject(folderPath),
   );
 
-  ipcMain.handle(
-    "project:readShaders",
-    (_e, folderPath: string, manifest: ShadilyManifest) =>
-      projectService.readShaders(folderPath, manifest),
+  ipcMain.handle("project:readEntry", (_e, payload: unknown) =>
+    projectService.readProjectEntry(projectEntryRequestSchema.parse(payload)),
   );
 
   ipcMain.handle("chat:send", async (event, prompt: string) => {

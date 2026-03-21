@@ -67,6 +67,42 @@ export const editorFrame = style({
   minWidth: 0,
 });
 
+export const editorEmptyState = style({
+  display: "grid",
+  placeItems: "center",
+  alignContent: "center",
+  gap: themeVars.space[3],
+  height: "100%",
+  minHeight: 0,
+  minWidth: 0,
+  padding: themeVars.space[8],
+  textAlign: "center",
+  background: `linear-gradient(180deg, ${themeVars.color.background.panel} 0%, ${themeVars.color.background.panelInset} 100%)`,
+});
+
+export const editorImageFrame = style({
+  display: "grid",
+  placeItems: "center",
+  alignContent: "center",
+  gap: themeVars.space[4],
+  height: "100%",
+  minHeight: 0,
+  minWidth: 0,
+  padding: themeVars.space[7],
+  background: `linear-gradient(180deg, ${themeVars.color.background.panel} 0%, ${themeVars.color.background.panelInset} 100%)`,
+});
+
+export const editorImagePreview = style({
+  display: "block",
+  maxWidth: "100%",
+  maxHeight: "100%",
+  minWidth: 0,
+  minHeight: 0,
+  objectFit: "contain",
+  borderRadius: themeVars.radius.lg,
+  boxShadow: themeVars.shadow.panel,
+});
+
 export const previewFrame = style({
   display: "grid",
   height: "100%",

@@ -4,12 +4,12 @@ import type {
   BootstrapPayload,
   ChatAttachPreviewContextResult,
   FileChangeInfo,
+  ProjectEntryRequest,
+  ProjectEntryResult,
   ProjectOpenResult,
   ProjectSaveCapturePayload,
   ProjectSaveCaptureResult,
   ProjectSavePayload,
-  RecentProject,
-  ShadilyManifest,
 } from "../../shared/contracts";
 
 declare global {
@@ -27,16 +27,14 @@ declare global {
           name: string,
         ) => Promise<ProjectOpenResult | null>;
         open: () => Promise<ProjectOpenResult | null>;
-        openPath: (folderPath: string) => Promise<ProjectOpenResult | null>;
+        reload: (folderPath: string) => Promise<ProjectOpenResult>;
         save: (payload: ProjectSavePayload) => Promise<void>;
         saveCapture: (
           payload: ProjectSaveCapturePayload,
         ) => Promise<ProjectSaveCaptureResult>;
-        getRecents: () => Promise<RecentProject[]>;
-        readShaders: (
-          folderPath: string,
-          manifest: ShadilyManifest,
-        ) => Promise<{ fragment: string; vertex: string }>;
+        readEntry: (
+          payload: ProjectEntryRequest,
+        ) => Promise<ProjectEntryResult>;
       };
       chat: {
         send: (prompt: string) => Promise<void>;

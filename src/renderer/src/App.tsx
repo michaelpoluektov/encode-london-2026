@@ -1,4 +1,4 @@
-import { type JSX, useEffect } from "react";
+import { type JSX, useEffect, useRef } from "react";
 import {
   appShell,
   footerBar,
@@ -26,6 +26,7 @@ import {
   type WorkspaceRegionId,
   workspacePanelDefinitions,
 } from "./store/app-store";
+import { useProjectStore } from "./store/project-store";
 
 const normalizePaneSizes = (sizes: readonly number[]): number[] => {
   const total = sizes.reduce((sum, size) => sum + size, 0);
@@ -47,7 +48,9 @@ const getRegionPanelIds = (
   });
 
 export const App = (): JSX.Element => {
+  const hasBootstrappedRef = useRef(false);
   const setBootstrap = useAppStore((state) => state.setBootstrap);
+  const openProject = useProjectStore((state) => state.openProject);
   const shellPaneSizes = useAppStore((state) => state.shellPaneSizes);
   const setShellPaneSizes = useAppStore((state) => state.setShellPaneSizes);
   const workspaceColumnSizes = useAppStore(
@@ -73,8 +76,20 @@ export const App = (): JSX.Element => {
   );
 
   useEffect(() => {
-    void window.shadily.getBootstrapPayload().then(setBootstrap);
-  }, [setBootstrap]);
+    if (hasBootstrappedRef.current) {
+      return;
+    }
+
+    hasBootstrappedRef.current = true;
+
+    void window.shadily.getBootstrapPayload().then((payload) => {
+      setBootstrap(payload);
+
+      if (payload.initialProject !== null) {
+        openProject(payload.initialProject);
+      }
+    });
+  }, [openProject, setBootstrap]);
 
   const sidePanelIds = getRegionPanelIds(workspacePanels, "side");
   const bottomPanelIds = getRegionPanelIds(workspacePanels, "bottom");

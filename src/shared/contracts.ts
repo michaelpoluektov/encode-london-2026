@@ -9,14 +9,6 @@ export const codexRuntimeSchema = z.object({
 
 export type CodexRuntimeState = z.infer<typeof codexRuntimeSchema>;
 
-export const bootstrapPayloadSchema = z.object({
-  appName: z.string().min(1),
-  platform: z.string().min(1),
-  codex: codexRuntimeSchema,
-});
-
-export type BootstrapPayload = z.infer<typeof bootstrapPayloadSchema>;
-
 export const shadilyManifestSchema = z.object({
   name: z.string(),
   version: z.literal("1"),
@@ -41,17 +33,94 @@ export const appConfigSchema = z.object({
 
 export type AppConfig = z.infer<typeof appConfigSchema>;
 
-export type ProjectOpenResult = {
-  folderPath: string;
-  manifest: ShadilyManifest;
-  shaders: { fragment: string; vertex: string };
+export type ProjectTreeNode = {
+  path: string;
+  name: string;
+  kind: "file" | "directory";
+  itemKind: "directory" | "editable" | "readOnly" | "image" | "binary";
+  children?: ProjectTreeNode[];
 };
+
+export const projectTreeNodeSchema: z.ZodType<ProjectTreeNode> = z.lazy(() =>
+  z.object({
+    path: z.string().min(1),
+    name: z.string().min(1),
+    kind: z.enum(["file", "directory"]),
+    itemKind: z.enum(["directory", "editable", "readOnly", "image", "binary"]),
+    children: z.array(projectTreeNodeSchema).optional(),
+  }),
+);
+
+export const projectOpenResultSchema = z.object({
+  folderPath: z.string().min(1),
+  manifest: shadilyManifestSchema,
+  shaders: z.object({ fragment: z.string(), vertex: z.string() }),
+  tree: z.array(projectTreeNodeSchema),
+});
+
+export type ProjectOpenResult = z.infer<typeof projectOpenResultSchema>;
+
+export const bootstrapPayloadSchema = z.object({
+  appName: z.string().min(1),
+  platform: z.string().min(1),
+  codex: codexRuntimeSchema,
+  initialProject: projectOpenResultSchema.nullable(),
+});
+
+export type BootstrapPayload = z.infer<typeof bootstrapPayloadSchema>;
 
 export type ProjectSavePayload = {
   folderPath: string;
   manifest: ShadilyManifest;
   shaders: { fragment: string; vertex: string };
 };
+
+export const projectEntryRequestSchema = z.object({
+  folderPath: z.string().min(1),
+  manifest: shadilyManifestSchema,
+  path: z.string().min(1),
+});
+
+export type ProjectEntryRequest = z.infer<typeof projectEntryRequestSchema>;
+
+export const projectTextEntryResultSchema = z.object({
+  path: z.string().min(1),
+  kind: z.literal("text"),
+  language: z.string().min(1),
+  isEditable: z.boolean(),
+  content: z.string(),
+});
+
+export const projectBinaryEntryResultSchema = z.object({
+  path: z.string().min(1),
+  kind: z.literal("binary"),
+  language: z.null(),
+  isEditable: z.literal(false),
+});
+
+export const projectImageEntryResultSchema = z.object({
+  path: z.string().min(1),
+  kind: z.literal("image"),
+  isEditable: z.literal(false),
+  sourceUrl: z.string().min(1),
+});
+
+export const projectEntryResultSchema = z.discriminatedUnion("kind", [
+  projectTextEntryResultSchema,
+  projectImageEntryResultSchema,
+  projectBinaryEntryResultSchema,
+]);
+
+export type ProjectTextEntryResult = z.infer<
+  typeof projectTextEntryResultSchema
+>;
+export type ProjectImageEntryResult = z.infer<
+  typeof projectImageEntryResultSchema
+>;
+export type ProjectBinaryEntryResult = z.infer<
+  typeof projectBinaryEntryResultSchema
+>;
+export type ProjectEntryResult = z.infer<typeof projectEntryResultSchema>;
 
 export const projectSaveCapturePayloadSchema = z.object({
   folderPath: z.string().min(1),
