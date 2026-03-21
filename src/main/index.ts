@@ -7,6 +7,8 @@ import {
   projectCreatePayloadSchema,
   projectEntryRequestSchema,
   projectFolderPathSchema,
+  projectLayoutRequestSchema,
+  projectLayoutSavePayloadSchema,
   projectSaveCapturePayloadSchema,
   projectSavePayloadSchema,
 } from "../shared/contracts";
@@ -131,6 +133,19 @@ app.whenReady().then(async () => {
   ipcMain.handle("project:readEntry", (_e, payload: unknown) =>
     projectService.readProjectEntry(projectEntryRequestSchema.parse(payload)),
   );
+
+  ipcMain.handle("project:getLayout", async (_e, payload: unknown) => {
+    const parsedPayload = projectLayoutRequestSchema.parse(payload);
+    return projectService.readProjectLayout(parsedPayload.projectId);
+  });
+
+  ipcMain.handle("project:saveLayout", async (_e, payload: unknown) => {
+    const parsedPayload = projectLayoutSavePayloadSchema.parse(payload);
+    await projectService.writeProjectLayout(
+      parsedPayload.projectId,
+      parsedPayload.layout,
+    );
+  });
 
   ipcMain.handle("chat:send", async (event, payload: unknown) => {
     const prompt = chatPromptSchema.parse(payload);

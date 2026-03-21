@@ -17,6 +17,7 @@ type SplitLayoutProps = {
   readonly panes: readonly SplitPaneDefinition[];
   readonly defaultSizes?: readonly number[];
   readonly onChange?: (sizes: number[]) => void;
+  readonly onDragEnd?: () => void;
   readonly orientation?: "horizontal" | "vertical";
 };
 
@@ -24,6 +25,7 @@ export const SplitLayout = ({
   panes,
   defaultSizes,
   onChange,
+  onDragEnd,
   orientation = "horizontal",
 }: SplitLayoutProps): JSX.Element => {
   const allotmentDefaultSizes =
@@ -34,6 +36,7 @@ export const SplitLayout = ({
       <Allotment
         defaultSizes={allotmentDefaultSizes}
         onChange={onChange}
+        onDragEnd={onDragEnd}
         vertical={orientation === "vertical"}
       >
         {panes.map((pane) => (

@@ -19,7 +19,6 @@ import {
   getLanguageForPath,
   getProjectItemKind,
 } from "./project-tree";
-import { addRecentProject } from "./recent-projects";
 
 const toProjectPath = (path: string): string => path.split(sep).join("/");
 
@@ -70,10 +69,7 @@ export const createProjectOpenResult = (
   tree: buildProjectTree(folderPath, manifest),
 });
 
-export const loadProject = (
-  folderPath: string,
-  recordRecent = true,
-): ProjectOpenResult => {
+export const loadProject = (folderPath: string): ProjectOpenResult => {
   const manifestRaw = JSON.parse(
     readFileSync(
       join(folderPath, DEFAULT_PROJECT_FILE_PATHS.manifest),
@@ -82,10 +78,6 @@ export const loadProject = (
   );
   const manifest = shadilyManifestSchema.parse(manifestRaw);
   const shaders = readShaders(folderPath, manifest);
-
-  if (recordRecent) {
-    addRecentProject({ name: manifest.name, path: folderPath });
-  }
 
   return createProjectOpenResult(folderPath, manifest, shaders);
 };
@@ -118,8 +110,6 @@ export const createProject = async (
     "utf-8",
   );
 
-  addRecentProject({ name, path: folderPath });
-
   return createProjectOpenResult(folderPath, manifest, shaders);
 };
 
@@ -129,7 +119,7 @@ export const openProject = async (
 
 export const reloadProject = async (
   folderPath: string,
-): Promise<ProjectOpenResult> => loadProject(folderPath, false);
+): Promise<ProjectOpenResult> => loadProject(folderPath);
 
 export const readProjectEntry = ({
   folderPath,
