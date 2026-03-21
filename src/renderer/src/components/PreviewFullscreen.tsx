@@ -37,7 +37,7 @@ export const PreviewFullscreen = ({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const meshRef = useRef<THREE.Mesh<
-    THREE.SphereGeometry,
+    THREE.PlaneGeometry,
     THREE.Material
   > | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
@@ -71,8 +71,8 @@ export const PreviewFullscreen = ({
     let scene: THREE.Scene | null = null;
     let renderer: THREE.WebGLRenderer | null = null;
     let camera: THREE.PerspectiveCamera | null = null;
-    let geometry: THREE.SphereGeometry | null = null;
-    let mesh: THREE.Mesh<THREE.SphereGeometry, THREE.Material> | null = null;
+    let geometry: THREE.PlaneGeometry | null = null;
+    let mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.Material> | null = null;
     let controls: OrbitControls | null = null;
     let resizeObserver: ResizeObserver | null = null;
     let frameId = 0;
@@ -106,7 +106,7 @@ export const PreviewFullscreen = ({
     controls.maxDistance = 10;
     controls.saveState();
 
-    geometry = new THREE.SphereGeometry(1, 256, 128);
+    geometry = new THREE.PlaneGeometry(2.4, 2.4, 1, 1);
     const material = createPreviewMaterial(
       fragmentSource,
       DEFAULT_VERTEX_SHADER,
