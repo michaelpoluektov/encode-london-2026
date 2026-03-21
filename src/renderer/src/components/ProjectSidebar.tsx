@@ -17,6 +17,8 @@ import {
   folderGlyph,
   imageGlyph,
   projectActions,
+  projectActionsPrimary,
+  projectActionsToggle,
   projectSection,
   projectSidebar,
   readOnlyGlyph,
@@ -37,6 +39,8 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   DocumentIcon,
+  EyeIcon,
+  EyeOffIcon,
   FileIcon,
   FolderClosedIcon,
   FolderOpenIcon,
@@ -140,6 +144,31 @@ const createInitialOpenState = (
     }),
   );
 
+const HIDDEN_FILENAMES = new Set(["AGENTS.md", "shadily.json"]);
+
+const filterTreeNodes = (
+  nodes: readonly ProjectTreeNode[],
+  showHiddenFiles: boolean,
+): ProjectTreeNode[] => {
+  if (showHiddenFiles) {
+    return [...nodes];
+  }
+
+  return nodes.flatMap((node) => {
+    if (node.kind === "file") {
+      return HIDDEN_FILENAMES.has(node.name) ? [] : [node];
+    }
+
+    const children = filterTreeNodes(node.children ?? [], showHiddenFiles);
+
+    if (children.length === 0) {
+      return [];
+    }
+
+    return [{ ...node, children }];
+  });
+};
+
 export const ProjectSidebar = (): JSX.Element => {
   const project = useProjectStore((s) => s.project);
   const openProject = useProjectStore((s) => s.openProject);
@@ -147,12 +176,17 @@ export const ProjectSidebar = (): JSX.Element => {
 
   const [pendingFolder, setPendingFolder] = useState<string | null>(null);
   const [pendingName, setPendingName] = useState("");
+  const [showHiddenFiles, setShowHiddenFiles] = useState(false);
   const [treeHeight, setTreeHeight] = useState(1);
 
   const treeViewportRef = useRef<HTMLDivElement | null>(null);
+  const filteredTree = useMemo(
+    () => filterTreeNodes(project?.tree ?? [], showHiddenFiles),
+    [project?.tree, showHiddenFiles],
+  );
   const initialOpenState = useMemo(
-    () => createInitialOpenState(project?.tree ?? []),
-    [project?.tree],
+    () => createInitialOpenState(filteredTree),
+    [filteredTree],
   );
 
   useEffect(() => {
@@ -224,27 +258,43 @@ export const ProjectSidebar = (): JSX.Element => {
     <div className={projectSidebar}>
       <section className={projectSection}>
         <div className={projectActions}>
+          <div className={projectActionsPrimary}>
+            <Button
+              aria-label="Create project"
+              onClick={() => {
+                void handleNewProject();
+              }}
+              size="sm"
+              variant="outline"
+            >
+              <PlusIcon size={12} />
+              New
+            </Button>
+            <Button
+              aria-label="Open project"
+              onClick={() => {
+                void handleOpenProject();
+              }}
+              size="sm"
+              variant="outline"
+            >
+              <DocumentIcon size={12} />
+              Open
+            </Button>
+          </div>
           <Button
-            aria-label="Create project"
+            aria-label={
+              showHiddenFiles ? "Hide hidden files" : "Show hidden files"
+            }
+            className={projectActionsToggle}
             onClick={() => {
-              void handleNewProject();
+              setShowHiddenFiles((visible) => !visible);
             }}
             size="sm"
-            variant="outline"
+            square
+            variant="plain"
           >
-            <PlusIcon size={12} />
-            New
-          </Button>
-          <Button
-            aria-label="Open project"
-            onClick={() => {
-              void handleOpenProject();
-            }}
-            size="sm"
-            variant="outline"
-          >
-            <DocumentIcon size={12} />
-            Open
+            {showHiddenFiles ? <EyeOffIcon size={12} /> : <EyeIcon size={12} />}
           </Button>
         </div>
       </section>
@@ -271,7 +321,7 @@ export const ProjectSidebar = (): JSX.Element => {
             <Tree<ProjectTreeNode>
               key={`${project.manifest.projectId}-${treeHeight}`}
               className={treeClassName}
-              data={project.tree}
+              data={filteredTree}
               disableDrag
               disableEdit
               disableMultiSelection

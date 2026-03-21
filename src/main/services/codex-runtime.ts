@@ -47,7 +47,6 @@ const getCodex = (): Codex => {
 };
 
 export const setMcpPort = (port: number): void => {
-  console.log(`[codex-runtime] MCP port set to ${port}`);
   _mcpPort = port;
   _codex = null; // force recreation with MCP config
 };
@@ -83,9 +82,10 @@ const toRunItemType = (item: ThreadItem): ThreadItem["type"] | "error" =>
 const buildToolCallResultText = (
   item: Extract<ThreadItem, { type: "mcp_tool_call" }>,
 ): string | null => {
-  if (item.error) return item.error.message;
   const blocks = item.result?.content;
-  if (!blocks?.length) return null;
+  if (!blocks?.length) {
+    return item.error?.message ?? null;
+  }
   const imageBlock = blocks.find((b) => b.type === "image");
   if (
     imageBlock !== undefined &&
@@ -389,7 +389,7 @@ const runCodexTurn = async ({
               toolName: event.item.tool,
               argsText: JSON.stringify(event.item.arguments ?? {}),
               resultText: buildToolCallResultText(event.item),
-              isError: event.item.error !== undefined,
+              isError: event.item.status === "failed",
               parentPartId: null,
             });
           }

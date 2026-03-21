@@ -158,7 +158,6 @@ const createMcpServerInstance = (): McpServer => {
 export const startMcpServer = async (): Promise<number> =>
   new Promise<number>((resolve, reject) => {
     const httpServer = createServer(async (req, res) => {
-      console.log(`[mcp-server] ${req.method} ${req.url}`);
       const url = req.url ?? "";
       if (!url.startsWith("/mcp")) {
         res.writeHead(404);
@@ -196,9 +195,6 @@ export const startMcpServer = async (): Promise<number> =>
       const address = httpServer.address();
       const port =
         typeof address === "object" && address !== null ? address.port : 0;
-      console.log(
-        `[mcp-server] MCP server listening on http://127.0.0.1:${port}/mcp`,
-      );
       resolve(port);
     });
 

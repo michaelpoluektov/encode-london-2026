@@ -3,7 +3,6 @@ import {
   MessagePrimitive,
   ThreadPrimitive,
   type ToolCallMessagePartProps,
-  useMessage,
 } from "@assistant-ui/react";
 import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
 import {
@@ -206,10 +205,6 @@ const AssistantMessageBubble = ({
 }: {
   isStreaming: boolean;
 }): JSX.Element => {
-  const hasText = useMessage((m) =>
-    m.content.some((p) => "text" in p && Boolean(p.text)),
-  );
-  const showSpinner = isStreaming && !hasText;
   return (
     <div className={chatMessageRow}>
       <div
@@ -218,7 +213,16 @@ const AssistantMessageBubble = ({
         }
       >
         <div className={chatMessageBody}>
-          {showSpinner && (
+          <MessagePrimitive.Content
+            components={{
+              Text: AssistantText,
+              Reasoning: AssistantReasoning,
+              tools: {
+                Fallback: ToolCallBlock,
+              },
+            }}
+          />
+          {isStreaming && (
             <div className={chatLoadingSpinner}>
               {([0, 200, 400] as const).map((delay) => (
                 <span
@@ -228,17 +232,6 @@ const AssistantMessageBubble = ({
                 />
               ))}
             </div>
-          )}
-          {!showSpinner && (
-            <MessagePrimitive.Content
-              components={{
-                Text: AssistantText,
-                Reasoning: AssistantReasoning,
-                tools: {
-                  Fallback: ToolCallBlock,
-                },
-              }}
-            />
           )}
         </div>
       </div>

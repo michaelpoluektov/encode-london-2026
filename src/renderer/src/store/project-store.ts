@@ -47,10 +47,9 @@ type ProjectStore = {
   readonly closeTab: (path: string) => void;
   readonly markTabsAiModified: (paths: string[]) => void;
   readonly setSavedDocument: (document: ProjectEntryResult) => void;
+  readonly setExternallySavedDocument: (document: ProjectEntryResult) => void;
   readonly updateDraft: (path: string, content: string) => void;
 };
-
-
 
 export const useProjectStore = create<ProjectStore>((set) => ({
   project: null,
@@ -122,6 +121,19 @@ export const useProjectStore = create<ProjectStore>((set) => ({
 
       return {
         project: setProjectSavedDocument(state.project, document),
+      };
+    }),
+
+  setExternallySavedDocument: (document) =>
+    set((state) => {
+      if (state.project === null) {
+        return state;
+      }
+
+      return {
+        project: setProjectSavedDocument(state.project, document, {
+          discardDraft: true,
+        }),
       };
     }),
 

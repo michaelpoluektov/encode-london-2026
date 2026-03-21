@@ -16,7 +16,19 @@ export const projectSection = style({
 
 export const projectActions = style({
   display: "flex",
+  alignItems: "center",
   gap: themeVars.space[2],
+});
+
+export const projectActionsPrimary = style({
+  display: "flex",
+  gap: themeVars.space[2],
+  minWidth: 0,
+});
+
+export const projectActionsToggle = style({
+  marginLeft: "auto",
+  color: themeVars.color.text.muted,
 });
 
 export const treeShell = style({

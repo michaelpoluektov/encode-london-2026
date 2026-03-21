@@ -257,6 +257,57 @@ export const MagnifyingGlassIcon = ({
   </IconBase>
 );
 
+export const EyeIcon = ({
+  className,
+  size,
+  strokeWidth = 1.35,
+}: IconProps): JSX.Element => (
+  <IconBase className={className} size={size}>
+    <path
+      d="M1.75 8c1.5-2.55 3.68-3.85 6.25-3.85S12.75 5.45 14.25 8c-1.5 2.55-3.68 3.85-6.25 3.85S3.25 10.55 1.75 8Z"
+      stroke="currentColor"
+      strokeLinejoin="round"
+      strokeWidth={strokeWidth}
+    />
+    <circle
+      cx="8"
+      cy="8"
+      r="2"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+    />
+  </IconBase>
+);
+
+export const EyeOffIcon = ({
+  className,
+  size,
+  strokeWidth = 1.35,
+}: IconProps): JSX.Element => (
+  <IconBase className={className} size={size}>
+    <path
+      d="M2.25 2.25 13.75 13.75"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth={strokeWidth}
+    />
+    <path
+      d="M6.25 4.55A7.53 7.53 0 0 1 8 4.15c2.57 0 4.75 1.3 6.25 3.85a10.75 10.75 0 0 1-2.25 2.58"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={strokeWidth}
+    />
+    <path
+      d="M10.2 10.32A4.66 4.66 0 0 1 8 11.85c-2.57 0-4.75-1.3-6.25-3.85A10.76 10.76 0 0 1 4.8 4.82"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={strokeWidth}
+    />
+  </IconBase>
+);
+
 export const CloseIcon = ({
   className,
   size,

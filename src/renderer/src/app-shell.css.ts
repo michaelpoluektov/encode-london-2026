@@ -141,7 +141,7 @@ export const viewportHost = style({
   minHeight: 0,
   minWidth: 0,
   overflow: "hidden",
-  background: themeVars.color.preview.background,
+  background: "transparent",
   position: "relative",
 });
 

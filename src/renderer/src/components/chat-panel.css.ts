@@ -461,8 +461,12 @@ export const chatCheckpointPreviewImage = style({
 
 // Inline image in tool call result
 export const chatToolCallImage = style({
+  width: "auto",
+  height: "auto",
   maxWidth: "100%",
   maxHeight: "200px",
+  alignSelf: "flex-start",
+  objectFit: "contain",
   borderRadius: themeVars.radius.sm,
   display: "block",
   marginTop: themeVars.space[1],

@@ -62,7 +62,12 @@ export const saveProject = async (
   graphSource: string,
   vertexSource: string,
 ): Promise<ProjectOpenResult> => {
-  const project = await saveProjectFiles(folderPath, manifest, graphSource, vertexSource);
+  const project = await saveProjectFiles(
+    folderPath,
+    manifest,
+    graphSource,
+    vertexSource,
+  );
   await upsertProjectMetadata(project.folderPath, project.manifest);
   return project;
 };

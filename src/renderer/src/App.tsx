@@ -485,7 +485,7 @@ export const App = (): JSX.Element => {
       label: "Graph",
       minSize: 180,
       paneId: "graph",
-      restorePlacement: "bottomRight",
+      restorePlacement: "topRight",
       headerActions: [captureAction],
     },
     {
@@ -494,7 +494,7 @@ export const App = (): JSX.Element => {
       label: "Source",
       minSize: 220,
       paneId: "source",
-      restorePlacement: "topRight",
+      restorePlacement: "bottomRight",
     },
   ] as const;
 

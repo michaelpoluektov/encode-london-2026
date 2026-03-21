@@ -53,13 +53,33 @@ const waitForPendingShaderReload = async (): Promise<void> => {
 
 const hasTouchedPath = (
   changes: FileChangeInfo[],
+  projectFolderPath: string,
   projectPath: string,
 ): boolean => {
   const normalizedPath = normalizeProjectPath(projectPath);
 
   return changes.some(
-    (change) => normalizeProjectPath(change.path) === normalizedPath,
+    (change) =>
+      toProjectRelativePath(projectFolderPath, change.path) === normalizedPath,
   );
+};
+
+const toProjectRelativePath = (folderPath: string, path: string): string => {
+  const normalizedPath = normalizeProjectPath(path);
+  const normalizedFolderPath = normalizeProjectPath(folderPath).replace(
+    /\/+$/,
+    "",
+  );
+
+  if (normalizedPath === normalizedFolderPath) {
+    return "";
+  }
+
+  const projectPrefix = `${normalizedFolderPath}/`;
+
+  return normalizedPath.startsWith(projectPrefix)
+    ? normalizedPath.slice(projectPrefix.length)
+    : normalizedPath;
 };
 
 const refreshTouchedProject = async (
@@ -77,13 +97,54 @@ const refreshTouchedProject = async (
     );
     useProjectStore.getState().refreshProject(freshProject);
 
+    const touchedPaths = [
+      ...new Set(
+        changes
+          .filter((change) => change.kind !== "delete")
+          .map((change) =>
+            toProjectRelativePath(project.folderPath, change.path),
+          )
+          .filter((path) => path.length > 0),
+      ),
+    ];
+    const openTabPaths = new Set(
+      useProjectStore.getState().project?.openTabPaths ?? [],
+    );
+    const pathsToRefresh = touchedPaths.filter((path) =>
+      openTabPaths.has(path),
+    );
+
+    await Promise.all(
+      pathsToRefresh.map(async (path) => {
+        const currentProject = useProjectStore.getState().project;
+
+        if (currentProject === null) {
+          return;
+        }
+
+        const refreshedDocument = await window.shadily.project.readEntry({
+          folderPath: currentProject.folderPath,
+          manifest: currentProject.manifest,
+          path,
+        });
+
+        useProjectStore
+          .getState()
+          .setExternallySavedDocument(refreshedDocument);
+      }),
+    );
+
     const selectedProject = useProjectStore.getState().project;
     const selectedPath = selectedProject?.selectedEntryPath ?? null;
 
     if (
       selectedProject !== null &&
       selectedPath !== null &&
-      hasTouchedPath(changes, selectedPath)
+      hasTouchedPath(
+        changes.filter((change) => change.kind !== "delete"),
+        selectedProject.folderPath,
+        selectedPath,
+      )
     ) {
       const refreshedDocument = await window.shadily.project.readEntry({
         folderPath: selectedProject.folderPath,
@@ -91,7 +152,7 @@ const refreshTouchedProject = async (
         path: selectedPath,
       });
 
-      useProjectStore.getState().setSavedDocument(refreshedDocument);
+      useProjectStore.getState().setExternallySavedDocument(refreshedDocument);
     }
   } catch {
     // non-fatal — user can manually reload
@@ -99,7 +160,20 @@ const refreshTouchedProject = async (
 };
 
 const queueShaderReload = (changes: FileChangeInfo[]): void => {
-  useProjectStore.getState().markTabsAiModified(changes.map((c) => c.path));
+  const project = useProjectStore.getState().project;
+
+  if (project !== null) {
+    useProjectStore
+      .getState()
+      .markTabsAiModified(
+        changes
+          .map((change) =>
+            toProjectRelativePath(project.folderPath, change.path),
+          )
+          .filter((path) => path.length > 0),
+      );
+  }
+
   pendingShaderReload = pendingShaderReload
     .catch(() => undefined)
     .then(async () => refreshTouchedProject(changes));
