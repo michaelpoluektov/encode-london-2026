@@ -37,11 +37,13 @@ export const shellTitle = style({
 export const layoutViewport = style({
   minHeight: 0,
   padding: 0,
+  position: "relative",
 });
 
 export const workspaceShell = style({
   height: "100%",
   minHeight: 0,
+  position: "relative",
 });
 
 export const workspaceGrid = style({
@@ -52,6 +54,7 @@ export const workspaceGrid = style({
 export const workspaceColumn = style({
   height: "100%",
   minHeight: 0,
+  position: "relative",
 });
 
 export const shellFrame = style({

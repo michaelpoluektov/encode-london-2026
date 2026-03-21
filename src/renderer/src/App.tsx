@@ -13,11 +13,11 @@ import {
 import { ChatPanel } from "./components/ChatPanel";
 import { GraphPanel } from "./components/GraphPanel";
 import { Panel } from "./components/Panel";
+import { PaneRestoreControl } from "./components/PaneRestoreControl";
 import { PreviewViewport } from "./components/PreviewViewport";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { ShaderEditor } from "./components/ShaderEditor";
 import { SplitLayout } from "./components/SplitLayout";
-import { Button } from "./components/ui/Button";
 import { Text } from "./components/ui/Text";
 import { useAppStore } from "./store/app-store";
 import { useProjectStore } from "./store/project-store";
@@ -35,12 +35,8 @@ const normalizePaneSizes = (sizes: readonly number[]): number[] => {
 export const App = (): JSX.Element => {
   const hasBootstrappedRef = useRef(false);
   const openProject = useProjectStore((state) => state.openProject);
-  const isProjectSidebarOpen = useAppStore(
-    (state) => state.isProjectSidebarOpen,
-  );
-  const setProjectSidebarOpen = useAppStore(
-    (state) => state.setProjectSidebarOpen,
-  );
+  const collapsedPanes = useAppStore((state) => state.collapsedPanes);
+  const togglePaneCollapsed = useAppStore((state) => state.togglePaneCollapsed);
   const shellPaneSizes = useAppStore((state) => state.shellPaneSizes);
   const setShellPaneSizes = useAppStore((state) => state.setShellPaneSizes);
   const workspaceColumnSizes = useAppStore(
@@ -76,6 +72,14 @@ export const App = (): JSX.Element => {
     });
   }, [openProject]);
 
+  const isSourceCollapseDisabled =
+    collapsedPanes.graph && !collapsedPanes.source;
+  const isGraphCollapseDisabled =
+    collapsedPanes.source && !collapsedPanes.graph;
+  const isChatCollapseDisabled = collapsedPanes.render && !collapsedPanes.chat;
+  const isRenderCollapseDisabled =
+    collapsedPanes.chat && !collapsedPanes.render;
+
   const workspaceGridShell = (
     <div className={workspaceGrid}>
       <SplitLayout
@@ -85,30 +89,68 @@ export const App = (): JSX.Element => {
           {
             content: (
               <div className={workspaceColumn}>
+                {collapsedPanes.source ? (
+                  <PaneRestoreControl
+                    label="Source"
+                    placement="topRight"
+                    onRestore={() => {
+                      togglePaneCollapsed("source");
+                    }}
+                  />
+                ) : null}
+                {collapsedPanes.graph ? (
+                  <PaneRestoreControl
+                    label="Graph"
+                    placement="bottomRight"
+                    onRestore={() => {
+                      togglePaneCollapsed("graph");
+                    }}
+                  />
+                ) : null}
                 <SplitLayout
                   defaultSizes={normalizePaneSizes(workspaceLeftRowSizes)}
-                  onChange={setWorkspaceLeftRowSizes}
+                  onChange={(sizes) => {
+                    if (collapsedPanes.source || collapsedPanes.graph) {
+                      return;
+                    }
+
+                    setWorkspaceLeftRowSizes(sizes);
+                  }}
                   orientation="vertical"
                   panes={[
                     {
                       content: (
-                        <Panel title="Source">
+                        <Panel
+                          collapseDisabled={isSourceCollapseDisabled}
+                          label="Source"
+                          onToggleCollapsed={() => {
+                            togglePaneCollapsed("source");
+                          }}
+                        >
                           <ShaderEditor />
                         </Panel>
                       ),
                       id: "source-panel",
                       minSize: 220,
                       preferredSize: `${workspaceLeftRowSizes[0]}%`,
+                      visible: !collapsedPanes.source,
                     },
                     {
                       content: (
-                        <Panel title="Graph">
+                        <Panel
+                          collapseDisabled={isGraphCollapseDisabled}
+                          label="Graph"
+                          onToggleCollapsed={() => {
+                            togglePaneCollapsed("graph");
+                          }}
+                        >
                           <GraphPanel />
                         </Panel>
                       ),
                       id: "graph-panel",
                       minSize: 180,
                       preferredSize: `${workspaceLeftRowSizes[1]}%`,
+                      visible: !collapsedPanes.graph,
                     },
                   ]}
                 />
@@ -121,30 +163,68 @@ export const App = (): JSX.Element => {
           {
             content: (
               <div className={workspaceColumn}>
+                {collapsedPanes.chat ? (
+                  <PaneRestoreControl
+                    label="Chat"
+                    placement="topRight"
+                    onRestore={() => {
+                      togglePaneCollapsed("chat");
+                    }}
+                  />
+                ) : null}
+                {collapsedPanes.render ? (
+                  <PaneRestoreControl
+                    label="Render"
+                    placement="bottomRight"
+                    onRestore={() => {
+                      togglePaneCollapsed("render");
+                    }}
+                  />
+                ) : null}
                 <SplitLayout
                   defaultSizes={normalizePaneSizes(workspaceRightRowSizes)}
-                  onChange={setWorkspaceRightRowSizes}
+                  onChange={(sizes) => {
+                    if (collapsedPanes.chat || collapsedPanes.render) {
+                      return;
+                    }
+
+                    setWorkspaceRightRowSizes(sizes);
+                  }}
                   orientation="vertical"
                   panes={[
                     {
                       content: (
-                        <Panel title="Chat">
+                        <Panel
+                          collapseDisabled={isChatCollapseDisabled}
+                          label="Chat"
+                          onToggleCollapsed={() => {
+                            togglePaneCollapsed("chat");
+                          }}
+                        >
                           <ChatPanel />
                         </Panel>
                       ),
                       id: "chat-panel",
                       minSize: 220,
                       preferredSize: `${workspaceRightRowSizes[0]}%`,
+                      visible: !collapsedPanes.chat,
                     },
                     {
                       content: (
-                        <Panel title="Render">
+                        <Panel
+                          collapseDisabled={isRenderCollapseDisabled}
+                          label="Render"
+                          onToggleCollapsed={() => {
+                            togglePaneCollapsed("render");
+                          }}
+                        >
                           <PreviewViewport />
                         </Panel>
                       ),
                       id: "render-panel",
                       minSize: 220,
                       preferredSize: `${workspaceRightRowSizes[1]}%`,
+                      visible: !collapsedPanes.render,
                     },
                   ]}
                 />
@@ -165,46 +245,56 @@ export const App = (): JSX.Element => {
         <Text as="h1" className={shellTitle} variant="title">
           Shadily
         </Text>
-        <Button
-          onClick={() => {
-            setProjectSidebarOpen(!isProjectSidebarOpen);
-          }}
-          variant="outline"
-        >
-          {isProjectSidebarOpen ? "Hide Project" : "Show Project"}
-        </Button>
       </header>
       <section className={layoutViewport}>
-        {isProjectSidebarOpen ? (
-          <SplitLayout
-            defaultSizes={normalizePaneSizes(shellPaneSizes)}
-            onChange={setShellPaneSizes}
-            panes={[
-              {
-                content: <ProjectSidebar />,
-                id: "project-sidebar",
-                minSize: 220,
-                preferredSize: `${shellPaneSizes[0]}%`,
-                snap: true,
-              },
-              {
-                content: (
-                  <div className={workspaceShell}>{workspaceGridShell}</div>
-                ),
-                id: "workspace-shell",
-                minSize: 720,
-                preferredSize: `${shellPaneSizes[1]}%`,
-              },
-            ]}
+        {collapsedPanes.project ? (
+          <PaneRestoreControl
+            label="Project"
+            placement="leftCenter"
+            restoreSymbol=">"
+            onRestore={() => {
+              togglePaneCollapsed("project");
+            }}
           />
-        ) : (
-          <div className={workspaceShell}>{workspaceGridShell}</div>
-        )}
+        ) : null}
+        <SplitLayout
+          defaultSizes={normalizePaneSizes(shellPaneSizes)}
+          onChange={(sizes) => {
+            if (collapsedPanes.project) {
+              return;
+            }
+
+            setShellPaneSizes(sizes);
+          }}
+          panes={[
+            {
+              content: (
+                <ProjectSidebar
+                  onToggleCollapsed={() => {
+                    togglePaneCollapsed("project");
+                  }}
+                />
+              ),
+              id: "project-sidebar",
+              minSize: 220,
+              preferredSize: `${shellPaneSizes[0]}%`,
+              visible: !collapsedPanes.project,
+            },
+            {
+              content: (
+                <div className={workspaceShell}>{workspaceGridShell}</div>
+              ),
+              id: "workspace-shell",
+              minSize: 720,
+              preferredSize: `${shellPaneSizes[1]}%`,
+            },
+          ]}
+        />
       </section>
       <footer className={footerBar}>
         <div className={shellFrame}>
           <Text as="span" tone="muted" variant="caption">
-            Resizable 2x2 workspace with a collapsible project sidebar.
+            Resizable 2x2 workspace with collapsible pane rails.
           </Text>
         </div>
       </footer>

@@ -86,7 +86,13 @@ const ProjectTreeRow = ({
   </div>
 );
 
-export const ProjectSidebar = (): JSX.Element => {
+type ProjectSidebarProps = {
+  readonly onToggleCollapsed: () => void;
+};
+
+export const ProjectSidebar = ({
+  onToggleCollapsed,
+}: ProjectSidebarProps): JSX.Element => {
   const project = useProjectStore((s) => s.project);
   const openProject = useProjectStore((s) => s.openProject);
   const selectEntry = useProjectStore((s) => s.selectEntry);
@@ -170,8 +176,13 @@ export const ProjectSidebar = (): JSX.Element => {
   );
 
   return (
-    <Panel actions={actions} title="Project">
+    <Panel
+      collapseSymbol="<"
+      label="Project"
+      onToggleCollapsed={onToggleCollapsed}
+    >
       <div className={projectSidebar}>
+        <section className={projectSection}>{actions}</section>
         {pendingFolder !== null ? (
           <section className={projectSection}>
             <Text as="span" variant="label">

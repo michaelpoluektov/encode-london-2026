@@ -1,12 +1,21 @@
 import { create } from "zustand";
 
+export type CollapsiblePaneId =
+  | "project"
+  | "source"
+  | "graph"
+  | "chat"
+  | "render";
+
+type PaneCollapseState = Record<CollapsiblePaneId, boolean>;
+
 type AppState = {
-  readonly isProjectSidebarOpen: boolean;
+  readonly collapsedPanes: PaneCollapseState;
   readonly shellPaneSizes: readonly number[];
   readonly workspaceColumnSizes: readonly number[];
   readonly workspaceLeftRowSizes: readonly number[];
   readonly workspaceRightRowSizes: readonly number[];
-  readonly setProjectSidebarOpen: (isProjectSidebarOpen: boolean) => void;
+  readonly togglePaneCollapsed: (paneId: CollapsiblePaneId) => void;
   readonly setShellPaneSizes: (shellPaneSizes: readonly number[]) => void;
   readonly setWorkspaceColumnSizes: (
     workspaceColumnSizes: readonly number[],
@@ -20,13 +29,24 @@ type AppState = {
 };
 
 export const useAppStore = create<AppState>((set) => ({
-  isProjectSidebarOpen: true,
+  collapsedPanes: {
+    project: false,
+    source: false,
+    graph: false,
+    chat: false,
+    render: false,
+  },
   shellPaneSizes: [18, 82],
   workspaceColumnSizes: [50, 50],
   workspaceLeftRowSizes: [50, 50],
   workspaceRightRowSizes: [50, 50],
-  setProjectSidebarOpen: (isProjectSidebarOpen) =>
-    set({ isProjectSidebarOpen }),
+  togglePaneCollapsed: (paneId) =>
+    set((state) => ({
+      collapsedPanes: {
+        ...state.collapsedPanes,
+        [paneId]: !state.collapsedPanes[paneId],
+      },
+    })),
   setShellPaneSizes: (shellPaneSizes) => set({ shellPaneSizes }),
   setWorkspaceColumnSizes: (workspaceColumnSizes) =>
     set({ workspaceColumnSizes }),
