@@ -1,30 +1,123 @@
-import { type JSX, type KeyboardEvent, useEffect, useState } from "react";
+import {
+  type JSX,
+  type KeyboardEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { type NodeRendererProps, Tree } from "react-arborist";
+import type { ProjectTreeNode } from "../../../shared/contracts";
+import { cx } from "../lib/cx";
 import { useProjectStore } from "../store/project-store";
 import { Panel } from "./Panel";
 import {
-  projectList,
+  binaryGlyph,
+  editableGlyph,
+  emptyState,
+  folderGlyph,
+  imageGlyph,
+  pendingInput,
   projectSection,
   projectSidebar,
+  readOnlyGlyph,
+  treeCaret,
+  treeCaretHidden,
+  treeClassName,
+  treeGlyph,
+  treeLabel,
+  treeLabelGroup,
+  treeRow,
+  treeRowSelected,
+  treeShell,
+  treeViewport,
 } from "./project-sidebar.css";
 import { Button } from "./ui/Button";
-import { NavItem } from "./ui/NavItem";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
 
+const getGlyphClassName = (node: ProjectTreeNode): string => {
+  switch (node.itemKind) {
+    case "directory":
+      return folderGlyph;
+    case "editable":
+      return editableGlyph;
+    case "image":
+      return imageGlyph;
+    case "binary":
+      return binaryGlyph;
+    case "readOnly":
+      return readOnlyGlyph;
+  }
+};
+
+const ProjectTreeRow = ({
+  node,
+  style,
+}: NodeRendererProps<ProjectTreeNode>): JSX.Element => (
+  <div style={style}>
+    <button
+      className={cx(treeRow, node.isSelected && treeRowSelected)}
+      type="button"
+      onClick={() => {
+        if (node.data.kind === "directory") {
+          node.toggle();
+          return;
+        }
+
+        node.select();
+      }}
+    >
+      <span
+        aria-hidden="true"
+        className={cx(treeCaret, node.isLeaf && treeCaretHidden)}
+      >
+        {node.isLeaf ? ">" : node.isOpen ? "v" : ">"}
+      </span>
+      <span
+        aria-hidden="true"
+        className={cx(treeGlyph, getGlyphClassName(node.data))}
+      />
+      <div className={treeLabelGroup}>
+        <Text as="span" className={treeLabel} tone="default" variant="body">
+          {node.data.name}
+        </Text>
+      </div>
+    </button>
+  </div>
+);
+
 export const ProjectSidebar = (): JSX.Element => {
   const project = useProjectStore((s) => s.project);
-  const activeFile = useProjectStore((s) => s.activeFile);
-  const recentProjects = useProjectStore((s) => s.recentProjects);
   const openProject = useProjectStore((s) => s.openProject);
-  const setActiveFile = useProjectStore((s) => s.setActiveFile);
-  const setRecentProjects = useProjectStore((s) => s.setRecentProjects);
+  const selectEntry = useProjectStore((s) => s.selectEntry);
 
   const [pendingFolder, setPendingFolder] = useState<string | null>(null);
   const [pendingName, setPendingName] = useState("");
+  const [treeHeight, setTreeHeight] = useState(1);
+
+  const treeViewportRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    window.shadily.project.getRecents().then(setRecentProjects);
-  }, [setRecentProjects]);
+    const viewport = treeViewportRef.current;
+
+    if (viewport === null) {
+      return;
+    }
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+
+      if (entry !== undefined) {
+        setTreeHeight(Math.max(Math.floor(entry.contentRect.height), 1));
+      }
+    });
+
+    resizeObserver.observe(viewport);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   const handleNewProject = async (): Promise<void> => {
     const folder = await window.shadily.project.pickFolder();
@@ -44,15 +137,15 @@ export const ProjectSidebar = (): JSX.Element => {
     setPendingName("");
     if (result !== null) {
       openProject(result);
-      const recents = await window.shadily.project.getRecents();
-      setRecentProjects(recents);
     }
   };
 
-  const handleCreateKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === "Enter") {
+  const handleCreateKeyDown = (
+    event: KeyboardEvent<HTMLInputElement>,
+  ): void => {
+    if (event.key === "Enter") {
       void handleCreateConfirm();
-    } else if (e.key === "Escape") {
+    } else if (event.key === "Escape") {
       setPendingFolder(null);
       setPendingName("");
     }
@@ -62,17 +155,6 @@ export const ProjectSidebar = (): JSX.Element => {
     const result = await window.shadily.project.open();
     if (result !== null) {
       openProject(result);
-      const recents = await window.shadily.project.getRecents();
-      setRecentProjects(recents);
-    }
-  };
-
-  const handleOpenRecent = async (path: string): Promise<void> => {
-    const result = await window.shadily.project.openPath(path);
-    if (result !== null) {
-      openProject(result);
-      const recents = await window.shadily.project.getRecents();
-      setRecentProjects(recents);
     }
   };
 
@@ -89,7 +171,7 @@ export const ProjectSidebar = (): JSX.Element => {
 
   return (
     <Panel actions={actions} title="Project">
-      <Stack className={projectSidebar} gap={4}>
+      <div className={projectSidebar}>
         {pendingFolder !== null ? (
           <section className={projectSection}>
             <Text as="span" variant="label">
@@ -98,81 +180,53 @@ export const ProjectSidebar = (): JSX.Element => {
             <input
               // biome-ignore lint/a11y/noAutofocus: intentional focus for inline input
               autoFocus
+              className={pendingInput}
               type="text"
               value={pendingName}
-              onChange={(e) => setPendingName(e.target.value)}
+              onChange={(event) => setPendingName(event.target.value)}
               onKeyDown={handleCreateKeyDown}
-              style={{
-                background: "transparent",
-                border: "1px solid currentColor",
-                borderRadius: 4,
-                color: "inherit",
-                font: "inherit",
-                outline: "none",
-                padding: "4px 8px",
-              }}
             />
           </section>
         ) : null}
 
-        {project !== null ? (
-          <section className={projectSection}>
-            <Text as="span" variant="label">
-              {project.manifest.name}
-            </Text>
-            <div className={projectList}>
-              <button
-                type="button"
-                onClick={() => setActiveFile("fragment")}
-                style={{ all: "unset", cursor: "pointer" }}
+        <div className={treeShell}>
+          <div ref={treeViewportRef} className={treeViewport}>
+            {project !== null ? (
+              <Tree<ProjectTreeNode>
+                className={treeClassName}
+                data={project.tree}
+                disableDrag
+                disableEdit
+                disableMultiSelection
+                height={treeHeight}
+                idAccessor="path"
+                indent={20}
+                openByDefault
+                overscanCount={8}
+                padding={0}
+                rowHeight={24}
+                selection={project.selectedEntryPath ?? undefined}
+                width="100%"
+                onSelect={(nodes) => {
+                  const nextNode = nodes[0];
+
+                  if (nextNode?.data.kind === "file") {
+                    selectEntry(nextNode.data.path);
+                  }
+                }}
               >
-                <NavItem
-                  active={activeFile === "fragment"}
-                  subtitle={project.folderPath}
-                  title={project.manifest.shaders.fragment}
-                />
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFile("vertex")}
-                style={{ all: "unset", cursor: "pointer" }}
-              >
-                <NavItem
-                  active={activeFile === "vertex"}
-                  subtitle={project.folderPath}
-                  title={project.manifest.shaders.vertex}
-                />
-              </button>
-              <NavItem subtitle={project.folderPath} title="captures/" />
-            </div>
-          </section>
-        ) : (
-          <section className={projectSection}>
-            <Text as="span" variant="label">
-              No project open
-            </Text>
-            {recentProjects.length > 0 ? (
-              <>
-                <Text as="span" variant="label">
-                  Recent
+                {ProjectTreeRow}
+              </Tree>
+            ) : (
+              <div className={emptyState}>
+                <Text as="p" tone="muted" variant="caption">
+                  The project tree appears here once a project is open.
                 </Text>
-                <div className={projectList}>
-                  {recentProjects.map((recent) => (
-                    <button
-                      key={recent.path}
-                      type="button"
-                      onClick={() => void handleOpenRecent(recent.path)}
-                      style={{ all: "unset", cursor: "pointer" }}
-                    >
-                      <NavItem subtitle={recent.path} title={recent.name} />
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : null}
-          </section>
-        )}
-      </Stack>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </Panel>
   );
 };

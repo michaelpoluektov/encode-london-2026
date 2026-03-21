@@ -30,7 +30,21 @@ const waitForPendingShaderReload = async (): Promise<void> => {
   await pendingShaderReload.catch(() => undefined);
 };
 
-const reloadTouchedShaders = async (
+const normalizeProjectPath = (path: string): string =>
+  path.replaceAll("\\", "/");
+
+const hasTouchedPath = (
+  changes: FileChangeInfo[],
+  projectPath: string,
+): boolean => {
+  const normalizedPath = normalizeProjectPath(projectPath);
+
+  return changes.some(
+    (change) => normalizeProjectPath(change.path) === normalizedPath,
+  );
+};
+
+const refreshTouchedProject = async (
   changes: FileChangeInfo[],
 ): Promise<void> => {
   const project = useProjectStore.getState().project;
@@ -39,26 +53,28 @@ const reloadTouchedShaders = async (
     return;
   }
 
-  const shaderFiles = new Set([
-    project.manifest.shaders.fragment,
-    project.manifest.shaders.vertex,
-  ]);
-  const touched = changes.some((change) =>
-    shaderFiles.has(change.path.split("/").pop() ?? change.path),
-  );
-
-  if (!touched) {
-    return;
-  }
-
   try {
-    const fresh = await window.shadily.project.readShaders(
+    const freshProject = await window.shadily.project.reload(
       project.folderPath,
-      project.manifest,
     );
+    useProjectStore.getState().refreshProject(freshProject);
 
-    useProjectStore.getState().updateShader("fragment", fresh.fragment);
-    useProjectStore.getState().updateShader("vertex", fresh.vertex);
+    const selectedProject = useProjectStore.getState().project;
+    const selectedPath = selectedProject?.selectedEntryPath ?? null;
+
+    if (
+      selectedProject !== null &&
+      selectedPath !== null &&
+      hasTouchedPath(changes, selectedPath)
+    ) {
+      const refreshedDocument = await window.shadily.project.readEntry({
+        folderPath: selectedProject.folderPath,
+        manifest: selectedProject.manifest,
+        path: selectedPath,
+      });
+
+      useProjectStore.getState().setDocument(refreshedDocument);
+    }
   } catch {
     // non-fatal — user can manually reload
   }
@@ -67,7 +83,7 @@ const reloadTouchedShaders = async (
 const queueShaderReload = (changes: FileChangeInfo[]): void => {
   pendingShaderReload = pendingShaderReload
     .catch(() => undefined)
-    .then(async () => reloadTouchedShaders(changes));
+    .then(async () => refreshTouchedProject(changes));
 };
 
 const clearChatSubscriptions = (): void => {
