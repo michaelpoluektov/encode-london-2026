@@ -25,8 +25,8 @@ import {
 } from "./app-shell.css";
 import { ChatPanel } from "./components/ChatPanel";
 import { GraphEditor } from "./components/GraphEditor";
-import { Panel } from "./components/Panel";
 import type { PanelHeaderAction } from "./components/Panel";
+import { Panel } from "./components/Panel";
 import { PaneRestoreControl } from "./components/PaneRestoreControl";
 import { PreviewViewport } from "./components/PreviewViewport";
 import { ProjectSidebar } from "./components/ProjectSidebar";
@@ -460,21 +460,20 @@ export const App = (): JSX.Element => {
 
     refreshProject(freshProject);
 
-    const separator = currentProject.folderPath.endsWith("/") ? "" : "/";
+    const folderNorm = currentProject.folderPath.replaceAll("\\", "/");
+    const separator = folderNorm.endsWith("/") ? "" : "/";
     const relativePath = imagePath
       .replaceAll("\\", "/")
-      .replace(
-        `${currentProject.folderPath.replaceAll("\\", "/")}${separator}`,
-        "",
-      );
+      .replace(`${folderNorm}${separator}`, "");
 
-    const imageDocument = await window.shadily.project.readEntry({
-      folderPath: currentProject.folderPath,
-      manifest: freshProject.manifest,
+    // Use the dataUrl we already have in memory — file:// URLs don't work
+    // in the renderer when running from the dev server (HTTP origin).
+    setSavedDocument({
       path: relativePath,
+      kind: "image",
+      isEditable: false,
+      sourceUrl: captureResult.dataUrl,
     });
-
-    setSavedDocument(imageDocument);
     openTab(relativePath);
   }, [openTab, refreshProject, setSavedDocument]);
 

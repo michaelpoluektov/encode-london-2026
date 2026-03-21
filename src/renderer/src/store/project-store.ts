@@ -394,7 +394,10 @@ export const useProjectStore = create<ProjectStore>((set) => ({
         if (nextOpenTabPaths.length === 0) {
           nextSelectedEntryPath = null;
         } else {
-          const preferredIndex = Math.min(tabIndex, nextOpenTabPaths.length - 1);
+          const preferredIndex = Math.min(
+            tabIndex,
+            nextOpenTabPaths.length - 1,
+          );
           nextSelectedEntryPath = nextOpenTabPaths[preferredIndex] ?? null;
         }
       }
