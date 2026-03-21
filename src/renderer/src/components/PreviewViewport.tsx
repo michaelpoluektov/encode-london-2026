@@ -20,10 +20,6 @@ import {
   createPreviewMaterial,
 } from "../preview-compile";
 import { createPreviewRevision, usePreviewStore } from "../store/preview-store";
-import {
-  getProjectVertexSource,
-  useProjectStore,
-} from "../store/project-store";
 import { darkThemeValues } from "../theme";
 
 const PREVIEW_CAPTURE_SIZE = 200;
