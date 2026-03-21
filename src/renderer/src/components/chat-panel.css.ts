@@ -9,6 +9,113 @@ export const chatPanel = style({
   overflow: "hidden",
 });
 
+export const chatHeader = style({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: themeVars.space[2],
+  borderBottom: `1px solid ${themeVars.color.border.subtle}`,
+  background: themeVars.color.background.panelMuted,
+});
+
+export const chatThreadHeader = style({
+  display: "flex",
+  alignItems: "center",
+  flex: 1,
+  gap: themeVars.space[2],
+  minWidth: 0,
+  padding: `0 ${themeVars.space[4]} 0 0`,
+});
+
+export const chatThreadList = style({
+  display: "flex",
+  flex: 1,
+  gap: 0,
+  overflowX: "auto",
+  minWidth: 0,
+});
+
+export const chatThreadTab = style({
+  flex: "0 0 auto",
+  borderRight: `1px solid ${themeVars.color.border.subtle}`,
+});
+
+export const chatThreadButton = style({
+  minWidth: 0,
+  maxWidth: "14rem",
+  display: "flex",
+  alignItems: "center",
+  gap: themeVars.space[1],
+  padding: `${themeVars.space[2]} ${themeVars.space[2]} ${themeVars.space[2]} ${themeVars.space[3]}`,
+  border: "none",
+  borderBottom: `2px solid transparent`,
+  background: "transparent",
+  color: themeVars.color.text.secondary,
+  textAlign: "left",
+  selectors: {
+    "&:hover": {
+      background: themeVars.color.background.panelInset,
+      color: themeVars.color.text.primary,
+    },
+  },
+});
+
+export const chatThreadButtonActive = style({
+  borderBottomColor: themeVars.color.border.accent,
+  background: themeVars.color.background.panelRaised,
+  color: themeVars.color.text.primary,
+});
+
+export const chatThreadSelectButton = style({
+  minWidth: 0,
+  flex: 1,
+  display: "flex",
+  alignItems: "center",
+  padding: 0,
+  border: "none",
+  background: "transparent",
+  color: "inherit",
+  cursor: "pointer",
+  textAlign: "left",
+  selectors: {
+    "&:disabled": {
+      cursor: "not-allowed",
+      opacity: 0.6,
+    },
+  },
+});
+
+export const chatThreadTitle = style({
+  display: "block",
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  fontFamily: themeVars.font.family.sans,
+  fontSize: themeVars.font.size.sm,
+  lineHeight: themeVars.font.lineHeight.normal,
+});
+
+export const chatThreadDeleteButton = style({
+  padding: 0,
+  border: "none",
+  background: "transparent",
+  color: "inherit",
+  cursor: "pointer",
+  fontFamily: themeVars.font.family.sans,
+  fontSize: themeVars.font.size.sm,
+  lineHeight: themeVars.font.lineHeight.normal,
+  selectors: {
+    "&:hover:not(:disabled)": {
+      color: themeVars.color.text.primary,
+    },
+    "&:disabled": {
+      cursor: "not-allowed",
+      opacity: 0.4,
+    },
+  },
+});
+
 export const chatMessages = style({
   flex: 1,
   overflowY: "auto",
@@ -32,6 +139,12 @@ export const chatMessageBubble = style({
   fontFamily: themeVars.font.family.sans,
   fontSize: themeVars.font.size.sm,
   lineHeight: themeVars.font.lineHeight.relaxed,
+});
+
+export const chatMessageBody = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: themeVars.space[2],
 });
 
 export const chatMessageBubbleUser = style([
@@ -64,6 +177,42 @@ export const chatStreamingBubble = style([
     opacity: 0.85,
   },
 ]);
+
+export const chatPartBlock = style({
+  whiteSpace: "pre-wrap",
+});
+
+export const chatPartReasoning = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: themeVars.space[1],
+  padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
+  background: themeVars.color.background.panelInset,
+  border: `1px dashed ${themeVars.color.border.standard}`,
+  borderRadius: themeVars.radius.sm,
+});
+
+export const chatPartImage = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: themeVars.space[1],
+  padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
+  background: themeVars.color.background.panelInset,
+  border: `1px solid ${themeVars.color.border.subtle}`,
+  borderRadius: themeVars.radius.sm,
+});
+
+export const chatPartLabel = style({
+  marginTop: themeVars.space[1],
+});
+
+export const chatPartPre = style({
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+  lineHeight: themeVars.font.lineHeight.relaxed,
+});
 
 // Markdown content inside assistant bubbles
 export const chatMarkdown = style({
