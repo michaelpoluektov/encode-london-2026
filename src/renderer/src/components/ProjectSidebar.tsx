@@ -9,7 +9,7 @@ import { type NodeRendererProps, Tree } from "react-arborist";
 import type { ProjectTreeNode } from "../../../shared/contracts";
 import { cx } from "../lib/cx";
 import { useProjectStore } from "../store/project-store";
-import { Panel } from "./Panel";
+import { Panel, type PanelHeaderAction } from "./Panel";
 import {
   binaryGlyph,
   editableGlyph,
@@ -30,9 +30,7 @@ import {
   treeShell,
   treeViewport,
 } from "./project-sidebar.css";
-import { Button } from "./ui/Button";
 import { textInputField } from "./ui/field.css";
-import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
 
 const getGlyphClassName = (node: ProjectTreeNode): string => {
@@ -84,6 +82,34 @@ const ProjectTreeRow = ({
       </div>
     </button>
   </div>
+);
+
+const NewProjectIcon = (): JSX.Element => (
+  <svg aria-hidden="true" fill="none" height="8" viewBox="0 0 12 12" width="8">
+    <path
+      d="M6 2v8M2 6h8"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="1.25"
+    />
+  </svg>
+);
+
+const OpenProjectIcon = (): JSX.Element => (
+  <svg aria-hidden="true" fill="none" height="8" viewBox="0 0 12 12" width="8">
+    <path
+      d="M3 1.75h4l2 2v6.5H3z"
+      stroke="currentColor"
+      strokeLinejoin="round"
+      strokeWidth="1.25"
+    />
+    <path
+      d="M7 1.75v2h2"
+      stroke="currentColor"
+      strokeLinejoin="round"
+      strokeWidth="1.25"
+    />
+  </svg>
 );
 
 type ProjectSidebarProps = {
@@ -163,26 +189,33 @@ export const ProjectSidebar = ({
       openProject(result);
     }
   };
-
-  const actions = (
-    <Stack direction="row" gap={2}>
-      <Button size="sm" onClick={() => void handleNewProject()}>
-        New
-      </Button>
-      <Button size="sm" onClick={() => void handleOpenProject()}>
-        Open
-      </Button>
-    </Stack>
-  );
+  const headerActions: readonly PanelHeaderAction[] = [
+    {
+      ariaLabel: "Create project",
+      content: <NewProjectIcon />,
+      key: "new-project",
+      onClick: () => {
+        void handleNewProject();
+      },
+    },
+    {
+      ariaLabel: "Open project",
+      content: <OpenProjectIcon />,
+      key: "open-project",
+      onClick: () => {
+        void handleOpenProject();
+      },
+    },
+  ];
 
   return (
     <Panel
       collapseSymbol="<"
+      headerActions={headerActions}
       label="Project"
       onToggleCollapsed={onToggleCollapsed}
     >
       <div className={projectSidebar}>
-        <section className={projectSection}>{actions}</section>
         {pendingFolder !== null ? (
           <section className={projectSection}>
             <Text as="span" variant="label">

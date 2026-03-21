@@ -1,17 +1,28 @@
 import type { JSX, ReactNode } from "react";
 import { cx } from "../lib/cx";
-import { panel, panelBody, panelHeader, panelTone } from "./panel.css";
+import {
+  panel,
+  panelBody,
+  panelHeader,
+  panelHeaderControls,
+} from "./panel.css";
 import { Button } from "./ui/Button";
 
-type PanelTone = keyof typeof panelTone;
+export type PanelHeaderAction = {
+  readonly ariaLabel: string;
+  readonly disabled?: boolean;
+  readonly key: string;
+  readonly onClick: () => void;
+  readonly content: ReactNode;
+};
 
 type PanelProps = {
   readonly children?: ReactNode;
   readonly label: string;
   readonly collapseDisabled?: boolean;
   readonly collapseSymbol?: string;
+  readonly headerActions?: readonly PanelHeaderAction[];
   readonly onToggleCollapsed?: () => void;
-  readonly tone?: PanelTone;
   readonly bodyClassName?: string;
   readonly headerClassName?: string;
 };
@@ -21,12 +32,12 @@ export const Panel = ({
   label,
   collapseDisabled = false,
   collapseSymbol = "-",
+  headerActions = [],
   onToggleCollapsed,
-  tone = "default",
   bodyClassName,
   headerClassName,
 }: PanelProps): JSX.Element => {
-  const hasHeader = onToggleCollapsed != null;
+  const hasHeader = onToggleCollapsed != null || headerActions.length > 0;
   const bodyClassNames = cx(panelBody, bodyClassName);
   const headerClassNames = cx(panelHeader, headerClassName);
   const toggleButton =
@@ -42,14 +53,27 @@ export const Panel = ({
         {collapseSymbol}
       </Button>
     );
+  const actionButtons = headerActions.map((action) => (
+    <Button
+      key={action.key}
+      aria-label={action.ariaLabel}
+      disabled={action.disabled}
+      onClick={action.onClick}
+      size="xs"
+      square
+      variant="plain"
+    >
+      {action.content}
+    </Button>
+  ));
 
   return (
-    <section
-      aria-label={`${label} panel`}
-      className={cx(panel, panelTone[tone])}
-    >
+    <section aria-label={`${label} panel`} className={panel}>
       {hasHeader ? (
-        <header className={headerClassNames}>{toggleButton}</header>
+        <header className={headerClassNames}>
+          <div className={panelHeaderControls}>{actionButtons}</div>
+          {toggleButton}
+        </header>
       ) : null}
       <div className={bodyClassNames}>{children}</div>
     </section>
