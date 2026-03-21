@@ -2,7 +2,10 @@
 
 import type {
   BootstrapPayload,
-  ChatAttachPreviewContextResult,
+  ChatSendPayload,
+  ChatThreadDetail,
+  ChatThreadSummary,
+  ChatThreadRequest,
   FileChangeInfo,
   ProjectEntryRequest,
   ProjectEntryResult,
@@ -41,10 +44,14 @@ declare global {
         saveLayout: (payload: ProjectLayoutSavePayload) => Promise<void>;
       };
       chat: {
-        send: (prompt: string) => Promise<void>;
-        attachPreviewContext: (
-          imagePath: string,
-        ) => Promise<ChatAttachPreviewContextResult>;
+        listThreads: (
+          projectId: string,
+        ) => Promise<readonly ChatThreadSummary[]>;
+        getActiveThread: (projectId: string) => Promise<ChatThreadDetail>;
+        createThread: (projectId: string) => Promise<ChatThreadDetail>;
+        switchThread: (payload: ChatThreadRequest) => Promise<ChatThreadDetail>;
+        deleteThread: (payload: ChatThreadRequest) => Promise<ChatThreadDetail>;
+        send: (payload: ChatSendPayload) => Promise<ChatThreadDetail>;
         stop: () => Promise<void>;
         onChunk: (cb: (text: string) => void) => () => void;
         onFileChange: (cb: (changes: FileChangeInfo[]) => void) => () => void;

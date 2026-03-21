@@ -1,6 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
-  ChatAttachPreviewContextResult,
+  ChatProjectRequest,
+  ChatSendPayload,
+  ChatThreadDetail,
+  ChatThreadRequest,
+  ChatThreadSummary,
   FileChangeInfo,
   ProjectEntryRequest,
   ProjectEntryResult,
@@ -14,8 +18,11 @@ import type {
 import {
   type BootstrapPayload,
   bootstrapPayloadSchema,
-  chatAttachPreviewContextResultSchema,
-  chatPromptSchema,
+  chatProjectRequestSchema,
+  chatSendPayloadSchema,
+  chatThreadDetailSchema,
+  chatThreadListSchema,
+  chatThreadRequestSchema,
   pickFolderResultSchema,
   projectCreatePayloadSchema,
   projectEntryResultSchema,
@@ -87,13 +94,57 @@ const shadilyDesktopApi = {
     },
   },
   chat: {
-    send: (prompt: string): Promise<void> =>
-      ipcRenderer.invoke("chat:send", chatPromptSchema.parse(prompt)),
-    attachPreviewContext: async (
-      imagePath: string,
-    ): Promise<ChatAttachPreviewContextResult> =>
-      chatAttachPreviewContextResultSchema.parse(
-        await ipcRenderer.invoke("chat:attachPreviewContext", { imagePath }),
+    listThreads: async (
+      projectId: string,
+    ): Promise<readonly ChatThreadSummary[]> =>
+      chatThreadListSchema.parse(
+        await ipcRenderer.invoke(
+          "chat:listThreads",
+          chatProjectRequestSchema.parse({ projectId }),
+        ),
+      ),
+    getActiveThread: async (projectId: string): Promise<ChatThreadDetail> =>
+      chatThreadDetailSchema.parse(
+        await ipcRenderer.invoke(
+          "chat:getActiveThread",
+          chatProjectRequestSchema.parse({
+            projectId,
+          } satisfies ChatProjectRequest),
+        ),
+      ),
+    createThread: async (projectId: string): Promise<ChatThreadDetail> =>
+      chatThreadDetailSchema.parse(
+        await ipcRenderer.invoke(
+          "chat:createThread",
+          chatProjectRequestSchema.parse({
+            projectId,
+          } satisfies ChatProjectRequest),
+        ),
+      ),
+    switchThread: async (
+      payload: ChatThreadRequest,
+    ): Promise<ChatThreadDetail> =>
+      chatThreadDetailSchema.parse(
+        await ipcRenderer.invoke(
+          "chat:switchThread",
+          chatThreadRequestSchema.parse(payload),
+        ),
+      ),
+    deleteThread: async (
+      payload: ChatThreadRequest,
+    ): Promise<ChatThreadDetail> =>
+      chatThreadDetailSchema.parse(
+        await ipcRenderer.invoke(
+          "chat:deleteThread",
+          chatThreadRequestSchema.parse(payload),
+        ),
+      ),
+    send: async (payload: ChatSendPayload): Promise<ChatThreadDetail> =>
+      chatThreadDetailSchema.parse(
+        await ipcRenderer.invoke(
+          "chat:send",
+          chatSendPayloadSchema.parse(payload),
+        ),
       ),
     stop: (): Promise<void> => ipcRenderer.invoke("chat:stop"),
     onChunk: (cb: (text: string) => void): (() => void) => {

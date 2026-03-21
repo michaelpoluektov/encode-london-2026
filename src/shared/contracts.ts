@@ -173,31 +173,134 @@ export type ProjectSaveCaptureResult = z.infer<
 >;
 
 export const chatPromptSchema = z.string().trim().min(1);
+export const chatThreadStatusSchema = z.enum(["regular", "archived"]);
+export const chatRoleSchema = z.enum(["user", "assistant", "system"]);
 
-export const chatAttachPreviewContextPayloadSchema = z.object({
+export const chatThreadSummarySchema = z.object({
+  id: z.string().uuid(),
+  projectId: projectIdSchema,
+  codexThreadId: z.string().min(1).nullable(),
+  title: z.string().min(1).nullable(),
+  status: chatThreadStatusSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  lastUsedAt: z.string(),
+  lastMessageAt: z.string().nullable(),
+});
+
+export type ChatThreadSummary = z.infer<typeof chatThreadSummarySchema>;
+
+export const chatTextPartSchema = z.object({
+  id: z.string().uuid(),
+  type: z.literal("text"),
+  text: z.string(),
+  parentPartId: z.string().uuid().nullable(),
+});
+
+export const chatReasoningPartSchema = z.object({
+  id: z.string().uuid(),
+  type: z.literal("reasoning"),
+  text: z.string(),
+  parentPartId: z.string().uuid().nullable(),
+});
+
+export const chatImagePartSchema = z.object({
+  id: z.string().uuid(),
+  type: z.literal("image"),
   imagePath: z.string().min(1),
+  filename: z.string().min(1).nullable(),
 });
 
-export type ChatAttachPreviewContextPayload = z.infer<
-  typeof chatAttachPreviewContextPayloadSchema
->;
-
-export const chatAttachPreviewContextResultSchema = z.object({
-  appliedChanges: z.boolean(),
-  responseText: z.string(),
+export const chatFilePartSchema = z.object({
+  id: z.string().uuid(),
+  type: z.literal("file"),
+  filePath: z.string().min(1),
+  filename: z.string().min(1).nullable(),
+  mimeType: z.string().min(1).nullable(),
 });
 
-export type ChatAttachPreviewContextResult = z.infer<
-  typeof chatAttachPreviewContextResultSchema
->;
+export const chatDataPartSchema = z.object({
+  id: z.string().uuid(),
+  type: z.literal("data"),
+  name: z.string().min(1),
+  dataJson: z.string(),
+});
 
-export type ChatRole = "user" | "assistant" | "system";
+export const chatToolCallPartSchema = z.object({
+  id: z.string().uuid(),
+  type: z.literal("tool-call"),
+  toolCallId: z.string().min(1),
+  toolName: z.string().min(1),
+  argsText: z.string(),
+  resultText: z.string().nullable(),
+  isError: z.boolean(),
+  parentPartId: z.string().uuid().nullable(),
+});
 
-export type ChatMessage = {
-  id: string;
-  role: ChatRole;
-  content: string;
-};
+export const chatMessagePartSchema = z.discriminatedUnion("type", [
+  chatTextPartSchema,
+  chatReasoningPartSchema,
+  chatImagePartSchema,
+  chatFilePartSchema,
+  chatDataPartSchema,
+  chatToolCallPartSchema,
+]);
+
+export type ChatMessagePart = z.infer<typeof chatMessagePartSchema>;
+type DistributiveOmit<T, Key extends PropertyKey> = T extends unknown
+  ? Omit<T, Key>
+  : never;
+export type ChatMessagePartInput = DistributiveOmit<ChatMessagePart, "id">;
+
+export const chatMessageStatusSchema = z.object({
+  type: z.enum(["running", "complete", "incomplete", "requires-action"]),
+  reason: z.string().nullable(),
+  errorJson: z.string().nullable(),
+});
+
+export type ChatMessageStatus = z.infer<typeof chatMessageStatusSchema>;
+
+export const chatMessageSchema = z.object({
+  id: z.string().uuid(),
+  threadId: z.string().uuid(),
+  role: chatRoleSchema,
+  runId: z.string().uuid().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  status: chatMessageStatusSchema.nullable(),
+  parts: z.array(chatMessagePartSchema),
+});
+
+export type ChatMessage = z.infer<typeof chatMessageSchema>;
+
+export const chatThreadDetailSchema = z.object({
+  thread: chatThreadSummarySchema,
+  messages: z.array(chatMessageSchema),
+});
+
+export type ChatThreadDetail = z.infer<typeof chatThreadDetailSchema>;
+export const chatThreadListSchema = z.array(chatThreadSummarySchema);
+
+export const chatProjectRequestSchema = z.object({
+  projectId: projectIdSchema,
+});
+
+export type ChatProjectRequest = z.infer<typeof chatProjectRequestSchema>;
+
+export const chatThreadRequestSchema = z.object({
+  projectId: projectIdSchema,
+  threadId: z.string().uuid(),
+});
+
+export type ChatThreadRequest = z.infer<typeof chatThreadRequestSchema>;
+
+export const chatSendPayloadSchema = z.object({
+  projectId: projectIdSchema,
+  threadId: z.string().uuid(),
+  prompt: chatPromptSchema,
+});
+
+export type ChatSendPayload = z.infer<typeof chatSendPayloadSchema>;
 
 export type FileChangeInfo = {
   path: string;
