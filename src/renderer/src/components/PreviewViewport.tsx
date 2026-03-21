@@ -4,6 +4,7 @@ import {
   DEFAULT_FRAGMENT_SHADER,
   DEFAULT_VERTEX_SHADER,
 } from "../../../shared/default-project";
+
 import {
   previewFrame,
   previewFrameStale,
@@ -19,10 +20,6 @@ import {
 } from "../preview-compile";
 import { useGraphPreviewStore } from "../store/graph-preview-store";
 import { createPreviewRevision, usePreviewStore } from "../store/preview-store";
-import {
-  getProjectShaderSource,
-  useProjectStore,
-} from "../store/project-store";
 import { darkThemeValues } from "../theme";
 
 const PREVIEW_CAPTURE_SIZE = 200;
@@ -65,12 +62,6 @@ const getErrorMessage = (error: unknown, fallbackMessage: string): string =>
 const EMPTY_GRAPH_UNIFORM_VALUES: GraphUniformValues = Object.freeze({});
 
 export const PreviewViewport = (): JSX.Element => {
-  const projectFragmentSource = useProjectStore((state) =>
-    getProjectShaderSource(state.project, "fragment"),
-  );
-  const projectVertexSource = useProjectStore((state) =>
-    getProjectShaderSource(state.project, "vertex"),
-  );
   const graphFragmentSource = useGraphPreviewStore(
     (state) => state.fragmentShaderSource,
   );
@@ -79,13 +70,11 @@ export const PreviewViewport = (): JSX.Element => {
   );
   const isPreviewStale = usePreviewStore((state) => state.isStale);
 
-  const fragmentSource = graphFragmentSource ?? projectFragmentSource;
-  const vertexSource =
-    graphFragmentSource === null ? projectVertexSource : DEFAULT_VERTEX_SHADER;
-  const activeUniformValues =
-    graphFragmentSource === null
-      ? EMPTY_GRAPH_UNIFORM_VALUES
-      : graphUniformValues;
+  const fragmentSource = graphFragmentSource ?? DEFAULT_FRAGMENT_SHADER;
+  const vertexSource = DEFAULT_VERTEX_SHADER;
+  const activeUniformValues = graphFragmentSource === null
+    ? EMPTY_GRAPH_UNIFORM_VALUES
+    : graphUniformValues;
 
   const deferredFragment = useDeferredValue(fragmentSource);
   const deferredVertex = useDeferredValue(vertexSource);

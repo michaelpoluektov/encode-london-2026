@@ -8,11 +8,9 @@ import type {
   ShadilyManifest,
 } from "../../../shared/contracts";
 import {
-  DEFAULT_FRAGMENT_SHADER,
-  DEFAULT_VERTEX_SHADER,
+  DEFAULT_GRAPH_SOURCE,
 } from "../../../shared/default-project";
 
-type ShaderFileKey = "fragment" | "vertex";
 type ProjectSavedFiles = Record<string, ProjectEntryResult>;
 type ProjectDraftFiles = Record<string, string>;
 
@@ -76,35 +74,28 @@ const findFirstFilePath = (
   return null;
 };
 
-const createShaderDocument = (
+const createGraphDocument = (
   path: string,
   content: string,
 ): ProjectTextEntryResult => ({
   path: normalizeProjectPath(path),
   kind: "text",
-  language: "glsl",
+  language: "json",
   isEditable: true,
   content,
 });
 
-const getShaderDocumentPath = (
-  manifest: ShadilyManifest,
-  file: ShaderFileKey,
-): string => normalizeProjectPath(manifest.shaders[file]);
+const getGraphDocumentPath = (manifest: ShadilyManifest): string =>
+  normalizeProjectPath(manifest.graph.source);
 
 const getDefaultSelectedEntryPath = (
   tree: readonly ProjectTreeNode[],
   manifest: ShadilyManifest,
 ): string | null => {
-  const preferredPaths = [
-    getShaderDocumentPath(manifest, "fragment"),
-    getShaderDocumentPath(manifest, "vertex"),
-  ];
+  const preferredPath = getGraphDocumentPath(manifest);
 
-  for (const preferredPath of preferredPaths) {
-    if (hasFilePath(tree, preferredPath)) {
-      return preferredPath;
-    }
+  if (hasFilePath(tree, preferredPath)) {
+    return preferredPath;
   }
 
   return findFirstFilePath(tree);
@@ -126,13 +117,11 @@ const createSavedFiles = (
     previousProject?.savedFiles ?? {},
     result.tree,
   );
-  const fragmentPath = getShaderDocumentPath(result.manifest, "fragment");
-  const vertexPath = getShaderDocumentPath(result.manifest, "vertex");
+  const graphPath = getGraphDocumentPath(result.manifest);
 
   return {
     ...savedFiles,
-    [fragmentPath]: createShaderDocument(fragmentPath, result.shaders.fragment),
-    [vertexPath]: createShaderDocument(vertexPath, result.shaders.vertex),
+    [graphPath]: createGraphDocument(graphPath, result.graphSource),
   };
 };
 
@@ -186,8 +175,7 @@ const createProjectState = (
       : null;
 
   if (mode === "commit") {
-    delete draftFiles[getShaderDocumentPath(result.manifest, "fragment")];
-    delete draftFiles[getShaderDocumentPath(result.manifest, "vertex")];
+    delete draftFiles[getGraphDocumentPath(result.manifest)];
   }
 
   const selectedEntryPath =
@@ -255,25 +243,20 @@ export const getProjectDocument = (
       };
 };
 
-export const getProjectShaderSource = (
+export const getProjectGraphSource = (
   project: ProjectState | null,
-  file: ShaderFileKey,
 ): string => {
   if (project === null) {
-    return file === "fragment"
-      ? DEFAULT_FRAGMENT_SHADER
-      : DEFAULT_VERTEX_SHADER;
+    return DEFAULT_GRAPH_SOURCE;
   }
 
   const document = getProjectDocument(
     project,
-    getShaderDocumentPath(project.manifest, file),
+    getGraphDocumentPath(project.manifest),
   );
 
   if (document?.kind !== "text") {
-    return file === "fragment"
-      ? DEFAULT_FRAGMENT_SHADER
-      : DEFAULT_VERTEX_SHADER;
+    return DEFAULT_GRAPH_SOURCE;
   }
 
   return document.content;
@@ -284,10 +267,7 @@ export const createProjectSavePayload = (
 ): ProjectSavePayload => ({
   folderPath: project.folderPath,
   manifest: project.manifest,
-  shaders: {
-    fragment: getProjectShaderSource(project, "fragment"),
-    vertex: getProjectShaderSource(project, "vertex"),
-  },
+  graphSource: getProjectGraphSource(project),
 });
 
 export const useProjectStore = create<ProjectStore>((set) => ({

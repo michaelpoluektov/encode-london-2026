@@ -10,8 +10,8 @@ export type CodexRuntimeState = z.infer<typeof codexRuntimeSchema>;
 export const shadilyManifestSchema = z.object({
   projectId: z.string().uuid(),
   name: z.string(),
-  version: z.literal("1"),
-  shaders: z.object({ fragment: z.string(), vertex: z.string() }),
+  version: z.literal("2"),
+  graph: z.object({ source: z.string() }),
   preview: z.object({ mesh: z.string() }),
   created: z.string(),
   modified: z.string(),
@@ -40,7 +40,7 @@ export const projectTreeNodeSchema: z.ZodType<ProjectTreeNode> = z.lazy(() =>
 export const projectOpenResultSchema = z.object({
   folderPath: z.string().min(1),
   manifest: shadilyManifestSchema,
-  shaders: z.object({ fragment: z.string(), vertex: z.string() }),
+  graphSource: z.string(),
   tree: z.array(projectTreeNodeSchema),
 });
 
@@ -101,7 +101,7 @@ export type ProjectLayoutSavePayload = z.infer<
 export const projectSavePayloadSchema = z.object({
   folderPath: projectFolderPathSchema,
   manifest: shadilyManifestSchema,
-  shaders: z.object({ fragment: z.string(), vertex: z.string() }),
+  graphSource: z.string(),
 });
 
 export type ProjectSavePayload = z.infer<typeof projectSavePayloadSchema>;

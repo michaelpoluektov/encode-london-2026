@@ -13,6 +13,7 @@ import {
 import {
   createDefaultProjectContents,
   DEFAULT_AGENTS_MD,
+  DEFAULT_NODE_GLSL_FILES,
   DEFAULT_PROJECT_FILE_PATHS,
 } from "../../shared/default-project";
 import {
@@ -37,36 +38,23 @@ const resolveProjectPath = (folderPath: string, path: string): string => {
   return resolvedPath;
 };
 
-const getEditableShaderPaths = (manifest: ShadilyManifest): Set<string> =>
-  new Set([
-    toProjectPath(manifest.shaders.fragment),
-    toProjectPath(manifest.shaders.vertex),
-  ]);
+const getEditablePaths = (manifest: ShadilyManifest): Set<string> =>
+  new Set([toProjectPath(manifest.graph.source)]);
 
-export const readShaders = (
+export const readGraphSource = (
   folderPath: string,
   manifest: ShadilyManifest,
-): { fragment: string; vertex: string } => {
-  const fragment = readFileSync(
-    join(folderPath, manifest.shaders.fragment),
-    "utf-8",
-  );
-  const vertex = readFileSync(
-    join(folderPath, manifest.shaders.vertex),
-    "utf-8",
-  );
-
-  return { fragment, vertex };
-};
+): string =>
+  readFileSync(join(folderPath, manifest.graph.source), "utf-8");
 
 export const createProjectOpenResult = (
   folderPath: string,
   manifest: ShadilyManifest,
-  shaders: { fragment: string; vertex: string },
+  graphSource: string,
 ): ProjectOpenResult => ({
   folderPath,
   manifest,
-  shaders,
+  graphSource,
   tree: buildProjectTree(folderPath, manifest),
 });
 
@@ -78,9 +66,9 @@ export const loadProject = (folderPath: string): ProjectOpenResult => {
     ),
   );
   const manifest = shadilyManifestSchema.parse(manifestRaw);
-  const shaders = readShaders(folderPath, manifest);
+  const graphSource = readGraphSource(folderPath, manifest);
 
-  return createProjectOpenResult(folderPath, manifest, shaders);
+  return createProjectOpenResult(folderPath, manifest, graphSource);
 };
 
 export const createProject = async (
@@ -93,7 +81,10 @@ export const createProject = async (
     recursive: true,
   });
 
-  const { manifest, shaders } = createDefaultProjectContents(name);
+  const nodesDir = join(folderPath, DEFAULT_PROJECT_FILE_PATHS.nodesDir);
+  mkdirSync(nodesDir, { recursive: true });
+
+  const { manifest, graphSource } = createDefaultProjectContents(name);
 
   writeFileSync(
     join(folderPath, DEFAULT_PROJECT_FILE_PATHS.manifest),
@@ -101,13 +92,8 @@ export const createProject = async (
     "utf-8",
   );
   writeFileSync(
-    join(folderPath, manifest.shaders.fragment),
-    shaders.fragment,
-    "utf-8",
-  );
-  writeFileSync(
-    join(folderPath, manifest.shaders.vertex),
-    shaders.vertex,
+    join(folderPath, manifest.graph.source),
+    graphSource,
     "utf-8",
   );
   writeFileSync(
@@ -116,7 +102,11 @@ export const createProject = async (
     "utf-8",
   );
 
-  return createProjectOpenResult(folderPath, manifest, shaders);
+  for (const [filename, content] of Object.entries(DEFAULT_NODE_GLSL_FILES)) {
+    writeFileSync(join(nodesDir, filename), content, "utf-8");
+  }
+
+  return createProjectOpenResult(folderPath, manifest, graphSource);
 };
 
 export const openProject = async (
@@ -134,7 +124,7 @@ export const readProjectEntry = ({
 }: ProjectEntryRequest): ProjectEntryResult => {
   const projectPath = toProjectPath(path);
   const absolutePath = resolveProjectPath(folderPath, projectPath);
-  const editablePaths = getEditableShaderPaths(manifest);
+  const editablePaths = getEditablePaths(manifest);
   const itemKind = getProjectItemKind(absolutePath, projectPath, editablePaths);
 
   if (!existsSync(absolutePath)) {
@@ -171,7 +161,7 @@ export const readProjectEntry = ({
 export const saveProject = async (
   folderPath: string,
   manifest: ShadilyManifest,
-  shaders: { fragment: string; vertex: string },
+  graphSource: string,
 ): Promise<ProjectOpenResult> => {
   const updated: ShadilyManifest = {
     ...manifest,
@@ -179,13 +169,8 @@ export const saveProject = async (
   };
 
   writeFileSync(
-    join(folderPath, manifest.shaders.fragment),
-    shaders.fragment,
-    "utf-8",
-  );
-  writeFileSync(
-    join(folderPath, manifest.shaders.vertex),
-    shaders.vertex,
+    join(folderPath, manifest.graph.source),
+    graphSource,
     "utf-8",
   );
   writeFileSync(
@@ -194,7 +179,7 @@ export const saveProject = async (
     "utf-8",
   );
 
-  return createProjectOpenResult(folderPath, updated, shaders);
+  return createProjectOpenResult(folderPath, updated, graphSource);
 };
 
 export const saveCapture = async ({

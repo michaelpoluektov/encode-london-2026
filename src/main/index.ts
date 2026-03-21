@@ -112,7 +112,7 @@ app.whenReady().then(async () => {
     return projectService.saveProject(
       parsedPayload.folderPath,
       parsedPayload.manifest,
-      parsedPayload.shaders,
+      parsedPayload.graphSource,
     );
   });
 

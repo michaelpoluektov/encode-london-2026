@@ -4,11 +4,8 @@ import type { ProjectTreeNode, ShadilyManifest } from "../../shared/contracts";
 
 const toProjectPath = (path: string): string => path.split(sep).join("/");
 
-const getEditableShaderPaths = (manifest: ShadilyManifest): Set<string> =>
-  new Set([
-    toProjectPath(manifest.shaders.fragment),
-    toProjectPath(manifest.shaders.vertex),
-  ]);
+const getEditablePaths = (manifest: ShadilyManifest): Set<string> =>
+  new Set([toProjectPath(manifest.graph.source)]);
 
 const IMAGE_EXTENSIONS = new Set([
   ".avif",
@@ -96,7 +93,7 @@ export const buildProjectTree = (
   folderPath: string,
   manifest: ShadilyManifest,
 ): ProjectTreeNode[] => {
-  const editablePaths = getEditableShaderPaths(manifest);
+  const editablePaths = getEditablePaths(manifest);
 
   const walkDirectory = (
     absoluteDir: string,
