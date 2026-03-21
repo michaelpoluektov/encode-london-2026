@@ -1,4 +1,14 @@
-type PreviewCaptureHandler = () => Promise<string | null>;
+export type PreviewCaptureResult =
+  | {
+      readonly kind: "success";
+      readonly dataUrl: string;
+    }
+  | {
+      readonly kind: "error";
+      readonly message: string;
+    };
+
+type PreviewCaptureHandler = () => Promise<PreviewCaptureResult>;
 
 let activePreviewCaptureHandler: PreviewCaptureHandler | null = null;
 
@@ -14,10 +24,14 @@ export const registerPreviewCaptureHandler = (
   };
 };
 
-export const captureRegisteredPreview = async (): Promise<string | null> => {
-  if (activePreviewCaptureHandler === null) {
-    return null;
-  }
+export const captureRegisteredPreview =
+  async (): Promise<PreviewCaptureResult> => {
+    if (activePreviewCaptureHandler === null) {
+      return {
+        kind: "error",
+        message: "Preview capture is unavailable.",
+      };
+    }
 
-  return activePreviewCaptureHandler();
-};
+    return activePreviewCaptureHandler();
+  };

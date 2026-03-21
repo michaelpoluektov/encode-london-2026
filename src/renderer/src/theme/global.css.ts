@@ -2,7 +2,8 @@ import { globalStyle, style } from "@vanilla-extract/css";
 import { themeVars } from "./contract.css";
 
 export const themeRoot = style({
-  minHeight: "100vh",
+  height: "100%",
+  minHeight: 0,
   background: [
     `radial-gradient(circle at top, ${themeVars.color.background.heroGlow} 0%, transparent 42%)`,
     `linear-gradient(180deg, #0d1324 0%, ${themeVars.color.background.app} 100%)`,
@@ -17,13 +18,16 @@ export const themeRoot = style({
 });
 
 globalStyle("html", {
+  height: "100%",
   backgroundColor: themeVars.color.background.app,
   colorScheme: "dark",
 });
 
 globalStyle("body", {
   margin: 0,
-  minHeight: "100vh",
+  height: "100%",
+  minHeight: 0,
+  overflow: "hidden",
   background: "transparent",
   color: themeVars.color.text.primary,
   fontFamily: themeVars.font.family.sans,
@@ -32,7 +36,8 @@ globalStyle("body", {
 });
 
 globalStyle("#root", {
-  minHeight: "100vh",
+  height: "100%",
+  minHeight: 0,
 });
 
 globalStyle("*, *::before, *::after", {

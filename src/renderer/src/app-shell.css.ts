@@ -4,7 +4,9 @@ import { themeVars } from "./theme";
 export const appShell = style({
   display: "grid",
   gridTemplateRows: `minmax(0, 1fr) ${themeVars.size.footerBarHeight}`,
-  minHeight: "100vh",
+  height: "100%",
+  minHeight: 0,
+  overflow: "hidden",
 });
 
 export const footerBar = style({

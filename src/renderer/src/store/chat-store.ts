@@ -178,14 +178,15 @@ const runPreviewFollowUps = async (
       content: `Visual follow-up ${iteration}/${MAX_PREVIEW_FOLLOW_UPS}: capturing the current preview...`,
     });
 
-    const captureDataUrl = await captureRegisteredPreview();
+    const captureResult = await captureRegisteredPreview();
 
-    if (captureDataUrl === null) {
+    if (captureResult.kind === "error") {
       updateChatMessage(
         setState,
         statusMessageId,
-        `Visual follow-up ${iteration}/${MAX_PREVIEW_FOLLOW_UPS}: preview capture was unavailable, so automatic refinement stopped.`,
+        `Visual follow-up ${iteration}/${MAX_PREVIEW_FOLLOW_UPS}: ${captureResult.message}`,
       );
+      setState({ warningMessage: captureResult.message });
       return;
     }
 
@@ -198,7 +199,7 @@ const runPreviewFollowUps = async (
     try {
       const { imagePath } = await window.shadily.project.saveCapture({
         folderPath: project.folderPath,
-        dataUrl: captureDataUrl,
+        dataUrl: captureResult.dataUrl,
       });
       const imageLabel = getImageLabel(imagePath);
       const result = await window.shadily.chat.attachPreviewContext(imagePath);
