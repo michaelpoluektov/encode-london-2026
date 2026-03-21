@@ -14,6 +14,7 @@ import {
   appendUserPrompt,
   completeChatRun,
   createChatRun,
+  getChatThreadDetail,
   getChatThreadSession,
   updateChatRunStatus,
 } from "./chat-persistence";
@@ -134,6 +135,105 @@ const toAssistantParts = (
   return parts;
 };
 
+const formatContextPart = (part: ChatMessagePartInput): string | null => {
+  switch (part.type) {
+    case "text":
+      return part.text.trim().length > 0 ? part.text : null;
+    case "reasoning":
+      return part.text.trim().length > 0 ? `Reasoning:\n${part.text}` : null;
+    case "tool-call": {
+      const sections = [`Tool call: ${part.toolName}`];
+      if (part.argsText.trim().length > 0 && part.argsText !== "{}") {
+        sections.push(`Arguments:\n${part.argsText}`);
+      }
+      if (part.resultText?.trim().length) {
+        sections.push(`Result:\n${part.resultText}`);
+      }
+      if (part.isError) {
+        sections.push("Status: error");
+      }
+      return sections.join("\n");
+    }
+    case "image":
+      return `Image attachment: ${part.filename ?? part.imagePath}`;
+    case "file":
+      return `File attachment: ${part.filename ?? part.filePath}`;
+    case "data":
+      return `Data attachment (${part.name}):\n${part.dataJson}`;
+  }
+};
+
+const buildThreadContextTranscript = async (
+  projectId: string,
+  threadId: string,
+  excludedMessageId: string | null,
+): Promise<string | null> => {
+  const detail = await getChatThreadDetail(projectId, threadId);
+  const priorMessages = detail.messages.filter(
+    (message) => message.id !== excludedMessageId,
+  );
+
+  if (priorMessages.length === 0) {
+    return null;
+  }
+
+  const transcript = priorMessages
+    .map((message) => {
+      const header = `${message.role.toUpperCase()}:`;
+      const body = message.parts
+        .map((part) => formatContextPart(part))
+        .filter((part): part is string => part !== null)
+        .join("\n\n")
+        .trim();
+
+      return body.length > 0 ? `${header}\n${body}` : null;
+    })
+    .filter((entry): entry is string => entry !== null)
+    .join("\n\n");
+
+  return transcript.length > 0 ? transcript : null;
+};
+
+const buildTurnInput = async ({
+  projectId,
+  threadId,
+  prompt,
+  initialCodexThreadId,
+  triggerMessageId,
+}: {
+  projectId: string;
+  threadId: string;
+  prompt: string;
+  initialCodexThreadId: string | null;
+  triggerMessageId: string | null;
+}): Promise<string> => {
+  if (initialCodexThreadId !== null) {
+    return prompt;
+  }
+
+  const transcript = await buildThreadContextTranscript(
+    projectId,
+    threadId,
+    triggerMessageId,
+  );
+
+  if (transcript === null) {
+    return prompt;
+  }
+
+  return [
+    "Use the following chat transcript as the authoritative conversation context. It matches the messages currently visible in the app UI.",
+    "",
+    "<chat_transcript>",
+    transcript,
+    "</chat_transcript>",
+    "",
+    "<current_user_message>",
+    prompt,
+    "</current_user_message>",
+  ].join("\n");
+};
+
 const getOrCreateThreadSession = async (
   projectId: string,
   threadId: string,
@@ -217,6 +317,13 @@ const runCodexTurn = async ({
     folderPath,
   } = await getOrCreateThreadSession(projectId, threadId);
   const triggerMessage = await createTriggerMessage(folderPath);
+  const inputWithContext = await buildTurnInput({
+    projectId,
+    threadId,
+    prompt: input,
+    initialCodexThreadId: initialThreadId,
+    triggerMessageId: triggerMessage,
+  });
   const runId = await createChatRun({
     threadId,
     projectId,
@@ -236,7 +343,7 @@ const runCodexTurn = async ({
   };
 
   try {
-    const { events } = await thread.runStreamed(input, {
+    const { events } = await thread.runStreamed(inputWithContext, {
       signal: abortController.signal,
     });
 
@@ -398,6 +505,9 @@ export const sendMessage = async (
     threadId: string;
     prompt: string;
     previewPath?: string | null;
+    previewSnapshot?:
+      | import("../../shared/contracts").GraphPreviewSnapshot
+      | null;
     fragmentShaderSource?: string | null;
   },
   onChunk: (text: string) => void,
@@ -435,6 +545,7 @@ export const sendMessage = async (
           messageId: userMessage.id,
           fileSnapshotsJson: JSON.stringify(fileSnapshots),
           previewPath: resolvedPreviewPath,
+          previewSnapshot: payload.previewSnapshot ?? null,
           fragmentShaderSource: payload.fragmentShaderSource ?? null,
         });
       } catch {

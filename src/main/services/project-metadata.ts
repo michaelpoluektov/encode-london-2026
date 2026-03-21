@@ -10,12 +10,14 @@ import { app } from "electron";
 import { Kysely, SqliteDialect, sql } from "kysely";
 import { z } from "zod";
 import type {
+  GraphPreviewSnapshot,
   ProjectCheckpoint,
   ProjectLayoutState,
   ProjectOpenResult,
   ShadilyManifest,
 } from "../../shared/contracts";
 import {
+  graphPreviewSnapshotSchema,
   projectCheckpointSchema,
   projectIdSchema,
   projectLayoutStateSchema,
@@ -143,6 +145,7 @@ type ProjectCheckpointsTable = {
   message_id: string;
   file_snapshots_json: string;
   preview_path: string | null;
+  preview_snapshot_json: string | null;
   fragment_shader_source: string | null;
   created_at: string;
 };
@@ -377,10 +380,19 @@ const createDatabase = async (): Promise<Kysely<MetadataDatabase>> => {
       message_id TEXT NOT NULL,
       file_snapshots_json TEXT NOT NULL,
       preview_path TEXT,
+      preview_snapshot_json TEXT,
       fragment_shader_source TEXT,
       created_at TEXT NOT NULL
     )
   `.execute(db);
+
+  await sql`
+    ALTER TABLE project_checkpoints ADD COLUMN preview_snapshot_json TEXT
+  `
+    .execute(db)
+    .catch(() => {
+      // Column already exists — ignore.
+    });
 
   // Migrate existing databases that lack the fragment_shader_source column.
   await sql`
@@ -547,12 +559,27 @@ export const saveProjectLayout = async (
 export const hasProjectFolder = (folderPath: string): boolean =>
   existsSync(folderPath);
 
+const parseCheckpointPreviewSnapshot = (
+  serializedSnapshot: string | null,
+): GraphPreviewSnapshot | null => {
+  if (serializedSnapshot === null) {
+    return null;
+  }
+
+  try {
+    return graphPreviewSnapshotSchema.parse(JSON.parse(serializedSnapshot));
+  } catch {
+    return null;
+  }
+};
+
 export const createCheckpoint = async ({
   projectId,
   threadId,
   messageId,
   fileSnapshotsJson,
   previewPath,
+  previewSnapshot,
   fragmentShaderSource,
 }: {
   projectId: string;
@@ -560,6 +587,7 @@ export const createCheckpoint = async ({
   messageId: string;
   fileSnapshotsJson: string;
   previewPath: string | null;
+  previewSnapshot: GraphPreviewSnapshot | null;
   fragmentShaderSource: string | null;
 }): Promise<void> => {
   const db = await getMetadataDatabase();
@@ -572,6 +600,8 @@ export const createCheckpoint = async ({
       message_id: messageId,
       file_snapshots_json: fileSnapshotsJson,
       preview_path: previewPath,
+      preview_snapshot_json:
+        previewSnapshot === null ? null : JSON.stringify(previewSnapshot),
       fragment_shader_source: fragmentShaderSource,
       created_at: getTimestamp(),
     })
@@ -591,6 +621,7 @@ export const listCheckpoints = async (
       "thread_id",
       "message_id",
       "preview_path",
+      "preview_snapshot_json",
       "fragment_shader_source",
       "created_at",
     ])
@@ -606,6 +637,9 @@ export const listCheckpoints = async (
       threadId: row.thread_id,
       messageId: row.message_id,
       previewPath: row.preview_path,
+      previewSnapshot: parseCheckpointPreviewSnapshot(
+        row.preview_snapshot_json,
+      ),
       fragmentShaderSource: row.fragment_shader_source ?? null,
       createdAt: row.created_at,
     }),

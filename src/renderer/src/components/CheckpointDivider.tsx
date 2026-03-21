@@ -1,5 +1,8 @@
 import { type JSX, useCallback, useRef, useState } from "react";
-import type { ProjectCheckpoint } from "../../../shared/contracts";
+import type {
+  GraphPreviewSnapshot,
+  ProjectCheckpoint,
+} from "../../../shared/contracts";
 import { useChatStore } from "../store/chat-store";
 import { useGraphPreviewStore } from "../store/graph-preview-store";
 import {
@@ -19,40 +22,48 @@ export const CheckpointDivider = ({
   const [isReverting, setIsReverting] = useState(false);
   const revertToCheckpoint = useChatStore((s) => s.revertToCheckpoint);
   const isGenerating = useChatStore((s) => s.isGenerating);
-  const savedShaderRef = useRef<string | null>(null);
+  const savedPreviewSnapshotRef = useRef<GraphPreviewSnapshot | null>(null);
+
+  const restoreSavedPreviewSnapshot = useCallback(() => {
+    const store = useGraphPreviewStore.getState();
+    const savedPreviewSnapshot = savedPreviewSnapshotRef.current;
+
+    if (savedPreviewSnapshot === null) {
+      store.clearCompiledGraphShader();
+    } else {
+      store.setCompiledGraphShader(
+        savedPreviewSnapshot.fragmentShaderSource,
+        savedPreviewSnapshot.uniformValues,
+      );
+    }
+
+    savedPreviewSnapshotRef.current = null;
+  }, []);
 
   const handlePreviewToggle = useCallback(() => {
     const store = useGraphPreviewStore.getState();
+
     if (isPreviewing) {
-      // Restore original shader
-      if (savedShaderRef.current !== null) {
-        store.setCompiledGraphShader(savedShaderRef.current, {});
-      } else {
-        store.clearCompiledGraphShader();
-      }
-      savedShaderRef.current = null;
+      restoreSavedPreviewSnapshot();
       setIsPreviewing(false);
-    } else if (checkpoint.fragmentShaderSource !== null) {
-      // Save current shader and swap in checkpoint shader
-      savedShaderRef.current = store.fragmentShaderSource;
-      store.setCompiledGraphShader(checkpoint.fragmentShaderSource, {});
+    } else if (checkpoint.previewSnapshot !== null) {
+      savedPreviewSnapshotRef.current = store.previewSnapshot;
+      store.setCompiledGraphShader(
+        checkpoint.previewSnapshot.fragmentShaderSource,
+        checkpoint.previewSnapshot.uniformValues,
+      );
       setIsPreviewing(true);
     }
-  }, [checkpoint.fragmentShaderSource, isPreviewing]);
+  }, [checkpoint.previewSnapshot, isPreviewing, restoreSavedPreviewSnapshot]);
 
   const handleRevert = async () => {
     if (isReverting || isGenerating) return;
-    // If previewing, restore before reverting
+
     if (isPreviewing) {
-      const store = useGraphPreviewStore.getState();
-      if (savedShaderRef.current !== null) {
-        store.setCompiledGraphShader(savedShaderRef.current, {});
-      } else {
-        store.clearCompiledGraphShader();
-      }
-      savedShaderRef.current = null;
+      restoreSavedPreviewSnapshot();
       setIsPreviewing(false);
     }
+
     setIsReverting(true);
     try {
       await revertToCheckpoint(checkpoint.id);
@@ -65,7 +76,7 @@ export const CheckpointDivider = ({
     <div className={chatCheckpointDivider}>
       <div className={chatCheckpointLine} />
       <div className={chatCheckpointActions}>
-        {checkpoint.fragmentShaderSource !== null && (
+        {checkpoint.previewSnapshot !== null && (
           <button
             aria-label={isPreviewing ? "Stop preview" : "Preview checkpoint"}
             className={chatCheckpointButton}

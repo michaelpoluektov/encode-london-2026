@@ -68,6 +68,7 @@ export const sendMessage = async (
       threadId: payload.threadId,
       prompt: payload.prompt,
       previewPath: payload.previewPath ?? null,
+      previewSnapshot: payload.previewSnapshot ?? null,
       fragmentShaderSource: payload.fragmentShaderSource ?? null,
     },
     onChunk,

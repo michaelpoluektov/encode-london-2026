@@ -420,8 +420,7 @@ export const sendChatMessage = async (
   }));
 
   let previewPath: string | null = null;
-  const fragmentShaderSource =
-    useGraphPreviewStore.getState().fragmentShaderSource;
+  const previewSnapshot = useGraphPreviewStore.getState().previewSnapshot;
   const project = useProjectStore.getState().project;
 
   if (project !== null) {
@@ -454,7 +453,8 @@ export const sendChatMessage = async (
           threadId: activeThread.id,
           prompt: trimmedPrompt,
           previewPath,
-          fragmentShaderSource,
+          previewSnapshot,
+          fragmentShaderSource: previewSnapshot?.fragmentShaderSource ?? null,
         });
         set({ isRetrying: false });
       } catch (sendError) {

@@ -170,6 +170,55 @@ export type ProjectSaveCaptureResult = z.infer<
   typeof projectSaveCaptureResultSchema
 >;
 
+const finiteNumberSchema = z.number().finite();
+
+export const graphUniformValueSchema: z.ZodType<
+  | boolean
+  | number
+  | { x: number; y: number }
+  | { x: number; y: number; z: number }
+  | { x: number; y: number; z: number; w: number }
+> = z.union([
+  z.boolean(),
+  finiteNumberSchema,
+  z
+    .object({
+      x: finiteNumberSchema,
+      y: finiteNumberSchema,
+    })
+    .strict(),
+  z
+    .object({
+      x: finiteNumberSchema,
+      y: finiteNumberSchema,
+      z: finiteNumberSchema,
+    })
+    .strict(),
+  z
+    .object({
+      x: finiteNumberSchema,
+      y: finiteNumberSchema,
+      z: finiteNumberSchema,
+      w: finiteNumberSchema,
+    })
+    .strict(),
+]);
+
+export const graphUniformValuesSchema = z.record(
+  z.string().min(1),
+  graphUniformValueSchema,
+);
+
+export type GraphUniformValue = z.infer<typeof graphUniformValueSchema>;
+export type GraphUniformValues = z.infer<typeof graphUniformValuesSchema>;
+
+export const graphPreviewSnapshotSchema = z.object({
+  fragmentShaderSource: z.string().min(1),
+  uniformValues: graphUniformValuesSchema,
+});
+
+export type GraphPreviewSnapshot = z.infer<typeof graphPreviewSnapshotSchema>;
+
 export const chatPromptSchema = z.string().trim().min(1);
 export const chatThreadStatusSchema = z.enum(["regular", "archived"]);
 export const chatRoleSchema = z.enum(["user", "assistant", "system"]);
@@ -297,6 +346,7 @@ export const chatSendPayloadSchema = z.object({
   threadId: z.string().uuid(),
   prompt: chatPromptSchema,
   previewPath: z.string().nullable().optional(),
+  previewSnapshot: graphPreviewSnapshotSchema.nullable().optional(),
   fragmentShaderSource: z.string().nullable().optional(),
 });
 
@@ -308,6 +358,7 @@ export const projectCheckpointSchema = z.object({
   threadId: z.string().uuid(),
   messageId: z.string().uuid(),
   previewPath: z.string().nullable(),
+  previewSnapshot: graphPreviewSnapshotSchema.nullable(),
   fragmentShaderSource: z.string().nullable(),
   createdAt: z.string(),
 });
