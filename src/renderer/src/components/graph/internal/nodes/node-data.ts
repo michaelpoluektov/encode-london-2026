@@ -20,6 +20,7 @@ type GraphNodeData<Definition> = {
 
 type InteractiveGraphNodeData<Definition, Value> = GraphNodeData<Definition> & {
   readonly onValueChange: (nextValue: Value) => void;
+  readonly uniformBindingKey: string;
   readonly value: Value;
 };
 

@@ -27,6 +27,7 @@ export type ValidatedGraphNode = {
   readonly flowId: string;
   readonly inputTypes: ReadonlyMap<string, GlslValueType>;
   readonly outputType: GlslValueType | null;
+  readonly uniformBindingKey: string | null;
   readonly definition: GraphNodeDefinition;
 };
 

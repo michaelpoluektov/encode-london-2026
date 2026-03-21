@@ -62,6 +62,8 @@ type FlowGraphNode =
   | Vec3GraphFlowNode
   | Vec4GraphFlowNode;
 
+type UniformBindingValue = boolean | number | Vec2Value | Vec3Value | Vec4Value;
+
 type CreateFlowElementsOptions = {
   readonly onInputValueChange: (flowId: string, value: GraphInputValue) => void;
 };
@@ -238,6 +240,20 @@ const cloneVec4Value = (value: Vec4Value): Vec4Value => ({
   z: value.z,
 });
 
+const colorValueToVec4Value = (value: ColorValue): Vec4Value => ({
+  w: value.a,
+  x: value.r,
+  y: value.g,
+  z: value.b,
+});
+
+const vec4ValueToColorValue = (value: Vec4Value): ColorValue => ({
+  a: value.w,
+  b: value.z,
+  g: value.y,
+  r: value.x,
+});
+
 const createInputValueChangeHandler =
   <Value>(
     flowId: string,
@@ -281,6 +297,79 @@ const isVec4Value = (value: unknown): value is Vec4Value =>
   typeof value.z === "number" &&
   typeof value.w === "number";
 
+const isInteractiveFlowNode = (
+  node: FlowGraphNode,
+): node is Exclude<
+  FlowGraphNode,
+  CustomGraphFlowNode | GlFragColorGraphFlowNode
+> => node.type !== "custom" && node.type !== "glFragColor";
+
+const toUniformBindingValue = (
+  node: Exclude<FlowGraphNode, CustomGraphFlowNode | GlFragColorGraphFlowNode>,
+  value: GraphInputValue,
+): UniformBindingValue | null => {
+  switch (node.type) {
+    case "bool":
+      return typeof value === "boolean" ? value : null;
+    case "color":
+      return isColorValue(value) ? colorValueToVec4Value(value) : null;
+    case "float":
+    case "int":
+      return typeof value === "number" ? value : null;
+    case "vec2":
+      return isVec2Value(value) ? cloneVec2Value(value) : null;
+    case "vec3":
+      return isVec3Value(value) ? cloneVec3Value(value) : null;
+    case "vec4":
+      return isVec4Value(value) ? cloneVec4Value(value) : null;
+  }
+};
+
+const applyUniformBindingValue = (
+  node: Exclude<FlowGraphNode, CustomGraphFlowNode | GlFragColorGraphFlowNode>,
+  value: UniformBindingValue,
+): FlowGraphNode => {
+  switch (node.type) {
+    case "bool":
+      return typeof value === "boolean"
+        ? replaceNodeData(node, { ...node.data, value })
+        : node;
+    case "color":
+      return isVec4Value(value)
+        ? replaceNodeData(node, {
+            ...node.data,
+            value: vec4ValueToColorValue(value),
+          })
+        : node;
+    case "float":
+    case "int":
+      return typeof value === "number"
+        ? replaceNodeData(node, { ...node.data, value })
+        : node;
+    case "vec2":
+      return isVec2Value(value)
+        ? replaceNodeData(node, {
+            ...node.data,
+            value: cloneVec2Value(value),
+          })
+        : node;
+    case "vec3":
+      return isVec3Value(value)
+        ? replaceNodeData(node, {
+            ...node.data,
+            value: cloneVec3Value(value),
+          })
+        : node;
+    case "vec4":
+      return isVec4Value(value)
+        ? replaceNodeData(node, {
+            ...node.data,
+            value: cloneVec4Value(value),
+          })
+        : node;
+  }
+};
+
 const createFlowNode = (
   node: ValidatedGraphNode,
   position: { x: number; y: number },
@@ -296,6 +385,7 @@ const createFlowNode = (
           node.flowId,
           options,
         ),
+        uniformBindingKey: node.uniformBindingKey ?? node.flowId,
         value: node.definition.defaultValue,
       };
 
@@ -312,6 +402,7 @@ const createFlowNode = (
           node.flowId,
           options,
         ),
+        uniformBindingKey: node.uniformBindingKey ?? node.flowId,
         value: cloneColorValue(node.definition.defaultValue),
       };
 
@@ -339,6 +430,7 @@ const createFlowNode = (
           node.flowId,
           options,
         ),
+        uniformBindingKey: node.uniformBindingKey ?? node.flowId,
         value: node.definition.defaultValue,
       };
 
@@ -366,6 +458,7 @@ const createFlowNode = (
           node.flowId,
           options,
         ),
+        uniformBindingKey: node.uniformBindingKey ?? node.flowId,
         value: node.definition.defaultValue,
       };
 
@@ -382,6 +475,7 @@ const createFlowNode = (
           node.flowId,
           options,
         ),
+        uniformBindingKey: node.uniformBindingKey ?? node.flowId,
         value: cloneVec2Value(node.definition.defaultValue),
       };
 
@@ -398,6 +492,7 @@ const createFlowNode = (
           node.flowId,
           options,
         ),
+        uniformBindingKey: node.uniformBindingKey ?? node.flowId,
         value: cloneVec3Value(node.definition.defaultValue),
       };
 
@@ -414,6 +509,7 @@ const createFlowNode = (
           node.flowId,
           options,
         ),
+        uniformBindingKey: node.uniformBindingKey ?? node.flowId,
         value: cloneVec4Value(node.definition.defaultValue),
       };
 
@@ -476,53 +572,34 @@ export const updateFlowNodeValue = (
   flowId: string,
   value: GraphInputValue,
 ): FlowGraphNode[] =>
-  nodes.map<FlowGraphNode>((node) => {
-    if (node.id !== flowId) {
-      return node;
+  (() => {
+    const sourceNode = nodes.find(
+      (
+        node,
+      ): node is Exclude<
+        FlowGraphNode,
+        CustomGraphFlowNode | GlFragColorGraphFlowNode
+      > => node.id === flowId && isInteractiveFlowNode(node),
+    );
+
+    if (sourceNode === undefined) {
+      return [...nodes];
     }
 
-    switch (node.type) {
-      case "bool":
-        return typeof value === "boolean"
-          ? replaceNodeData(node, { ...node.data, value })
-          : node;
-      case "color":
-        return isColorValue(value)
-          ? replaceNodeData(node, {
-              ...node.data,
-              value: cloneColorValue(value),
-            })
-          : node;
-      case "float":
-      case "int":
-        return typeof value === "number"
-          ? replaceNodeData(node, { ...node.data, value })
-          : node;
-      case "vec2":
-        return isVec2Value(value)
-          ? replaceNodeData(node, {
-              ...node.data,
-              value: cloneVec2Value(value),
-            })
-          : node;
-      case "vec3":
-        return isVec3Value(value)
-          ? replaceNodeData(node, {
-              ...node.data,
-              value: cloneVec3Value(value),
-            })
-          : node;
-      case "vec4":
-        return isVec4Value(value)
-          ? replaceNodeData(node, {
-              ...node.data,
-              value: cloneVec4Value(value),
-            })
-          : node;
-      case "custom":
-      case "glFragColor":
-        return node;
-      default:
-        return node;
+    const bindingValue = toUniformBindingValue(sourceNode, value);
+
+    if (bindingValue === null) {
+      return [...nodes];
     }
-  });
+
+    return nodes.map<FlowGraphNode>((node) => {
+      if (
+        !isInteractiveFlowNode(node) ||
+        node.data.uniformBindingKey !== sourceNode.data.uniformBindingKey
+      ) {
+        return node;
+      }
+
+      return applyUniformBindingValue(node, bindingValue);
+    });
+  })();
