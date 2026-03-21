@@ -1,4 +1,4 @@
-import { style, styleVariants } from "@vanilla-extract/css";
+import { style } from "@vanilla-extract/css";
 import { themeVars } from "../../theme";
 
 export const fieldChrome = style({
@@ -25,22 +25,12 @@ export const fieldChrome = style({
   },
 });
 
-export const fieldControlSize = styleVariants({
-  md: {
-    height: themeVars.size.controlMd,
-    padding: `0 ${themeVars.space[3]}`,
-  },
-  sm: {
-    height: themeVars.size.controlSm,
-    padding: `0 ${themeVars.space[3]}`,
-  },
-});
-
 export const textInputField = style([
   fieldChrome,
-  fieldControlSize.md,
   {
     width: "100%",
+    height: themeVars.size.controlMd,
+    padding: `0 ${themeVars.space[3]}`,
     fontFamily: themeVars.font.family.sans,
     fontSize: themeVars.font.size.sm,
     lineHeight: themeVars.font.lineHeight.normal,

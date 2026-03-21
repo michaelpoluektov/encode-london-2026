@@ -1,4 +1,4 @@
-import { style, styleVariants } from "@vanilla-extract/css";
+import { style } from "@vanilla-extract/css";
 import { themeVars } from "../theme";
 
 export const panel = style({
@@ -13,20 +13,19 @@ export const panel = style({
   overflow: "hidden",
 });
 
-export const panelTone = styleVariants({
-  default: {},
-  muted: {
-    background: themeVars.color.background.panelMuted,
-  },
-});
-
 export const panelHeader = style({
   display: "flex",
   alignItems: "center",
-  justifyContent: "flex-end",
+  justifyContent: "space-between",
   minHeight: themeVars.size.panelHeaderHeight,
   padding: `${themeVars.space[1]} ${themeVars.space[2]}`,
   borderBottom: `1px solid ${themeVars.color.border.subtle}`,
+});
+
+export const panelHeaderControls = style({
+  display: "flex",
+  alignItems: "center",
+  gap: themeVars.space[1],
 });
 
 export const panelBody = style({

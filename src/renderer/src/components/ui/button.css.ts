@@ -32,10 +32,6 @@ export const buttonBase = style({
 });
 
 export const buttonSize = styleVariants({
-  md: {
-    height: themeVars.size.controlMd,
-    padding: `0 ${themeVars.space[4]}`,
-  },
   sm: {
     height: themeVars.size.controlSm,
     padding: `0 ${themeVars.space[3]}`,
@@ -47,18 +43,6 @@ export const buttonSize = styleVariants({
 });
 
 export const buttonVariant = styleVariants({
-  icon: {
-    borderColor: themeVars.color.border.standard,
-    background: themeVars.color.surface.interactive,
-    fontFamily: themeVars.font.family.mono,
-    selectors: {
-      "&:hover:not(:disabled)": {
-        borderColor: themeVars.color.border.strong,
-        background: themeVars.color.surface.interactiveHover,
-        color: themeVars.color.text.primary,
-      },
-    },
-  },
   plain: {
     fontFamily: themeVars.font.family.mono,
     selectors: {
@@ -81,10 +65,6 @@ export const buttonVariant = styleVariants({
 });
 
 export const buttonSquare = styleVariants({
-  md: {
-    padding: 0,
-    width: themeVars.size.controlMd,
-  },
   sm: {
     padding: 0,
     width: themeVars.size.controlSm,
