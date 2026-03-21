@@ -35,11 +35,13 @@
     }
   },
   "dependencies": {
+    "@dagrejs/dagre": "^2.0.4",
     "@assistant-ui/react": "^0.12.19",
     "@assistant-ui/react-markdown": "^0.12.6",
     "@monaco-editor/react": "^4.7.0",
     "@openai/codex-sdk": "latest",
     "@vanilla-extract/css": "^1.20.0",
+    "@xyflow/react": "^12.10.1",
     "allotment": "^1.20.5",
     "kysely": "^0.28.14",
     "monaco-editor": "^0.52.2",
