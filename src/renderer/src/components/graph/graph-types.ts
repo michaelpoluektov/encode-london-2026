@@ -14,6 +14,14 @@ export type GraphSourceLoader = (
   node: CustomNode,
 ) => Promise<string> | string;
 
+export type GraphUniformValue =
+  | boolean
+  | number
+  | Vec2Value
+  | Vec3Value
+  | Vec4Value;
+export type GraphUniformValues = Readonly<Record<string, GraphUniformValue>>;
+
 export type GraphInputValue =
   | ColorValue
   | Vec2Value
