@@ -2,10 +2,8 @@ import { type JSX, useEffect, useRef } from "react";
 import {
   appShell,
   footerBar,
-  headerBar,
   layoutViewport,
   shellFrame,
-  shellTitle,
   workspaceColumn,
   workspaceGrid,
   workspaceShell,
@@ -241,11 +239,6 @@ export const App = (): JSX.Element => {
 
   return (
     <main className={appShell}>
-      <header className={headerBar}>
-        <Text as="h1" className={shellTitle} variant="title">
-          Shadily
-        </Text>
-      </header>
       <section className={layoutViewport}>
         {collapsedPanes.project ? (
           <PaneRestoreControl

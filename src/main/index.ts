@@ -16,6 +16,22 @@ if (process.platform === "linux") {
   app.commandLine.appendSwitch("ozone-platform-hint", "auto");
 }
 
+const isToggleDevToolsShortcut = (input: Electron.Input): boolean => {
+  if (input.type !== "keyDown") {
+    return false;
+  }
+
+  if (input.key === "F12") {
+    return true;
+  }
+
+  return (
+    input.key.toLowerCase() === "i" &&
+    (input.control || input.meta) &&
+    input.shift
+  );
+};
+
 const createMainWindow = async (): Promise<BrowserWindow> => {
   const mainWindow = new BrowserWindow({
     width: 1440,
@@ -29,6 +45,15 @@ const createMainWindow = async (): Promise<BrowserWindow> => {
       preload: join(__dirname, "../preload/index.mjs"),
       sandbox: false,
     },
+  });
+  mainWindow.removeMenu();
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    if (!isToggleDevToolsShortcut(input)) {
+      return;
+    }
+
+    event.preventDefault();
+    mainWindow.webContents.toggleDevTools();
   });
 
   await mainWindow.loadURL(
