@@ -1,1 +1,1 @@
-export { EXAMPLE_DAG_GRAPH } from "./graph";
+export { EXAMPLE_GRAPH_SOURCE } from "./graph";

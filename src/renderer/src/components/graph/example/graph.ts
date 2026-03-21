@@ -1,6 +1,6 @@
-import { type DagGraph, dagGraphSchema } from "../dag-schema";
+import { graphSchema } from "../internal/json-schema";
 
-export const EXAMPLE_DAG_GRAPH: DagGraph = dagGraphSchema.parse({
+const exampleGraph = graphSchema.parse({
   nodes: [
     {
       defaultValue: 0,
@@ -125,3 +125,5 @@ export const EXAMPLE_DAG_GRAPH: DagGraph = dagGraphSchema.parse({
     },
   ],
 });
+
+export const EXAMPLE_GRAPH_SOURCE = JSON.stringify(exampleGraph, null, 2);

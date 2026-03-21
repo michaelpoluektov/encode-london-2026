@@ -71,7 +71,7 @@ export const colorNodeSchema = z.object({
   defaultValue: colorValueSchema,
 });
 
-export const dagNodeSchema = z.discriminatedUnion("kind", [
+export const graphNodeSchema = z.discriminatedUnion("kind", [
   customNodeSchema,
   glFragColorNodeSchema,
   floatNodeSchema,
@@ -79,8 +79,8 @@ export const dagNodeSchema = z.discriminatedUnion("kind", [
   colorNodeSchema,
 ]);
 
-export const dagGraphSchema = z.object({
-  nodes: z.array(dagNodeSchema),
+export const graphSchema = z.object({
+  nodes: z.array(graphNodeSchema),
 });
 
 export type CustomNode = z.infer<typeof customNodeSchema>;
@@ -89,5 +89,5 @@ export type FloatNode = z.infer<typeof floatNodeSchema>;
 export type ClampedFloatNode = z.infer<typeof clampedFloatNodeSchema>;
 export type ColorNode = z.infer<typeof colorNodeSchema>;
 export type ColorValue = z.infer<typeof colorValueSchema>;
-export type DagNode = z.infer<typeof dagNodeSchema>;
-export type DagGraph = z.infer<typeof dagGraphSchema>;
+export type GraphNodeDefinition = z.infer<typeof graphNodeSchema>;
+export type GraphDefinition = z.infer<typeof graphSchema>;

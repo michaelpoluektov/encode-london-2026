@@ -2,24 +2,19 @@ import { Background, ReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { type JSX, useEffect, useMemo, useState } from "react";
 import { cx } from "../../lib/cx";
-import type { DagGraph } from "./dag-schema";
 import { graphCanvas } from "./graph.css";
+import type { GraphSourceLoader, ValidatedGraph } from "./graph-types";
 import {
   createFlowElements,
-  dagNodeTypes,
-} from "./internal/create-flow-elements";
-import {
-  type GraphParseIssue,
-  type GraphSourceLoader,
-  type ParsedDagGraph,
-  parseGraph,
-} from "./internal/parse-graph";
+  graphNodeTypes,
+} from "./internal/create-react-flow-graph";
+import { readValidatedGraph } from "./internal/load-and-validate-graph";
 
 type FlowElements = ReturnType<typeof createFlowElements>;
 
 type GraphProps = {
   readonly className?: string;
-  readonly graph: DagGraph;
+  readonly graphSource: string;
   readonly loadCustomNodeSource?: GraphSourceLoader;
 };
 
@@ -30,46 +25,48 @@ const EMPTY_FLOW_ELEMENTS: FlowElements = {
 
 export const Graph = ({
   className,
-  graph,
+  graphSource,
   loadCustomNodeSource,
 }: GraphProps): JSX.Element => {
-  const [parsedGraph, setParsedGraph] = useState<ParsedDagGraph | null>(null);
-  const [parseIssues, setParseIssues] = useState<readonly GraphParseIssue[]>(
-    [],
+  const [validatedGraph, setValidatedGraph] = useState<ValidatedGraph | null>(
+    null,
   );
+  const [errors, setErrors] = useState<readonly string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
-    void parseGraph(graph, { loadCustomNodeSource }).then((result) => {
-      if (cancelled) {
-        return;
-      }
+    void readValidatedGraph(graphSource, { loadCustomNodeSource }).then(
+      (result) => {
+        if (cancelled) {
+          return;
+        }
 
-      if (result.ok) {
-        setParsedGraph(result.graph);
-        setParseIssues([]);
-        return;
-      }
+        if (result.ok) {
+          setValidatedGraph(result.graph);
+          setErrors([]);
+          return;
+        }
 
-      setParsedGraph(null);
-      setParseIssues(result.issues);
-    });
+        setValidatedGraph(null);
+        setErrors(result.errors);
+      },
+    );
 
     return () => {
       cancelled = true;
     };
-  }, [graph, loadCustomNodeSource]);
+  }, [graphSource, loadCustomNodeSource]);
 
   const flowElements = useMemo(
     () =>
-      parsedGraph === null
+      validatedGraph === null
         ? EMPTY_FLOW_ELEMENTS
-        : createFlowElements(parsedGraph),
-    [parsedGraph],
+        : createFlowElements(validatedGraph),
+    [validatedGraph],
   );
 
-  if (parseIssues.length > 0) {
+  if (errors.length > 0) {
     return (
       <div className={cx(graphCanvas, className)}>
         <pre
@@ -80,7 +77,7 @@ export const Graph = ({
             whiteSpace: "pre-wrap",
           }}
         >
-          {parseIssues.map((issue) => issue.message).join("\n\n")}
+          {errors.join("\n\n")}
         </pre>
       </div>
     );
@@ -93,7 +90,7 @@ export const Graph = ({
         elementsSelectable={false}
         fitView
         nodes={flowElements.nodes}
-        nodeTypes={dagNodeTypes}
+        nodeTypes={graphNodeTypes}
         nodesConnectable={false}
         nodesDraggable={false}
         zoomOnDoubleClick={false}

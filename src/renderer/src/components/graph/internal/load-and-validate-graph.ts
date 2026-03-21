@@ -1,14 +1,21 @@
+import type { ZodIssue } from "zod";
+import type {
+  GlslValueType,
+  GraphSourceLoader,
+  ValidatedGraph,
+  ValidatedGraphEdge,
+  ValidatedGraphNode,
+} from "../graph-types";
 import type {
   ClampedFloatNode,
   ColorNode,
   CustomNode,
-  DagGraph,
-  DagNode,
   FloatNode,
   GlFragColorNode,
-} from "../dag-schema";
-
-export type GlslValueType = "bool" | "float" | "int" | "vec2" | "vec3" | "vec4";
+  GraphDefinition,
+  GraphNodeDefinition,
+} from "./json-schema";
+import { graphSchema } from "./json-schema";
 
 type InferredNodeTypeInfo = {
   readonly inputTypes: ReadonlyMap<string, GlslValueType>;
@@ -21,66 +28,21 @@ type ParsedGlslFunctionSignature = {
   readonly outputType: GlslValueType;
 };
 
-export type GraphParseIssue = {
-  readonly message: string;
-  readonly nodeInstanceName?: string;
-  readonly inputName?: string;
-  readonly sourceNodeInstanceName?: string;
-};
-
-export type GraphSourceLoader = (
-  filepath: string,
-  node: CustomNode,
-) => Promise<string> | string;
-
-export type GraphParseOptions = {
+type ReadValidatedGraphOptions = {
   readonly loadCustomNodeSource?: GraphSourceLoader;
 };
 
-export type ParsedDagNode = {
-  readonly displayName: string;
-  readonly flowId: string;
-  readonly graphNode: DagNode;
-  readonly inputTypes: ReadonlyMap<string, GlslValueType>;
-  readonly outputType: GlslValueType | null;
-};
-
-export type ParsedDagEdge = {
-  readonly sourceNode: ParsedDagNode;
-  readonly sourceRef: string;
-  readonly targetInputName: string;
-  readonly targetNode: ParsedDagNode;
-  readonly valueType: GlslValueType;
-};
-
-export type ParsedDagGraph = {
-  readonly edges: readonly ParsedDagEdge[];
-  readonly nodeByInstanceName: ReadonlyMap<string, ParsedDagNode>;
-  readonly nodes: readonly ParsedDagNode[];
-  readonly sourceGraph: DagGraph;
-};
-
-export type GraphParseResult =
+type ReadValidatedGraphResult =
   | {
-      readonly graph: ParsedDagGraph;
-      readonly issues: readonly [];
+      readonly errors: readonly [];
+      readonly graph: ValidatedGraph;
       readonly ok: true;
     }
   | {
+      readonly errors: readonly string[];
       readonly graph: null;
-      readonly issues: readonly GraphParseIssue[];
       readonly ok: false;
     };
-
-export class GraphParseError extends Error {
-  public readonly issues: readonly GraphParseIssue[];
-
-  public constructor(issues: readonly GraphParseIssue[]) {
-    super(issues.map((issue) => issue.message).join("\n"));
-    this.name = "GraphParseError";
-    this.issues = issues;
-  }
-}
 
 const SUPPORTED_GLSL_TYPES = new Set<GlslValueType>([
   "bool",
@@ -98,6 +60,43 @@ const exampleNodeSourceLoaders = import.meta.glob("../example/nodes/*.glsl", {
   import: "default",
   query: "?raw",
 });
+
+const formatSchemaIssuePath = (issue: ZodIssue): string =>
+  issue.path.length === 0 ? "graph" : `graph.${issue.path.join(".")}`;
+
+const formatSchemaIssue = (issue: ZodIssue): string =>
+  `${formatSchemaIssuePath(issue)}: ${issue.message}`;
+
+const parseGraphJson = (
+  graphSource: string,
+): { ok: true; graph: GraphDefinition } | { ok: false; errors: string[] } => {
+  let parsedJson: unknown;
+
+  try {
+    parsedJson = JSON.parse(graphSource);
+  } catch (error) {
+    return {
+      errors: [
+        `graph JSON could not be parsed. ${error instanceof Error ? error.message : "Unknown error."}`,
+      ],
+      ok: false,
+    };
+  }
+
+  const parsedGraph = graphSchema.safeParse(parsedJson);
+
+  if (!parsedGraph.success) {
+    return {
+      errors: parsedGraph.error.issues.map(formatSchemaIssue),
+      ok: false,
+    };
+  }
+
+  return {
+    graph: parsedGraph.data,
+    ok: true,
+  };
+};
 
 const normalizeExampleNodePath = (filepath: string): string | null => {
   const normalizedFilePath = filepath.replace(/\\/g, "/");
@@ -138,26 +137,28 @@ const loadExampleNodeSource = async (
   return null;
 };
 
-const createNodeLabel = (node: DagNode, fallback: string): string =>
-  "instanceName" in node ? node.instanceName : fallback;
+const createNodeLabel = (
+  node: GraphNodeDefinition,
+  fallback: string,
+): string => ("instanceName" in node ? node.instanceName : fallback);
 
-const getNodeInputs = (node: DagNode): Readonly<Record<string, string>> => {
+const getNodeInputs = (
+  node: GraphNodeDefinition,
+): Readonly<Record<string, string>> => {
   switch (node.kind) {
     case "custom":
       return node.inputs;
     case "glFragColor":
       return node.inputs;
     case "clampedFloat":
-      return {};
     case "color":
-      return {};
     case "float":
       return {};
   }
 };
 
 const createFlowNodeId = (
-  node: DagNode,
+  node: GraphNodeDefinition,
   index: number,
   seenIds: Map<string, number>,
 ): string => {
@@ -172,7 +173,7 @@ const createFlowNodeId = (
 
 const resolveSourceNodeInstanceName = (
   sourceRef: string,
-  nodeByInstanceName: ReadonlyMap<string, DagNode>,
+  nodeByInstanceName: ReadonlyMap<string, GraphNodeDefinition>,
 ): string | null => {
   const candidates = [sourceRef];
 
@@ -312,8 +313,8 @@ const inferCustomNodeTypeInfo = async (
   node: CustomNode,
   loadCustomNodeSource: GraphSourceLoader | undefined,
 ): Promise<
-  | { info: InferredNodeTypeInfo; issues: GraphParseIssue[] }
-  | { info: null; issues: GraphParseIssue[] }
+  | { errors: string[]; info: InferredNodeTypeInfo }
+  | { errors: string[]; info: null }
 > => {
   const loadSource =
     loadCustomNodeSource ??
@@ -335,13 +336,10 @@ const inferCustomNodeTypeInfo = async (
     source = await loadSource(node.filepath, node);
   } catch (error) {
     return {
-      info: null,
-      issues: [
-        {
-          message: `node [${node.instanceName}] could not load custom node source from [${node.filepath}] to infer its input and output types. ${error instanceof Error ? error.message : "Unknown error."}`,
-          nodeInstanceName: node.instanceName,
-        },
+      errors: [
+        `node [${node.instanceName}] could not load custom node source from [${node.filepath}] to infer its input and output types. ${error instanceof Error ? error.message : "Unknown error."}`,
       ],
+      info: null,
     };
   }
 
@@ -362,31 +360,28 @@ const inferCustomNodeTypeInfo = async (
         : "none";
 
     return {
-      info: null,
-      issues: [
-        {
-          message: `node [${node.instanceName}] could not infer a custom node signature from [${node.filepath}]. Expected a function named [${expectedFunctionName}] or a file with exactly one supported GLSL function. Available functions: ${availableFunctions}.`,
-          nodeInstanceName: node.instanceName,
-        },
+      errors: [
+        `node [${node.instanceName}] could not infer a custom node signature from [${node.filepath}]. Expected a function named [${expectedFunctionName}] or a file with exactly one supported GLSL function. Available functions: ${availableFunctions}.`,
       ],
+      info: null,
     };
   }
 
   return {
+    errors: [],
     info: {
       inputTypes: matchedSignature.inputTypes,
       outputType: matchedSignature.outputType,
     },
-    issues: [],
   };
 };
 
 const inferNodeTypeInfo = async (
-  node: DagNode,
+  node: GraphNodeDefinition,
   loadCustomNodeSource: GraphSourceLoader | undefined,
 ): Promise<
-  | { info: InferredNodeTypeInfo; issues: GraphParseIssue[] }
-  | { info: null; issues: GraphParseIssue[] }
+  | { errors: string[]; info: InferredNodeTypeInfo }
+  | { errors: string[]; info: null }
 > => {
   switch (node.kind) {
     case "custom":
@@ -396,17 +391,17 @@ const inferNodeTypeInfo = async (
     case "color":
     case "float":
       return {
+        errors: [],
         info: inferStaticNodeTypeInfo(node),
-        issues: [],
       };
   }
 };
 
-const createDuplicateInstanceNameIssues = (
-  graph: DagGraph,
-): GraphParseIssue[] => {
+const createDuplicateInstanceNameErrors = (
+  graph: GraphDefinition,
+): string[] => {
   const seenNodes = new Set<string>();
-  const issues: GraphParseIssue[] = [];
+  const errors: string[] = [];
 
   for (const node of graph.nodes) {
     if (!("instanceName" in node)) {
@@ -414,36 +409,35 @@ const createDuplicateInstanceNameIssues = (
     }
 
     if (seenNodes.has(node.instanceName)) {
-      issues.push({
-        message: `graph contains multiple nodes with the same instance name [${node.instanceName}]. Source references must be unique so edge types can be resolved unambiguously.`,
-        nodeInstanceName: node.instanceName,
-      });
+      errors.push(
+        `graph contains multiple nodes with the same instance name [${node.instanceName}]. Source references must be unique so edge types can be resolved unambiguously.`,
+      );
       continue;
     }
 
     seenNodes.add(node.instanceName);
   }
 
-  return issues;
+  return errors;
 };
 
-export const parseGraph = async (
-  graph: DagGraph,
-  options: GraphParseOptions = {},
-): Promise<GraphParseResult> => {
-  const issues = createDuplicateInstanceNameIssues(graph);
-  const rawNodeByInstanceName = new Map<string, DagNode>();
+const validateGraphDefinition = async (
+  graph: GraphDefinition,
+  options: ReadValidatedGraphOptions = {},
+): Promise<ReadValidatedGraphResult> => {
+  const errors = createDuplicateInstanceNameErrors(graph);
+  const nodeByInstanceName = new Map<string, GraphNodeDefinition>();
 
   for (const node of graph.nodes) {
-    if (
-      "instanceName" in node &&
-      !rawNodeByInstanceName.has(node.instanceName)
-    ) {
-      rawNodeByInstanceName.set(node.instanceName, node);
+    if ("instanceName" in node && !nodeByInstanceName.has(node.instanceName)) {
+      nodeByInstanceName.set(node.instanceName, node);
     }
   }
 
-  const inferredTypeInfoByNode = new Map<DagNode, InferredNodeTypeInfo>();
+  const inferredTypeInfoByNode = new Map<
+    GraphNodeDefinition,
+    InferredNodeTypeInfo
+  >();
 
   await Promise.all(
     graph.nodes.map(async (node) => {
@@ -452,7 +446,7 @@ export const parseGraph = async (
         options.loadCustomNodeSource,
       );
 
-      issues.push(...result.issues);
+      errors.push(...result.errors);
 
       if (result.info !== null) {
         inferredTypeInfoByNode.set(node, result.info);
@@ -461,7 +455,7 @@ export const parseGraph = async (
   );
 
   const seenFlowIds = new Map<string, number>();
-  const parsedNodes: ParsedDagNode[] = graph.nodes
+  const validatedNodes: ValidatedGraphNode[] = graph.nodes
     .map((node, index) => {
       const inferredTypeInfo = inferredTypeInfoByNode.get(node);
 
@@ -470,40 +464,37 @@ export const parseGraph = async (
       }
 
       return {
+        definition: node,
         displayName: createNodeLabel(node, "gl_FragColor"),
         flowId: createFlowNodeId(node, index, seenFlowIds),
-        graphNode: node,
         inputTypes: inferredTypeInfo.inputTypes,
         outputType: inferredTypeInfo.outputType,
-      } satisfies ParsedDagNode;
+      } satisfies ValidatedGraphNode;
     })
-    .filter((node): node is ParsedDagNode => node !== null);
+    .filter((node): node is ValidatedGraphNode => node !== null);
 
-  const parsedNodeByInstanceName = new Map<string, ParsedDagNode>();
+  const validatedNodeByInstanceName = new Map<string, ValidatedGraphNode>();
 
-  for (const parsedNode of parsedNodes) {
-    if ("instanceName" in parsedNode.graphNode) {
-      parsedNodeByInstanceName.set(
-        parsedNode.graphNode.instanceName,
-        parsedNode,
+  for (const validatedNode of validatedNodes) {
+    if ("instanceName" in validatedNode.definition) {
+      validatedNodeByInstanceName.set(
+        validatedNode.definition.instanceName,
+        validatedNode,
       );
     }
   }
 
-  const parsedEdges: ParsedDagEdge[] = [];
+  const validatedEdges: ValidatedGraphEdge[] = [];
 
-  for (const parsedNode of parsedNodes) {
-    const { graphNode } = parsedNode;
-    const nodeInputs = getNodeInputs(graphNode);
+  for (const validatedNode of validatedNodes) {
+    const nodeInputs = getNodeInputs(validatedNode.definition);
 
-    if (graphNode.kind === "custom") {
-      for (const [inputName, inputType] of parsedNode.inputTypes.entries()) {
-        if (graphNode.inputs[inputName] === undefined) {
-          issues.push({
-            message: `node [${graphNode.instanceName}] is missing a connection for input [${inputName}] of type [${inputType}]. Function [${graphNode.instanceName}Node] in [${graphNode.filepath}] requires this input.`,
-            inputName,
-            nodeInstanceName: graphNode.instanceName,
-          });
+    if (validatedNode.definition.kind === "custom") {
+      for (const [inputName, inputType] of validatedNode.inputTypes.entries()) {
+        if (validatedNode.definition.inputs[inputName] === undefined) {
+          errors.push(
+            `node [${validatedNode.definition.instanceName}] is missing a connection for input [${inputName}] of type [${inputType}]. Function [${validatedNode.definition.instanceName}Node] in [${validatedNode.definition.filepath}] requires this input.`,
+          );
         }
       }
     }
@@ -511,107 +502,101 @@ export const parseGraph = async (
     for (const [inputName, sourceRef] of Object.entries(nodeInputs)) {
       const sourceNodeInstanceName = resolveSourceNodeInstanceName(
         sourceRef,
-        rawNodeByInstanceName,
+        nodeByInstanceName,
       );
 
       if (sourceNodeInstanceName === null) {
-        issues.push({
-          message: `node [${parsedNode.displayName}] input [${inputName}] is connected to [${sourceRef}], but that source does not resolve to any node instance in this graph.`,
-          inputName,
-          nodeInstanceName: parsedNode.displayName,
-        });
+        errors.push(
+          `node [${validatedNode.displayName}] input [${inputName}] is connected to [${sourceRef}], but that source does not resolve to any node instance in this graph.`,
+        );
         continue;
       }
 
-      const sourceParsedNode = parsedNodeByInstanceName.get(
+      const sourceValidatedNode = validatedNodeByInstanceName.get(
         sourceNodeInstanceName,
       );
 
-      if (sourceParsedNode === undefined) {
+      if (sourceValidatedNode === undefined) {
         continue;
       }
 
-      if (sourceParsedNode.outputType === null) {
-        issues.push({
-          message: `node [${parsedNode.displayName}] input [${inputName}] is connected to node [${sourceNodeInstanceName}], but node [${sourceNodeInstanceName}] does not expose an output value.`,
-          inputName,
-          nodeInstanceName: parsedNode.displayName,
-          sourceNodeInstanceName,
-        });
+      if (sourceValidatedNode.outputType === null) {
+        errors.push(
+          `node [${validatedNode.displayName}] input [${inputName}] is connected to node [${sourceNodeInstanceName}], but node [${sourceNodeInstanceName}] does not expose an output value.`,
+        );
         continue;
       }
 
-      if (graphNode.kind !== "glFragColor" && graphNode.kind !== "custom") {
+      if (
+        validatedNode.definition.kind !== "glFragColor" &&
+        validatedNode.definition.kind !== "custom"
+      ) {
         continue;
       }
 
-      if (graphNode.kind === "custom") {
-        const expectedInputType = parsedNode.inputTypes.get(inputName);
+      if (validatedNode.definition.kind === "custom") {
+        const expectedInputType = validatedNode.inputTypes.get(inputName);
 
         if (expectedInputType === undefined) {
-          const availableInputs = Array.from(parsedNode.inputTypes.keys()).join(
-            ", ",
-          );
+          const availableInputs = Array.from(
+            validatedNode.inputTypes.keys(),
+          ).join(", ");
 
-          issues.push({
-            message: `node [${graphNode.instanceName}] declares a graph input [${inputName}], but function [${graphNode.instanceName}Node] in [${graphNode.filepath}] has no parameter with that name. Available inputs: ${availableInputs || "none"}.`,
-            inputName,
-            nodeInstanceName: graphNode.instanceName,
-            sourceNodeInstanceName,
-          });
+          errors.push(
+            `node [${validatedNode.definition.instanceName}] declares a graph input [${inputName}], but function [${validatedNode.definition.instanceName}Node] in [${validatedNode.definition.filepath}] has no parameter with that name. Available inputs: ${availableInputs || "none"}.`,
+          );
           continue;
         }
 
-        if (expectedInputType !== sourceParsedNode.outputType) {
-          issues.push({
-            message: `node [${graphNode.instanceName}] has input [${inputName}] of type [${expectedInputType}], it is connected to node [${sourceNodeInstanceName}] which has an output type of [${sourceParsedNode.outputType}]. [${expectedInputType}] != [${sourceParsedNode.outputType}].`,
-            inputName,
-            nodeInstanceName: graphNode.instanceName,
-            sourceNodeInstanceName,
-          });
+        if (expectedInputType !== sourceValidatedNode.outputType) {
+          errors.push(
+            `node [${validatedNode.definition.instanceName}] has input [${inputName}] of type [${expectedInputType}], it is connected to node [${sourceNodeInstanceName}] which has an output type of [${sourceValidatedNode.outputType}]. [${expectedInputType}] != [${sourceValidatedNode.outputType}].`,
+          );
           continue;
         }
       }
 
-      parsedEdges.push({
-        sourceNode: sourceParsedNode,
+      validatedEdges.push({
+        sourceNode: sourceValidatedNode,
         sourceRef,
         targetInputName: inputName,
-        targetNode: parsedNode,
-        valueType: sourceParsedNode.outputType,
+        targetNode: validatedNode,
+        valueType: sourceValidatedNode.outputType,
       });
     }
   }
 
-  if (issues.length > 0) {
+  if (errors.length > 0) {
     return {
+      errors,
       graph: null,
-      issues,
       ok: false,
     };
   }
 
   return {
+    errors: [],
     graph: {
-      edges: parsedEdges,
-      nodeByInstanceName: parsedNodeByInstanceName,
-      nodes: parsedNodes,
-      sourceGraph: graph,
+      edges: validatedEdges,
+      nodes: validatedNodes,
     },
-    issues: [],
     ok: true,
   };
 };
 
-export const parseGraphOrThrow = async (
-  graph: DagGraph,
-  options: GraphParseOptions = {},
-): Promise<ParsedDagGraph> => {
-  const result = await parseGraph(graph, options);
+export const readValidatedGraph = async (
+  graphSource: string,
+  options: ReadValidatedGraphOptions = {},
+): Promise<ReadValidatedGraphResult> => {
+  const parsedGraph = parseGraphJson(graphSource);
 
-  if (!result.ok) {
-    throw new GraphParseError(result.issues);
+  if (!parsedGraph.ok) {
+    return {
+      errors: parsedGraph.errors,
+      graph: null,
+      ok: false,
+    };
   }
 
-  return result.graph;
+  return validateGraphDefinition(parsedGraph.graph, options);
 };
