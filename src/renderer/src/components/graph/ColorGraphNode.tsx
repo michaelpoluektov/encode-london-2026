@@ -1,16 +1,16 @@
 import type { JSX } from "react";
-import type { FloatNode } from "../../dag/dag-schema";
+import type { ColorNode } from "../../dag/dag-schema";
 import {
   type GraphFlowNode,
   type GraphFlowNodeProps,
   GraphNodeFrame,
 } from "./GraphNode";
 
-export type FloatGraphFlowNode = GraphFlowNode<FloatNode, "float">;
+export type ColorGraphFlowNode = GraphFlowNode<ColorNode, "color">;
 
-export const FloatGraphNode = ({
+export const ColorGraphNode = ({
   data,
-}: GraphFlowNodeProps<FloatNode, "float">): JSX.Element => (
+}: GraphFlowNodeProps<ColorNode, "color">): JSX.Element => (
   <GraphNodeFrame
     details={[
       {
@@ -18,6 +18,6 @@ export const FloatGraphNode = ({
         value: data.uniformName,
       },
     ]}
-    title={`${data.instanceName} (float)`}
+    title={`${data.instanceName} (color)`}
   />
 );

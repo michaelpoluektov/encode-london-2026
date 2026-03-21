@@ -4,13 +4,23 @@ const nodeInstanceNameSchema = z.string().min(1);
 const nodeFilePathSchema = z.string().min(1);
 const uniformNameSchema = z.string().min(1);
 const finiteNumberSchema = z.number();
+const normalizedChannelSchema = finiteNumberSchema.min(0).max(1);
 
 // Inputs are modeled as `thisNodeInput -> sourceNodeOutputRef`.
 const customNodeInputsSchema = z.record(z.string().min(1), z.string().min(1));
 
-const outputGlFragColorInputsSchema = z
+const glFragColorInputsSchema = z
   .object({
-    gl_frag_color_input: z.string().min(1).optional(),
+    color: z.string().min(1).optional(),
+  })
+  .strict();
+
+const colorValueSchema = z
+  .object({
+    a: normalizedChannelSchema,
+    b: normalizedChannelSchema,
+    g: normalizedChannelSchema,
+    r: normalizedChannelSchema,
   })
   .strict();
 
@@ -21,21 +31,21 @@ export const customNodeSchema = z.object({
   inputs: customNodeInputsSchema,
 });
 
-export const outputGlFragColorNodeSchema = z.object({
-  kind: z.literal("output_gl_frag_color"),
-  inputs: outputGlFragColorInputsSchema,
+export const glFragColorNodeSchema = z.object({
+  kind: z.literal("glFragColor"),
+  inputs: glFragColorInputsSchema,
 });
 
-export const inputFloatNodeSchema = z.object({
-  kind: z.literal("input_float"),
+export const floatNodeSchema = z.object({
+  kind: z.literal("float"),
   instanceName: nodeInstanceNameSchema,
   uniformName: uniformNameSchema,
   defaultValue: finiteNumberSchema,
 });
 
-export const inputClampedFloatNodeSchema = z
+export const clampedFloatNodeSchema = z
   .object({
-    kind: z.literal("input_clamped_float"),
+    kind: z.literal("clampedFloat"),
     instanceName: nodeInstanceNameSchema,
     uniformName: uniformNameSchema,
     defaultValue: finiteNumberSchema,
@@ -54,11 +64,19 @@ export const inputClampedFloatNodeSchema = z
     },
   );
 
+export const colorNodeSchema = z.object({
+  kind: z.literal("color"),
+  instanceName: nodeInstanceNameSchema,
+  uniformName: uniformNameSchema,
+  defaultValue: colorValueSchema,
+});
+
 export const dagNodeSchema = z.discriminatedUnion("kind", [
   customNodeSchema,
-  outputGlFragColorNodeSchema,
-  inputFloatNodeSchema,
-  inputClampedFloatNodeSchema,
+  glFragColorNodeSchema,
+  floatNodeSchema,
+  clampedFloatNodeSchema,
+  colorNodeSchema,
 ]);
 
 export const dagGraphSchema = z.object({
@@ -66,8 +84,10 @@ export const dagGraphSchema = z.object({
 });
 
 export type CustomNode = z.infer<typeof customNodeSchema>;
-export type OutputGlFragColorNode = z.infer<typeof outputGlFragColorNodeSchema>;
-export type InputFloatNode = z.infer<typeof inputFloatNodeSchema>;
-export type InputClampedFloatNode = z.infer<typeof inputClampedFloatNodeSchema>;
+export type GlFragColorNode = z.infer<typeof glFragColorNodeSchema>;
+export type FloatNode = z.infer<typeof floatNodeSchema>;
+export type ClampedFloatNode = z.infer<typeof clampedFloatNodeSchema>;
+export type ColorNode = z.infer<typeof colorNodeSchema>;
+export type ColorValue = z.infer<typeof colorValueSchema>;
 export type DagNode = z.infer<typeof dagNodeSchema>;
 export type DagGraph = z.infer<typeof dagGraphSchema>;

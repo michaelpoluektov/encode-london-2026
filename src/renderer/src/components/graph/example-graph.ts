@@ -5,19 +5,19 @@ export const EXAMPLE_DAG_GRAPH: DagGraph = dagGraphSchema.parse({
     {
       defaultValue: 0,
       instanceName: "time",
-      kind: "input_float",
+      kind: "float",
       uniformName: "u_time",
     },
     {
       defaultValue: 3,
       instanceName: "frequency",
-      kind: "input_float",
+      kind: "float",
       uniformName: "u_frequency",
     },
     {
       defaultValue: 0.35,
       instanceName: "roughness",
-      kind: "input_clamped_float",
+      kind: "clampedFloat",
       max: 1,
       min: 0,
       uniformName: "u_roughness",
@@ -25,10 +25,32 @@ export const EXAMPLE_DAG_GRAPH: DagGraph = dagGraphSchema.parse({
     {
       defaultValue: 0.7,
       instanceName: "intensity",
-      kind: "input_clamped_float",
+      kind: "clampedFloat",
       max: 1,
       min: 0,
       uniformName: "u_intensity",
+    },
+    {
+      defaultValue: {
+        a: 1,
+        b: 0.95,
+        g: 0.52,
+        r: 0.14,
+      },
+      instanceName: "baseColor",
+      kind: "color",
+      uniformName: "u_base_color",
+    },
+    {
+      defaultValue: {
+        a: 1,
+        b: 0.42,
+        g: 0.76,
+        r: 0.94,
+      },
+      instanceName: "accentColor",
+      kind: "color",
+      uniformName: "u_accent_color",
     },
     {
       filepath: "nodes/wave.glsl",
@@ -80,15 +102,26 @@ export const EXAMPLE_DAG_GRAPH: DagGraph = dagGraphSchema.parse({
         detail: "noise",
         roughness: "roughness",
         signal: "blend",
+        tint: "tint",
       },
       instanceName: "shade",
       kind: "custom",
     },
     {
+      filepath: "nodes/tint.glsl",
       inputs: {
-        gl_frag_color_input: "shade",
+        accent: "accentColor",
+        base: "baseColor",
+        mask: "mask",
       },
-      kind: "output_gl_frag_color",
+      instanceName: "tint",
+      kind: "custom",
+    },
+    {
+      inputs: {
+        color: "shade",
+      },
+      kind: "glFragColor",
     },
   ],
 });

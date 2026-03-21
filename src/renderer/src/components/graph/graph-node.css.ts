@@ -17,6 +17,21 @@ export const graphNodeCard = style({
   border: `1px solid ${themeVars.color.border.standard}`,
   background: themeVars.color.background.panelRaised,
   boxShadow: themeVars.shadow.panel,
+  cursor: "default",
+  transition: [
+    `transform ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
+    `border-color ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
+    `background ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
+    `box-shadow ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
+  ].join(", "),
+  selectors: {
+    "&:hover": {
+      transform: "translateY(-1px)",
+      borderColor: themeVars.color.border.accent,
+      background: themeVars.color.surface.interactive,
+      boxShadow: themeVars.shadow.focus,
+    },
+  },
 });
 
 export const graphNodeHeader = style({
@@ -55,6 +70,16 @@ export const graphNodeInputRow = style({
   borderRadius: themeVars.radius.md,
   background: themeVars.color.background.panelInset,
   border: `1px solid ${themeVars.color.border.subtle}`,
+  transition: [
+    `border-color ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
+    `background ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
+  ].join(", "),
+  selectors: {
+    [`${graphNodeCard}:hover &`]: {
+      borderColor: themeVars.color.border.strong,
+      background: themeVars.color.background.panelMuted,
+    },
+  },
 });
 
 export const graphNodeInputHandle = style({
@@ -67,6 +92,18 @@ export const graphNodeInputHandle = style({
   borderRadius: "50%",
   border: `2px solid ${themeVars.color.background.panelRaised}`,
   background: themeVars.color.border.accent,
+  transition: [
+    `background ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
+    `transform ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
+    `box-shadow ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
+  ].join(", "),
+  selectors: {
+    [`${graphNodeCard}:hover &`]: {
+      transform: "translate(-50%, -50%) scale(1.08)",
+      background: themeVars.color.text.accent,
+      boxShadow: `0 0 0 3px ${themeVars.color.focus.ring}`,
+    },
+  },
 });
 
 export const graphNodeOutputHandle = style({
@@ -79,6 +116,18 @@ export const graphNodeOutputHandle = style({
   borderRadius: "50%",
   border: `2px solid ${themeVars.color.background.panelRaised}`,
   background: themeVars.color.border.accent,
+  transition: [
+    `background ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
+    `transform ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
+    `box-shadow ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
+  ].join(", "),
+  selectors: {
+    [`${graphNodeCard}:hover &`]: {
+      transform: "translate(50%, -50%) scale(1.08)",
+      background: themeVars.color.text.accent,
+      boxShadow: `0 0 0 3px ${themeVars.color.focus.ring}`,
+    },
+  },
 });
 
 export const graphNodePreviewSlot = style({

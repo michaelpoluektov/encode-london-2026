@@ -1,22 +1,21 @@
 import type { JSX } from "react";
-import type { InputClampedFloatNode } from "../../dag/dag-schema";
+import type { ClampedFloatNode } from "../../dag/dag-schema";
 import {
   type GraphFlowNode,
   type GraphFlowNodeProps,
   GraphNodeFrame,
 } from "./GraphNode";
 
-export type InputClampedFloatGraphFlowNode = GraphFlowNode<
-  InputClampedFloatNode,
-  "input_clamped_float"
+const formatClampedFloatRange = (value: number): string => value.toFixed(2);
+
+export type ClampedFloatGraphFlowNode = GraphFlowNode<
+  ClampedFloatNode,
+  "clampedFloat"
 >;
 
-export const InputClampedFloatGraphNode = ({
+export const ClampedFloatGraphNode = ({
   data,
-}: GraphFlowNodeProps<
-  InputClampedFloatNode,
-  "input_clamped_float"
->): JSX.Element => (
+}: GraphFlowNodeProps<ClampedFloatNode, "clampedFloat">): JSX.Element => (
   <GraphNodeFrame
     details={[
       {
@@ -24,6 +23,6 @@ export const InputClampedFloatGraphNode = ({
         value: data.uniformName,
       },
     ]}
-    title={`${data.instanceName} (${data.kind})`}
+    title={`${data.instanceName} (float[${formatClampedFloatRange(data.min)}, ${formatClampedFloatRange(data.max)}])`}
   />
 );
