@@ -12,6 +12,16 @@ export type CompiledFragmentShaderUniform = {
   readonly type: GlslValueType;
 };
 
+type CompiledFragmentShaderTimeUniform = {
+  readonly name: string;
+  readonly type: "float";
+};
+
+type CompiledFragmentShaderVarying = {
+  readonly name: string;
+  readonly type: GlslValueType;
+};
+
 export type CompileFragmentShaderResult =
   | {
       readonly errors: readonly [];
@@ -301,6 +311,48 @@ const collectUniforms = (
   return { errors, uniforms };
 };
 
+const collectTimeUniforms = (
+  graph: ValidatedGraph,
+): { errors: string[]; uniforms: CompiledFragmentShaderTimeUniform[] } => {
+  const uniforms: CompiledFragmentShaderTimeUniform[] = [];
+  const errors: string[] = [];
+
+  for (const time of graph.times) {
+    if (!GLSL_IDENTIFIER_PATTERN.test(time.key)) {
+      errors.push(`uniform [${time.key}] is not a valid GLSL identifier.`);
+      continue;
+    }
+
+    uniforms.push({
+      name: time.key,
+      type: time.valueType,
+    });
+  }
+
+  return { errors, uniforms };
+};
+
+const collectVaryings = (
+  graph: ValidatedGraph,
+): { errors: string[]; varyings: CompiledFragmentShaderVarying[] } => {
+  const varyings: CompiledFragmentShaderVarying[] = [];
+  const errors: string[] = [];
+
+  for (const varying of graph.varyings) {
+    if (!GLSL_IDENTIFIER_PATTERN.test(varying.key)) {
+      errors.push(`varying [${varying.key}] is not a valid GLSL identifier.`);
+      continue;
+    }
+
+    varyings.push({
+      name: varying.key,
+      type: varying.valueType,
+    });
+  }
+
+  return { errors, varyings };
+};
+
 const isReachableCustomNode = (
   node: ValidatedValueNode,
 ): node is ValidatedCustomNode => node.kind === "custom";
@@ -314,8 +366,13 @@ export const compileFragmentShader = (
   errors.push(...outputErrors);
 
   const { uniforms, errors: uniformErrors } = collectUniforms(graph);
+  const { uniforms: timeUniforms, errors: timeUniformErrors } =
+    collectTimeUniforms(graph);
+  const { varyings, errors: varyingErrors } = collectVaryings(graph);
 
   errors.push(...uniformErrors);
+  errors.push(...timeUniformErrors);
+  errors.push(...varyingErrors);
 
   if (outputEdge === null || errors.length > 0) {
     return {
@@ -348,8 +405,18 @@ export const compileFragmentShader = (
   const mainStatements: string[] = [];
 
   for (const [index, node] of orderedNodes.entries()) {
+    if (node.kind === "time") {
+      expressionByNodeId.set(node.flowId, node.timeBindingKey);
+      continue;
+    }
+
     if (node.kind === "uniform") {
       expressionByNodeId.set(node.flowId, node.uniformBindingKey);
+      continue;
+    }
+
+    if (node.kind === "varying") {
+      expressionByNodeId.set(node.flowId, node.varyingBindingKey);
       continue;
     }
 
@@ -426,8 +493,12 @@ export const compileFragmentShader = (
 
   const functionBlocks = Array.from(customNodeSourceByFilepath.values());
   const shaderSections = [
+    ...timeUniforms.map(
+      (uniform) => `uniform ${uniform.type} ${uniform.name};`,
+    ),
     ...uniforms.map((uniform) => `uniform ${uniform.type} ${uniform.name};`),
-    "varying vec2 vUv;",
+    ...varyings.map((varying) => `varying ${varying.type} ${varying.name};`),
+    varyings.length > 0 ? "" : null,
     functionBlocks.length > 0 ? "" : null,
     ...functionBlocks.flatMap((source, index) =>
       index === functionBlocks.length - 1 ? [source] : [source, ""],
@@ -443,6 +514,6 @@ export const compileFragmentShader = (
     errors: [],
     ok: true,
     shaderSource: shaderSections.join("\n"),
-    uniforms,
+    uniforms: [...timeUniforms, ...uniforms],
   };
 };

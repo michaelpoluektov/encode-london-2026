@@ -3,14 +3,11 @@ import { graphSchema } from "../internal/json-schema";
 const exampleGraph = graphSchema.parse({
   nodes: [
     {
-      defaultValue: 0,
       instanceName: "time",
-      kind: "uniform",
-      uniformName: "u_time",
-      valueType: "float",
+      kind: "time",
     },
     {
-      defaultValue: 3,
+      defaultValue: 30,
       instanceName: "frequency",
       kind: "uniform",
       uniformName: "u_frequency",
@@ -70,6 +67,12 @@ const exampleGraph = graphSchema.parse({
       valueType: "vec2",
     },
     {
+      instanceName: "uv",
+      kind: "varying",
+      valueType: "vec2",
+      varyingName: "vUv",
+    },
+    {
       defaultValue: {
         x: 0.08,
         y: 0.03,
@@ -115,6 +118,7 @@ const exampleGraph = graphSchema.parse({
       inputs: {
         frequency: "frequency",
         time: "time",
+        uv: "uv",
         uvScale: "uvScale",
       },
       instanceName: "wave",
@@ -125,6 +129,7 @@ const exampleGraph = graphSchema.parse({
       inputs: {
         frequency: "frequency",
         time: "time",
+        uv: "uv",
         uvScale: "uvScale",
       },
       instanceName: "noise",

@@ -5,8 +5,12 @@ import type {
   ValidatedGraph,
   ValidatedGraphEdge,
   ValidatedGraphNode,
+  ValidatedTimeBinding,
+  ValidatedTimeNode,
   ValidatedUniformBinding,
   ValidatedUniformNode,
+  ValidatedVaryingBinding,
+  ValidatedVaryingNode,
 } from "../graph-types";
 import {
   loadResolvedCustomNodeSource,
@@ -23,7 +27,9 @@ import type {
   CustomNode,
   GraphDefinition,
   GraphNodeDefinition,
+  TimeNode,
   UniformNode,
+  VaryingNode,
 } from "./json-schema";
 import { graphSchema } from "./json-schema";
 
@@ -47,6 +53,8 @@ type InferredCustomNodeData = {
   readonly signature: ParsedGlslFunctionSignature;
   readonly source: string;
 };
+
+const GRAPH_TIME_UNIFORM_NAME = "u_time";
 
 const formatSchemaIssuePath = (issue: ZodIssue): string =>
   issue.path.length === 0 ? "graph" : `graph.${issue.path.join(".")}`;
@@ -220,6 +228,30 @@ const createValidatedUniformNode = (
   };
 };
 
+const createValidatedVaryingNode = (
+  node: VaryingNode,
+  flowId: string,
+): ValidatedVaryingNode => ({
+  definition: node,
+  displayName: node.instanceName,
+  flowId,
+  kind: "varying",
+  outputType: node.valueType,
+  varyingBindingKey: node.varyingName,
+});
+
+const createValidatedTimeNode = (
+  node: TimeNode,
+  flowId: string,
+): ValidatedTimeNode => ({
+  definition: node,
+  displayName: node.instanceName,
+  flowId,
+  kind: "time",
+  outputType: "float",
+  timeBindingKey: GRAPH_TIME_UNIFORM_NAME,
+});
+
 const createUniformBindings = (
   nodes: readonly ValidatedGraphNode[],
 ): {
@@ -277,6 +309,110 @@ const createUniformBindings = (
         `uniform [${node.uniformBindingKey}] is shared by node [${existingBinding.node.displayName}] and node [${node.displayName}], but their default values differ: node [${existingBinding.node.displayName}] uses [${formatGlslValue(existingBinding.defaultValue, existingBinding.valueType)}] while node [${node.displayName}] uses [${formatGlslValue(node.defaultValue, node.outputType)}]. Shared uniforms must start with the same value.`,
       );
     }
+  }
+
+  return {
+    bindings,
+    errors,
+  };
+};
+
+const createVaryingBindings = (
+  nodes: readonly ValidatedGraphNode[],
+): {
+  bindings: readonly ValidatedVaryingBinding[];
+  errors: readonly string[];
+} => {
+  const errors: string[] = [];
+  const bindings: ValidatedVaryingBinding[] = [];
+  const bindingByKey = new Map<
+    string,
+    {
+      nodeIds: string[];
+      node: ValidatedVaryingNode;
+      valueType: ValidatedVaryingBinding["valueType"];
+    }
+  >();
+
+  for (const node of nodes) {
+    if (node.kind !== "varying") {
+      continue;
+    }
+
+    const existingBinding = bindingByKey.get(node.varyingBindingKey);
+
+    if (existingBinding === undefined) {
+      const nextBinding = {
+        node,
+        nodeIds: [node.flowId],
+        valueType: node.outputType,
+      };
+
+      bindingByKey.set(node.varyingBindingKey, nextBinding);
+      bindings.push({
+        key: node.varyingBindingKey,
+        nodeIds: nextBinding.nodeIds,
+        valueType: node.outputType,
+      });
+      continue;
+    }
+
+    existingBinding.nodeIds.push(node.flowId);
+
+    if (existingBinding.valueType !== node.outputType) {
+      errors.push(
+        `varying [${node.varyingBindingKey}] is shared by node [${existingBinding.node.displayName}] and node [${node.displayName}], but they resolve to different GLSL types [${existingBinding.valueType}] and [${node.outputType}]. Shared varyings must use the same type.`,
+      );
+    }
+  }
+
+  return {
+    bindings,
+    errors,
+  };
+};
+
+const createTimeBindings = (
+  nodes: readonly ValidatedGraphNode[],
+): {
+  bindings: readonly ValidatedTimeBinding[];
+  errors: readonly string[];
+} => {
+  const errors: string[] = [];
+  const bindings: ValidatedTimeBinding[] = [];
+  const bindingByKey = new Map<
+    string,
+    {
+      nodeIds: string[];
+      node: ValidatedTimeNode;
+      valueType: ValidatedTimeBinding["valueType"];
+    }
+  >();
+
+  for (const node of nodes) {
+    if (node.kind !== "time") {
+      continue;
+    }
+
+    const existingBinding = bindingByKey.get(node.timeBindingKey);
+
+    if (existingBinding === undefined) {
+      const nextBinding = {
+        node,
+        nodeIds: [node.flowId],
+        valueType: node.outputType,
+      };
+
+      bindingByKey.set(node.timeBindingKey, nextBinding);
+      bindings.push({
+        key: node.timeBindingKey,
+        nodeIds: nextBinding.nodeIds,
+        valueType: node.outputType,
+      });
+      continue;
+    }
+
+    existingBinding.nodeIds.push(node.flowId);
   }
 
   return {
@@ -354,6 +490,12 @@ const validateGraphDefinition = async (
         });
         break;
       }
+      case "time":
+        validatedNodes.push(createValidatedTimeNode(node, flowId));
+        break;
+      case "varying":
+        validatedNodes.push(createValidatedVaryingNode(node, flowId));
+        break;
       case "glFragColor":
         validatedNodes.push({
           definition: node,
@@ -367,12 +509,21 @@ const validateGraphDefinition = async (
 
   const { bindings, errors: uniformBindingErrors } =
     createUniformBindings(validatedNodes);
+  const { bindings: timeBindings, errors: timeBindingErrors } =
+    createTimeBindings(validatedNodes);
+  const { bindings: varyingBindings, errors: varyingBindingErrors } =
+    createVaryingBindings(validatedNodes);
 
   errors.push(...uniformBindingErrors);
+  errors.push(...timeBindingErrors);
+  errors.push(...varyingBindingErrors);
 
   const validatedNodeByInstanceName = new Map<
     string,
-    ValidatedCustomNode | ValidatedUniformNode
+    | ValidatedCustomNode
+    | ValidatedTimeNode
+    | ValidatedUniformNode
+    | ValidatedVaryingNode
   >();
 
   for (const validatedNode of validatedNodes) {
@@ -389,7 +540,11 @@ const validateGraphDefinition = async (
   const validatedEdges: ValidatedGraphEdge[] = [];
 
   for (const validatedNode of validatedNodes) {
-    if (validatedNode.kind === "uniform") {
+    if (
+      validatedNode.kind === "time" ||
+      validatedNode.kind === "uniform" ||
+      validatedNode.kind === "varying"
+    ) {
       continue;
     }
 
@@ -471,7 +626,9 @@ const validateGraphDefinition = async (
     graph: {
       edges: validatedEdges,
       nodes: validatedNodes,
+      times: timeBindings,
       uniforms: bindings,
+      varyings: varyingBindings,
     },
     ok: true,
   };

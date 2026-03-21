@@ -5,6 +5,7 @@ import type {
   GraphUniformValues,
   ValidatedGraph,
   ValidatedGraphNode,
+  ValidatedTimeNode,
   ValidatedUniformNode,
 } from "../graph-types";
 import {
@@ -17,8 +18,12 @@ import {
   type GlFragColorGraphFlowNode,
   GlFragColorGraphNode,
   GRAPH_NODE_OUTPUT_HANDLE_ID,
+  type TimeGraphFlowNode,
+  TimeGraphNode,
   type UniformGraphFlowNode,
   UniformGraphNode,
+  type VaryingGraphFlowNode,
+  VaryingGraphNode,
 } from "./nodes";
 
 const NODE_WIDTH = 240;
@@ -32,7 +37,9 @@ const SECTION_GAP_HEIGHT = 20;
 type FlowGraphNode =
   | CustomGraphFlowNode
   | GlFragColorGraphFlowNode
-  | UniformGraphFlowNode;
+  | TimeGraphFlowNode
+  | UniformGraphFlowNode
+  | VaryingGraphFlowNode;
 
 type CreateReactFlowGraphOptions = {
   readonly onUniformValueChange: (
@@ -44,7 +51,9 @@ type CreateReactFlowGraphOptions = {
 export const graphNodeTypes = {
   custom: CustomGraphNode,
   glFragColor: GlFragColorGraphNode,
+  time: TimeGraphNode,
   uniform: UniformGraphNode,
+  varying: VaryingGraphNode,
 } satisfies NodeTypes;
 
 const getRenderedInputCount = (node: ValidatedGraphNode): number => {
@@ -53,7 +62,9 @@ const getRenderedInputCount = (node: ValidatedGraphNode): number => {
       return node.signature.inputTypes.size;
     case "glFragColor":
       return 1;
+    case "time":
     case "uniform":
+    case "varying":
       return 0;
   }
 };
@@ -164,6 +175,10 @@ const getUniformNodeValue = (
 ): GraphUniformValue =>
   uniformValues[node.uniformBindingKey] ?? node.defaultValue;
 
+const createTimeNodeData = (node: ValidatedTimeNode) => ({
+  node,
+});
+
 const createFlowNode = (
   node: ValidatedGraphNode,
   position: { x: number; y: number },
@@ -199,6 +214,20 @@ const createFlowNode = (
           node,
         },
         type: "glFragColor",
+      };
+    case "time":
+      return {
+        ...baseNode,
+        data: createTimeNodeData(node),
+        type: "time",
+      };
+    case "varying":
+      return {
+        ...baseNode,
+        data: {
+          node,
+        },
+        type: "varying",
       };
   }
 };

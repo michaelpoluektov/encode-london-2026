@@ -50,11 +50,8 @@ export const DEFAULT_GRAPH_SOURCE = JSON.stringify(
   {
     nodes: [
       {
-        defaultValue: 0,
         instanceName: "time",
-        kind: "uniform",
-        uniformName: "u_time",
-        valueType: "float",
+        kind: "time",
       },
       {
         defaultValue: 3,
@@ -102,6 +99,12 @@ export const DEFAULT_GRAPH_SOURCE = JSON.stringify(
         valueType: "vec2",
       },
       {
+        instanceName: "uv",
+        kind: "varying",
+        valueType: "vec2",
+        varyingName: "vUv",
+      },
+      {
         defaultValue: { x: 0.08, y: 0.03, z: 0.12 },
         instanceName: "colorBias",
         kind: "uniform",
@@ -126,13 +129,23 @@ export const DEFAULT_GRAPH_SOURCE = JSON.stringify(
       },
       {
         filepath: "./nodes/wave.glsl",
-        inputs: { frequency: "frequency", time: "time", uvScale: "uvScale" },
+        inputs: {
+          frequency: "frequency",
+          time: "time",
+          uv: "uv",
+          uvScale: "uvScale",
+        },
         instanceName: "wave",
         kind: "custom",
       },
       {
         filepath: "./nodes/noise.glsl",
-        inputs: { frequency: "frequency", time: "time", uvScale: "uvScale" },
+        inputs: {
+          frequency: "frequency",
+          time: "time",
+          uv: "uv",
+          uvScale: "uvScale",
+        },
         instanceName: "noise",
         kind: "custom",
       },
@@ -187,8 +200,8 @@ export const DEFAULT_GRAPH_SOURCE = JSON.stringify(
 );
 
 export const DEFAULT_NODE_GLSL_FILES: Readonly<Record<string, string>> = {
-  "wave.glsl": `float waveNode(float time, float frequency, vec2 uvScale) {
-  vec2 p = gl_FragCoord.xy * 0.015 * max(uvScale, vec2(0.001));
+  "wave.glsl": `float waveNode(vec2 uv, float time, float frequency, vec2 uvScale) {
+  vec2 p = uv * max(uvScale, vec2(0.001));
   float phase = (p.x + p.y) * max(frequency, 0.001);
 
   return sin(phase + time);
@@ -200,8 +213,8 @@ export const DEFAULT_NODE_GLSL_FILES: Readonly<Record<string, string>> = {
   return fract(p.x * p.y);
 }
 
-float noiseNode(float time, float frequency, vec2 uvScale) {
-  vec2 p = gl_FragCoord.xy * 0.02 * max(frequency, 0.001) * max(uvScale, vec2(0.001));
+float noiseNode(vec2 uv, float time, float frequency, vec2 uvScale) {
+  vec2 p = uv * max(frequency, 0.001) * max(uvScale, vec2(0.001));
 
   return hash21(floor(p + time * 0.25));
 }`,

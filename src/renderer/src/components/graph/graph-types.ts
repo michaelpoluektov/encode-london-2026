@@ -7,7 +7,9 @@ import type {
 import type {
   CustomNode,
   GlFragColorNode,
+  TimeNode,
   UniformNode,
+  VaryingNode,
 } from "./internal/json-schema";
 
 export type {
@@ -34,6 +36,18 @@ export type ValidatedUniformBinding = {
   readonly valueType: GlslValueType;
 };
 
+export type ValidatedVaryingBinding = {
+  readonly key: string;
+  readonly nodeIds: readonly string[];
+  readonly valueType: GlslValueType;
+};
+
+export type ValidatedTimeBinding = {
+  readonly key: string;
+  readonly nodeIds: readonly string[];
+  readonly valueType: "float";
+};
+
 export type ValidatedUniformNode = {
   readonly defaultValue: GraphUniformValue;
   readonly definition: UniformNode;
@@ -43,6 +57,24 @@ export type ValidatedUniformNode = {
   readonly kind: "uniform";
   readonly outputType: GlslValueType;
   readonly uniformBindingKey: string;
+};
+
+export type ValidatedVaryingNode = {
+  readonly definition: VaryingNode;
+  readonly displayName: string;
+  readonly flowId: string;
+  readonly kind: "varying";
+  readonly outputType: GlslValueType;
+  readonly varyingBindingKey: string;
+};
+
+export type ValidatedTimeNode = {
+  readonly definition: TimeNode;
+  readonly displayName: string;
+  readonly flowId: string;
+  readonly kind: "time";
+  readonly outputType: "float";
+  readonly timeBindingKey: string;
 };
 
 export type ValidatedCustomNode = {
@@ -63,11 +95,17 @@ export type ValidatedOutputNode = {
   readonly kind: "glFragColor";
 };
 
-export type ValidatedValueNode = ValidatedCustomNode | ValidatedUniformNode;
+export type ValidatedValueNode =
+  | ValidatedCustomNode
+  | ValidatedTimeNode
+  | ValidatedUniformNode
+  | ValidatedVaryingNode;
 export type ValidatedGraphNode =
   | ValidatedCustomNode
   | ValidatedOutputNode
-  | ValidatedUniformNode;
+  | ValidatedTimeNode
+  | ValidatedUniformNode
+  | ValidatedVaryingNode;
 
 export type ValidatedGraphEdge = {
   readonly sourceNode: ValidatedValueNode;
@@ -80,5 +118,7 @@ export type ValidatedGraphEdge = {
 export type ValidatedGraph = {
   readonly edges: readonly ValidatedGraphEdge[];
   readonly nodes: readonly ValidatedGraphNode[];
+  readonly times: readonly ValidatedTimeBinding[];
   readonly uniforms: readonly ValidatedUniformBinding[];
+  readonly varyings: readonly ValidatedVaryingBinding[];
 };

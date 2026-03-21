@@ -11,6 +11,7 @@ import {
 const nodeInstanceNameSchema = z.string().min(1);
 const nodeFilePathSchema = z.string().min(1);
 const uniformNameSchema = z.string().min(1);
+const varyingNameSchema = z.string().min(1);
 
 const customNodeInputsSchema = z.record(z.string().min(1), z.string().min(1));
 
@@ -66,6 +67,18 @@ export const customNodeSchema = z.object({
   kind: z.literal("custom"),
 });
 
+export const timeNodeSchema = z.object({
+  instanceName: nodeInstanceNameSchema,
+  kind: z.literal("time"),
+});
+
+export const varyingNodeSchema = z.object({
+  instanceName: nodeInstanceNameSchema,
+  kind: z.literal("varying"),
+  valueType: glslValueTypeSchema,
+  varyingName: varyingNameSchema,
+});
+
 export const glFragColorNodeSchema = z.object({
   inputs: glFragColorInputsSchema,
   kind: z.literal("glFragColor"),
@@ -74,6 +87,8 @@ export const glFragColorNodeSchema = z.object({
 export const graphNodeSchema = z.discriminatedUnion("kind", [
   uniformNodeSchema,
   customNodeSchema,
+  timeNodeSchema,
+  varyingNodeSchema,
   glFragColorNodeSchema,
 ]);
 
@@ -88,6 +103,8 @@ export type UniformNode = Omit<
   readonly defaultValue: GlslValue;
 };
 export type CustomNode = z.infer<typeof customNodeSchema>;
+export type TimeNode = z.infer<typeof timeNodeSchema>;
+export type VaryingNode = z.infer<typeof varyingNodeSchema>;
 export type GlFragColorNode = z.infer<typeof glFragColorNodeSchema>;
 export type GraphNodeDefinition = z.infer<typeof graphNodeSchema>;
 export type GraphDefinition = z.infer<typeof graphSchema>;
