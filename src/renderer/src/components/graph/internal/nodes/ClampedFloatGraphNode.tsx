@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import type { ClampedFloatNode } from "../../../../dag/dag-schema";
+import type { ClampedFloatNode } from "../../dag-schema";
 import {
   type GraphFlowNode,
   type GraphFlowNodeProps,

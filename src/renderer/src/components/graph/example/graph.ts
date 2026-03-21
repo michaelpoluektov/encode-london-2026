@@ -1,4 +1,4 @@
-import { type DagGraph, dagGraphSchema } from "../../dag/dag-schema";
+import { type DagGraph, dagGraphSchema } from "../dag-schema";
 
 export const EXAMPLE_DAG_GRAPH: DagGraph = dagGraphSchema.parse({
   nodes: [
