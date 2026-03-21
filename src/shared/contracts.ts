@@ -73,12 +73,10 @@ export const projectLayoutStateSchema = z.object({
     source: z.boolean(),
     graph: z.boolean(),
     chat: z.boolean(),
-    render: z.boolean(),
   }),
   shellPaneSizes: paneSizePairSchema,
   workspaceColumnSizes: paneSizePairSchema,
   workspaceLeftRowSizes: paneSizePairSchema,
-  workspaceRightRowSizes: paneSizePairSchema,
 });
 
 export type ProjectLayoutState = z.infer<typeof projectLayoutStateSchema>;

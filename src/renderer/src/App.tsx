@@ -28,7 +28,6 @@ import { GraphEditor } from "./components/GraphEditor";
 import type { PanelHeaderAction } from "./components/Panel";
 import { Panel } from "./components/Panel";
 import { PaneRestoreControl } from "./components/PaneRestoreControl";
-import { PreviewViewport } from "./components/PreviewViewport";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { ShaderEditor } from "./components/ShaderEditor";
 import { SplitLayout } from "./components/SplitLayout";
@@ -269,7 +268,6 @@ export const App = (): JSX.Element => {
       shellPaneSizes: useAppStore.getState().shellPaneSizes,
       workspaceColumnSizes: useAppStore.getState().workspaceColumnSizes,
       workspaceLeftRowSizes: useAppStore.getState().workspaceLeftRowSizes,
-      workspaceRightRowSizes: useAppStore.getState().workspaceRightRowSizes,
     }),
   );
   const pendingLayoutSnapshotRef = useRef<ReturnType<
@@ -305,12 +303,6 @@ export const App = (): JSX.Element => {
   const setWorkspaceLeftRowSizes = useAppStore(
     (state) => state.setWorkspaceLeftRowSizes,
   );
-  const workspaceRightRowSizes = useAppStore(
-    (state) => state.workspaceRightRowSizes,
-  );
-  const setWorkspaceRightRowSizes = useAppStore(
-    (state) => state.setWorkspaceRightRowSizes,
-  );
   const previewDiagnostic = usePreviewStore(getPreviewDiagnostic);
   const isPreviewStale = usePreviewStore((state) => state.isStale);
 
@@ -324,8 +316,6 @@ export const App = (): JSX.Element => {
         overrides.workspaceColumnSizes ?? workspaceColumnSizes,
       workspaceLeftRowSizes:
         overrides.workspaceLeftRowSizes ?? workspaceLeftRowSizes,
-      workspaceRightRowSizes:
-        overrides.workspaceRightRowSizes ?? workspaceRightRowSizes,
     });
 
   layoutSnapshotRef.current = createLayoutSnapshot();
@@ -424,13 +414,6 @@ export const App = (): JSX.Element => {
     });
   };
 
-  const handleWorkspaceRightRowSizesChange = (sizes: number[]): void => {
-    setWorkspaceRightRowSizes(sizes);
-    pendingLayoutSnapshotRef.current = createLayoutSnapshot({
-      workspaceRightRowSizes: toPaneSizePair(sizes),
-    });
-  };
-
   const project = useProjectStore((state) => state.project);
   const openTab = useProjectStore((state) => state.openTab);
   const refreshProject = useProjectStore((state) => state.refreshProject);
@@ -487,57 +470,23 @@ export const App = (): JSX.Element => {
     },
   };
 
-  const workspaceColumns = [
+  const leftColumnPanes = [
     {
-      id: "workspace-left-column",
-      minSize: 360,
-      panes: [
-        {
-          content: <ShaderEditor />,
-          id: "source-panel",
-          label: "Source",
-          minSize: 220,
-          paneId: "source",
-          restorePlacement: "topRight",
-        },
-        {
-          content: <GraphEditor />,
-          id: "graph-panel",
-          label: "Graph",
-          minSize: 180,
-          paneId: "graph",
-          restorePlacement: "bottomRight",
-        },
-      ] as const,
-      preferredSize: `${workspaceColumnSizes[0]}%`,
-      rowSizes: workspaceLeftRowSizes,
-      onRowSizesChange: handleWorkspaceLeftRowSizesChange,
+      content: <GraphEditor />,
+      id: "graph-panel",
+      label: "Graph",
+      minSize: 180,
+      paneId: "graph",
+      restorePlacement: "bottomRight",
+      headerActions: [captureAction],
     },
     {
-      id: "workspace-right-column",
-      minSize: 360,
-      panes: [
-        {
-          content: <ChatPanel />,
-          id: "chat-panel",
-          label: "Chat",
-          minSize: 220,
-          paneId: "chat",
-          restorePlacement: "topRight",
-        },
-        {
-          content: <PreviewViewport />,
-          headerActions: [captureAction],
-          id: "render-panel",
-          label: "Render",
-          minSize: 220,
-          paneId: "render",
-          restorePlacement: "bottomRight",
-        },
-      ] as const,
-      preferredSize: `${workspaceColumnSizes[1]}%`,
-      rowSizes: workspaceRightRowSizes,
-      onRowSizesChange: handleWorkspaceRightRowSizesChange,
+      content: <ShaderEditor />,
+      id: "source-panel",
+      label: "Source",
+      minSize: 220,
+      paneId: "source",
+      restorePlacement: "topRight",
     },
   ] as const;
 
@@ -550,24 +499,53 @@ export const App = (): JSX.Element => {
         onDragEnd={() => {
           void persistProjectLayout();
         }}
-        panes={workspaceColumns.map((column) => ({
-          content: (
-            <WorkspaceColumnLayout
-              collapsedPanes={collapsedPanes}
-              layoutRevision={layoutRevision}
-              onDragEnd={() => {
-                void persistProjectLayout();
-              }}
-              onRowSizesChange={column.onRowSizesChange}
-              panes={column.panes}
-              rowSizes={column.rowSizes}
-              togglePaneCollapsed={handleTogglePaneCollapsed}
-            />
-          ),
-          id: column.id,
-          minSize: column.minSize,
-          preferredSize: column.preferredSize,
-        }))}
+        panes={[
+          {
+            content: (
+              <WorkspaceColumnLayout
+                collapsedPanes={collapsedPanes}
+                layoutRevision={layoutRevision}
+                onDragEnd={() => {
+                  void persistProjectLayout();
+                }}
+                onRowSizesChange={handleWorkspaceLeftRowSizesChange}
+                panes={leftColumnPanes}
+                rowSizes={workspaceLeftRowSizes}
+                togglePaneCollapsed={handleTogglePaneCollapsed}
+              />
+            ),
+            id: "workspace-left-column",
+            minSize: 360,
+            preferredSize: `${workspaceColumnSizes[0]}%`,
+          },
+          {
+            content: (
+              <div className={workspaceColumn}>
+                {collapsedPanes.chat ? (
+                  <PaneRestoreControl
+                    label="Chat"
+                    placement="topRight"
+                    onRestore={() => {
+                      handleTogglePaneCollapsed("chat");
+                    }}
+                  />
+                ) : (
+                  <Panel
+                    label="Chat"
+                    onToggleCollapsed={() => {
+                      handleTogglePaneCollapsed("chat");
+                    }}
+                  >
+                    <ChatPanel />
+                  </Panel>
+                )}
+              </div>
+            ),
+            id: "workspace-right-column",
+            minSize: 360,
+            preferredSize: `${workspaceColumnSizes[1]}%`,
+          },
+        ]}
       />
     </div>
   );

@@ -10,6 +10,13 @@ export const graphPanel = style({
   overflow: "hidden",
 });
 
+export const graphContainer = style({
+  position: "relative",
+  height: "100%",
+  minHeight: 0,
+  overflow: "hidden",
+});
+
 export const graphPlaceholder = style({
   fontFamily: themeVars.font.family.mono,
   letterSpacing: "0.08em",
