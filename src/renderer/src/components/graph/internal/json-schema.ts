@@ -1,13 +1,17 @@
 import { z } from "zod";
+import {
+  type GlslValue,
+  glslValueSchema,
+  glslValueTypeSchema,
+  normalizeUniformEditor,
+  parseGlslValueOfType,
+  uniformEditorSchema,
+} from "./glsl-type-registry";
 
 const nodeInstanceNameSchema = z.string().min(1);
 const nodeFilePathSchema = z.string().min(1);
 const uniformNameSchema = z.string().min(1);
-const finiteNumberSchema = z.number();
-const integerNumberSchema = z.number().int();
-const normalizedChannelSchema = finiteNumberSchema.min(0).max(1);
 
-// Inputs are modeled as `thisNodeInput -> sourceNodeOutputRef`.
 const customNodeInputsSchema = z.record(z.string().min(1), z.string().min(1));
 
 const glFragColorInputsSchema = z
@@ -16,158 +20,74 @@ const glFragColorInputsSchema = z
   })
   .strict();
 
-// `color` is a graph-level alias for `vec4` with RGBA channels so the UI can
-// render it through a color picker while validation treats it as `vec4`.
-const colorValueSchema = z
+export const uniformNodeSchema = z
   .object({
-    a: normalizedChannelSchema,
-    b: normalizedChannelSchema,
-    g: normalizedChannelSchema,
-    r: normalizedChannelSchema,
-  })
-  .strict();
-
-const vec2ValueSchema = z
-  .object({
-    x: finiteNumberSchema,
-    y: finiteNumberSchema,
-  })
-  .strict();
-
-const vec3ValueSchema = z
-  .object({
-    x: finiteNumberSchema,
-    y: finiteNumberSchema,
-    z: finiteNumberSchema,
-  })
-  .strict();
-
-const vec4ValueSchema = z
-  .object({
-    w: finiteNumberSchema,
-    x: finiteNumberSchema,
-    y: finiteNumberSchema,
-    z: finiteNumberSchema,
-  })
-  .strict();
-
-export const customNodeSchema = z.object({
-  kind: z.literal("custom"),
-  instanceName: nodeInstanceNameSchema,
-  filepath: nodeFilePathSchema,
-  inputs: customNodeInputsSchema,
-});
-
-export const glFragColorNodeSchema = z.object({
-  kind: z.literal("glFragColor"),
-  inputs: glFragColorInputsSchema,
-});
-
-export const floatNodeSchema = z
-  .object({
-    kind: z.literal("float"),
+    defaultValue: glslValueSchema,
+    editor: uniformEditorSchema.optional(),
     instanceName: nodeInstanceNameSchema,
+    kind: z.literal("uniform"),
     uniformName: uniformNameSchema,
-    defaultValue: finiteNumberSchema,
-    min: finiteNumberSchema.optional(),
-    max: finiteNumberSchema.optional(),
+    valueType: glslValueTypeSchema,
   })
-  .superRefine(({ defaultValue, max, min }, context) => {
-    if (min !== undefined && max !== undefined && min > max) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Float min must be less than or equal to max.",
-        path: ["max"],
-      });
-    }
+  .superRefine((node, context) => {
+    const parsedDefaultValue = parseGlslValueOfType(
+      node.valueType,
+      node.defaultValue,
+    );
 
-    if (min !== undefined && defaultValue < min) {
+    if (!parsedDefaultValue.success) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Float defaultValue must be greater than or equal to min.",
+        message: `defaultValue must match declared valueType [${node.valueType}].`,
         path: ["defaultValue"],
       });
+      return;
     }
 
-    if (max !== undefined && defaultValue > max) {
+    const { errors } = normalizeUniformEditor(
+      node.valueType,
+      parsedDefaultValue.data,
+      node.editor,
+    );
+
+    for (const error of errors) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Float defaultValue must be less than or equal to max.",
-        path: ["defaultValue"],
+        message: error,
+        path: ["editor"],
       });
     }
   });
 
-export const boolNodeSchema = z.object({
-  kind: z.literal("bool"),
+export const customNodeSchema = z.object({
+  filepath: nodeFilePathSchema,
+  inputs: customNodeInputsSchema,
   instanceName: nodeInstanceNameSchema,
-  uniformName: uniformNameSchema,
-  defaultValue: z.boolean(),
+  kind: z.literal("custom"),
 });
 
-export const intNodeSchema = z.object({
-  kind: z.literal("int"),
-  instanceName: nodeInstanceNameSchema,
-  uniformName: uniformNameSchema,
-  defaultValue: integerNumberSchema,
-});
-
-export const vec2NodeSchema = z.object({
-  kind: z.literal("vec2"),
-  instanceName: nodeInstanceNameSchema,
-  uniformName: uniformNameSchema,
-  defaultValue: vec2ValueSchema,
-});
-
-export const vec3NodeSchema = z.object({
-  kind: z.literal("vec3"),
-  instanceName: nodeInstanceNameSchema,
-  uniformName: uniformNameSchema,
-  defaultValue: vec3ValueSchema,
-});
-
-export const vec4NodeSchema = z.object({
-  kind: z.literal("vec4"),
-  instanceName: nodeInstanceNameSchema,
-  uniformName: uniformNameSchema,
-  defaultValue: vec4ValueSchema,
-});
-
-export const colorNodeSchema = z.object({
-  kind: z.literal("color"),
-  instanceName: nodeInstanceNameSchema,
-  uniformName: uniformNameSchema,
-  defaultValue: colorValueSchema,
+export const glFragColorNodeSchema = z.object({
+  inputs: glFragColorInputsSchema,
+  kind: z.literal("glFragColor"),
 });
 
 export const graphNodeSchema = z.discriminatedUnion("kind", [
-  boolNodeSchema,
-  colorNodeSchema,
+  uniformNodeSchema,
   customNodeSchema,
-  floatNodeSchema,
   glFragColorNodeSchema,
-  intNodeSchema,
-  vec2NodeSchema,
-  vec3NodeSchema,
-  vec4NodeSchema,
 ]);
 
 export const graphSchema = z.object({
   nodes: z.array(graphNodeSchema),
 });
 
+export type UniformNode = Omit<
+  z.infer<typeof uniformNodeSchema>,
+  "defaultValue"
+> & {
+  readonly defaultValue: GlslValue;
+};
 export type CustomNode = z.infer<typeof customNodeSchema>;
 export type GlFragColorNode = z.infer<typeof glFragColorNodeSchema>;
-export type BoolNode = z.infer<typeof boolNodeSchema>;
-export type FloatNode = z.infer<typeof floatNodeSchema>;
-export type IntNode = z.infer<typeof intNodeSchema>;
-export type Vec2Node = z.infer<typeof vec2NodeSchema>;
-export type Vec3Node = z.infer<typeof vec3NodeSchema>;
-export type Vec4Node = z.infer<typeof vec4NodeSchema>;
-export type ColorNode = z.infer<typeof colorNodeSchema>;
-export type ColorValue = z.infer<typeof colorValueSchema>;
-export type Vec2Value = z.infer<typeof vec2ValueSchema>;
-export type Vec3Value = z.infer<typeof vec3ValueSchema>;
-export type Vec4Value = z.infer<typeof vec4ValueSchema>;
 export type GraphNodeDefinition = z.infer<typeof graphNodeSchema>;
 export type GraphDefinition = z.infer<typeof graphSchema>;

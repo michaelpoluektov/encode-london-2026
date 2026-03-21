@@ -1,11 +1,15 @@
 import type { JSX } from "react";
+import type { ValidatedOutputNode } from "../../graph-types";
 import {
   createGraphNodeInputs,
   type GraphFlowNode,
   type GraphFlowNodeProps,
   GraphNodeFrame,
 } from "./GraphNode";
-import type { GlFragColorGraphNodeData } from "./node-data";
+
+export type GlFragColorGraphNodeData = {
+  readonly node: ValidatedOutputNode;
+};
 
 export type GlFragColorGraphFlowNode = GraphFlowNode<
   GlFragColorGraphNodeData,
@@ -21,12 +25,12 @@ export const GlFragColorGraphNode = ({
   <GraphNodeFrame
     details={[
       {
-        label: "Built-in",
+        label: "built-in",
         value: "gl_FragColor",
       },
     ]}
     hasOutput={false}
-    inputs={createGraphNodeInputs(Object.keys(data.definition.inputs))}
-    title="gl_FragColor"
+    inputs={createGraphNodeInputs(["color"])}
+    title={data.node.displayName}
   />
 );

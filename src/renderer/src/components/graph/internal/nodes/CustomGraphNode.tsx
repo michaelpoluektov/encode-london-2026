@@ -1,11 +1,15 @@
 import type { JSX } from "react";
+import type { ValidatedCustomNode } from "../../graph-types";
 import {
   createGraphNodeInputs,
   type GraphFlowNode,
   type GraphFlowNodeProps,
   GraphNodeFrame,
 } from "./GraphNode";
-import type { CustomGraphNodeData } from "./node-data";
+
+export type CustomGraphNodeData = {
+  readonly node: ValidatedCustomNode;
+};
 
 export type CustomGraphFlowNode = GraphFlowNode<CustomGraphNodeData, "custom">;
 
@@ -15,11 +19,13 @@ export const CustomGraphNode = ({
   <GraphNodeFrame
     details={[
       {
-        label: "File",
-        value: data.definition.filepath,
+        label: "file",
+        value: data.node.definition.filepath,
       },
     ]}
-    inputs={createGraphNodeInputs(Object.keys(data.definition.inputs))}
-    title={data.definition.instanceName}
+    inputs={createGraphNodeInputs(
+      Array.from(data.node.signature.inputTypes.keys()),
+    )}
+    title={`${data.node.displayName} (custom)`}
   />
 );
