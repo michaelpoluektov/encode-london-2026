@@ -3,7 +3,10 @@ import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import {
   bootstrapPayloadSchema,
   chatAttachPreviewContextPayloadSchema,
+  chatPromptSchema,
+  projectCreatePayloadSchema,
   projectEntryRequestSchema,
+  projectFolderPathSchema,
   projectSaveCapturePayloadSchema,
   projectSavePayloadSchema,
 } from "../shared/contracts";
@@ -87,14 +90,15 @@ app.whenReady().then(async () => {
     return canceled ? null : filePaths[0];
   });
 
-  ipcMain.handle(
-    "project:create",
-    async (_e, parentDir: string, name: string) => {
-      const result = await projectService.createProject(parentDir, name);
-      if (result) codexRuntime.startSession(result.folderPath);
-      return result;
-    },
-  );
+  ipcMain.handle("project:create", async (_e, payload: unknown) => {
+    const parsedPayload = projectCreatePayloadSchema.parse(payload);
+    const result = await projectService.createProject(
+      parsedPayload.parentDir,
+      parsedPayload.name,
+    );
+    if (result) codexRuntime.startSession(result.folderPath);
+    return result;
+  });
 
   ipcMain.handle("project:open", async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
@@ -120,15 +124,16 @@ app.whenReady().then(async () => {
     return projectService.saveCapture(parsedPayload);
   });
 
-  ipcMain.handle("project:reload", (_e, folderPath: string) =>
-    projectService.reloadProject(folderPath),
+  ipcMain.handle("project:reload", (_e, payload: unknown) =>
+    projectService.reloadProject(projectFolderPathSchema.parse(payload)),
   );
 
   ipcMain.handle("project:readEntry", (_e, payload: unknown) =>
     projectService.readProjectEntry(projectEntryRequestSchema.parse(payload)),
   );
 
-  ipcMain.handle("chat:send", async (event, prompt: string) => {
+  ipcMain.handle("chat:send", async (event, payload: unknown) => {
+    const prompt = chatPromptSchema.parse(payload);
     await codexRuntime.sendMessage(
       prompt,
       (text) => event.sender.send("chat:chunk", text),
