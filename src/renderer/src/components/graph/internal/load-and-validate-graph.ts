@@ -6,9 +6,14 @@ import type {
   ValidatedGraphEdge,
   ValidatedGraphNode,
 } from "../graph-types";
+import {
+  loadResolvedCustomNodeSource,
+  matchCustomNodeSignature,
+} from "./custom-node-glsl";
 import type {
   BoolNode,
   ColorNode,
+  ColorValue,
   CustomNode,
   FloatNode,
   GlFragColorNode,
@@ -16,8 +21,11 @@ import type {
   GraphNodeDefinition,
   IntNode,
   Vec2Node,
+  Vec2Value,
   Vec3Node,
+  Vec3Value,
   Vec4Node,
+  Vec4Value,
 } from "./json-schema";
 import { graphSchema } from "./json-schema";
 
@@ -26,11 +34,16 @@ type InferredNodeTypeInfo = {
   readonly outputType: GlslValueType | null;
 };
 
-type ParsedGlslFunctionSignature = {
-  readonly inputTypes: ReadonlyMap<string, GlslValueType>;
-  readonly name: string;
-  readonly outputType: GlslValueType;
-};
+type UniformInputNodeDefinition =
+  | BoolNode
+  | ColorNode
+  | FloatNode
+  | IntNode
+  | Vec2Node
+  | Vec3Node
+  | Vec4Node;
+
+type UniformBindingValue = boolean | number | Vec2Value | Vec3Value | Vec4Value;
 
 type ReadValidatedGraphOptions = {
   readonly loadCustomNodeSource?: GraphSourceLoader;
@@ -47,23 +60,6 @@ type ReadValidatedGraphResult =
       readonly graph: null;
       readonly ok: false;
     };
-
-const SUPPORTED_GLSL_TYPES = new Set<GlslValueType>([
-  "bool",
-  "float",
-  "int",
-  "vec2",
-  "vec3",
-  "vec4",
-]);
-
-const glslFunctionPattern =
-  /\b(?<returnType>[A-Za-z_]\w*)\s+(?<name>[A-Za-z_]\w*)\s*\((?<parameters>[^)]*)\)\s*\{/g;
-
-const exampleNodeSourceLoaders = import.meta.glob("../example/nodes/*.glsl", {
-  import: "default",
-  query: "?raw",
-});
 
 const formatSchemaIssuePath = (issue: ZodIssue): string =>
   issue.path.length === 0 ? "graph" : `graph.${issue.path.join(".")}`;
@@ -102,49 +98,14 @@ const parseGraphJson = (
   };
 };
 
-const normalizeExampleNodePath = (filepath: string): string | null => {
-  const normalizedFilePath = filepath.replace(/\\/g, "/");
-  const nodePathIndex = normalizedFilePath.indexOf("/nodes/");
-
-  if (normalizedFilePath.startsWith("./nodes/")) {
-    return normalizedFilePath;
-  }
-
-  if (nodePathIndex >= 0) {
-    return `.${normalizedFilePath.slice(nodePathIndex)}`;
-  }
-
-  return null;
-};
-
-const loadExampleNodeSource = async (
-  filepath: string,
-): Promise<string | null> => {
-  const normalizedFilePath = normalizeExampleNodePath(filepath);
-
-  if (normalizedFilePath === null) {
-    return null;
-  }
-
-  for (const [modulePath, loadModule] of Object.entries(
-    exampleNodeSourceLoaders,
-  )) {
-    const normalizedModulePath = normalizeExampleNodePath(modulePath);
-
-    if (normalizedModulePath === normalizedFilePath) {
-      const source = await loadModule();
-
-      return typeof source === "string" ? source : null;
-    }
-  }
-
-  return null;
-};
-
 const createNodeLabel = (
   node: GraphNodeDefinition,
   fallback: string,
 ): string => ("instanceName" in node ? node.instanceName : fallback);
+
+const isUniformInputNodeDefinition = (
+  node: GraphNodeDefinition,
+): node is UniformInputNodeDefinition => "uniformName" in node;
 
 const getNodeInputs = (
   node: GraphNodeDefinition,
@@ -257,92 +218,156 @@ const inferStaticNodeTypeInfo = (
   }
 };
 
-const parseParameter = (
-  parameterSource: string,
-): { name: string; type: GlslValueType } | null => {
-  const parameterMatch = parameterSource
-    .trim()
-    .match(
-      /^(?:(?:const|in|out|inout)\s+)?(?<type>[A-Za-z_]\w*)\s+(?<name>[A-Za-z_]\w*)$/,
-    );
+const colorValueToVec4Value = (value: ColorValue): Vec4Value => ({
+  w: value.a,
+  x: value.r,
+  y: value.g,
+  z: value.b,
+});
 
-  if (
-    parameterMatch?.groups?.type === undefined ||
-    parameterMatch.groups.name === undefined
-  ) {
-    return null;
+const cloneVec2Value = (value: Vec2Value): Vec2Value => ({
+  x: value.x,
+  y: value.y,
+});
+
+const cloneVec3Value = (value: Vec3Value): Vec3Value => ({
+  x: value.x,
+  y: value.y,
+  z: value.z,
+});
+
+const cloneVec4Value = (value: Vec4Value): Vec4Value => ({
+  w: value.w,
+  x: value.x,
+  y: value.y,
+  z: value.z,
+});
+
+const createUniformBindingValue = (
+  node: UniformInputNodeDefinition,
+): UniformBindingValue => {
+  switch (node.kind) {
+    case "bool":
+    case "float":
+    case "int":
+      return node.defaultValue;
+    case "color":
+      return colorValueToVec4Value(node.defaultValue);
+    case "vec2":
+      return cloneVec2Value(node.defaultValue);
+    case "vec3":
+      return cloneVec3Value(node.defaultValue);
+    case "vec4":
+      return cloneVec4Value(node.defaultValue);
   }
-
-  if (!SUPPORTED_GLSL_TYPES.has(parameterMatch.groups.type as GlslValueType)) {
-    return null;
-  }
-
-  return {
-    name: parameterMatch.groups.name,
-    type: parameterMatch.groups.type as GlslValueType,
-  };
 };
 
-const parseFunctionSignatures = (
-  source: string,
-): ParsedGlslFunctionSignature[] => {
-  const signatures: ParsedGlslFunctionSignature[] = [];
+const areUniformBindingValuesEqual = (
+  left: UniformBindingValue,
+  right: UniformBindingValue,
+): boolean => {
+  if (typeof left !== typeof right) {
+    return false;
+  }
 
-  for (const match of source.matchAll(glslFunctionPattern)) {
-    const returnType = match.groups?.returnType;
-    const name = match.groups?.name;
-    const parameters = match.groups?.parameters;
+  if (
+    typeof left === "boolean" ||
+    typeof left === "number" ||
+    typeof right === "boolean" ||
+    typeof right === "number"
+  ) {
+    return left === right;
+  }
 
+  return JSON.stringify(left) === JSON.stringify(right);
+};
+
+const formatUniformBindingValue = (
+  value: UniformBindingValue,
+  valueType: GlslValueType,
+): string => {
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : value.toString();
+  }
+
+  switch (valueType) {
+    case "vec2": {
+      const vec2Value = value as Vec2Value;
+
+      return `vec2(${vec2Value.x}, ${vec2Value.y})`;
+    }
+    case "vec3": {
+      const vec3Value = value as Vec3Value;
+
+      return `vec3(${vec3Value.x}, ${vec3Value.y}, ${vec3Value.z})`;
+    }
+    case "vec4": {
+      const vec4Value = value as Vec4Value;
+
+      return `vec4(${vec4Value.x}, ${vec4Value.y}, ${vec4Value.z}, ${vec4Value.w})`;
+    }
+    case "bool":
+    case "float":
+    case "int":
+      return JSON.stringify(value);
+  }
+};
+
+const createSharedUniformErrors = (
+  validatedNodes: readonly ValidatedGraphNode[],
+): string[] => {
+  const errors: string[] = [];
+  const uniformBindingByName = new Map<
+    string,
+    {
+      readonly defaultValue: UniformBindingValue;
+      readonly node: ValidatedGraphNode;
+      readonly valueType: GlslValueType;
+    }
+  >();
+
+  for (const validatedNode of validatedNodes) {
     if (
-      returnType === undefined ||
-      name === undefined ||
-      parameters === undefined ||
-      !SUPPORTED_GLSL_TYPES.has(returnType as GlslValueType)
+      !isUniformInputNodeDefinition(validatedNode.definition) ||
+      validatedNode.outputType === null
     ) {
       continue;
     }
 
-    const inputTypes = new Map<string, GlslValueType>();
-    const rawParameters = parameters
-      .split(",")
-      .map((parameter) => parameter.trim())
-      .filter(Boolean);
+    const uniformName = validatedNode.definition.uniformName;
+    const defaultValue = createUniformBindingValue(validatedNode.definition);
+    const existingBinding = uniformBindingByName.get(uniformName);
 
-    let hasInvalidParameter = false;
-
-    for (const rawParameter of rawParameters) {
-      const parsedParameter = parseParameter(rawParameter);
-
-      if (parsedParameter === null) {
-        hasInvalidParameter = true;
-        break;
-      }
-
-      inputTypes.set(parsedParameter.name, parsedParameter.type);
-    }
-
-    if (hasInvalidParameter) {
+    if (existingBinding === undefined) {
+      uniformBindingByName.set(uniformName, {
+        defaultValue,
+        node: validatedNode,
+        valueType: validatedNode.outputType,
+      });
       continue;
     }
 
-    signatures.push({
-      inputTypes,
-      name,
-      outputType: returnType as GlslValueType,
-    });
+    if (existingBinding.valueType !== validatedNode.outputType) {
+      errors.push(
+        `uniform [${uniformName}] is shared by node [${existingBinding.node.displayName}] and node [${validatedNode.displayName}], but they resolve to different GLSL types [${existingBinding.valueType}] and [${validatedNode.outputType}]. Shared uniforms must use the same type.`,
+      );
+      continue;
+    }
+
+    if (
+      !areUniformBindingValuesEqual(existingBinding.defaultValue, defaultValue)
+    ) {
+      errors.push(
+        `uniform [${uniformName}] is shared by node [${existingBinding.node.displayName}] and node [${validatedNode.displayName}], but their default values differ: node [${existingBinding.node.displayName}] uses [${formatUniformBindingValue(existingBinding.defaultValue, existingBinding.valueType)}] while node [${validatedNode.displayName}] uses [${formatUniformBindingValue(defaultValue, validatedNode.outputType)}]. Shared uniforms must start with the same value.`,
+      );
+    }
   }
 
-  return signatures;
-};
-
-const formatFunctionSignature = (
-  signature: ParsedGlslFunctionSignature,
-): string => {
-  const parameters = Array.from(signature.inputTypes.entries())
-    .map(([name, type]) => `${type} ${name}`)
-    .join(", ");
-
-  return `${signature.outputType} ${signature.name}(${parameters})`;
+  return errors;
 };
 
 const inferCustomNodeTypeInfo = async (
@@ -352,24 +377,10 @@ const inferCustomNodeTypeInfo = async (
   | { errors: string[]; info: InferredNodeTypeInfo }
   | { errors: string[]; info: null }
 > => {
-  const loadSource =
-    loadCustomNodeSource ??
-    (async (filepath: string) => {
-      const source = await loadExampleNodeSource(filepath);
-
-      if (source === null) {
-        throw new Error(
-          `No source loader is configured for custom node file [${filepath}].`,
-        );
-      }
-
-      return source;
-    });
-
   let source: string;
 
   try {
-    source = await loadSource(node.filepath, node);
+    source = await loadResolvedCustomNodeSource(node, loadCustomNodeSource);
   } catch (error) {
     return {
       errors: [
@@ -379,22 +390,10 @@ const inferCustomNodeTypeInfo = async (
     };
   }
 
-  const parsedFunctionSignatures = parseFunctionSignatures(source);
-  const expectedFunctionName = `${node.instanceName}Node`;
-  const matchedSignature =
-    parsedFunctionSignatures.find(
-      (signature) => signature.name === expectedFunctionName,
-    ) ??
-    (parsedFunctionSignatures.length === 1
-      ? parsedFunctionSignatures[0]
-      : null);
+  const { availableFunctions, expectedFunctionName, signature } =
+    matchCustomNodeSignature(node, source);
 
-  if (matchedSignature === null) {
-    const availableFunctions =
-      parsedFunctionSignatures.length > 0
-        ? parsedFunctionSignatures.map(formatFunctionSignature).join(", ")
-        : "none";
-
+  if (signature === null) {
     return {
       errors: [
         `node [${node.instanceName}] could not infer a custom node signature from [${node.filepath}]. Expected a function named [${expectedFunctionName}] or a file with exactly one supported GLSL function. Available functions: ${availableFunctions}.`,
@@ -406,8 +405,8 @@ const inferCustomNodeTypeInfo = async (
   return {
     errors: [],
     info: {
-      inputTypes: matchedSignature.inputTypes,
-      outputType: matchedSignature.outputType,
+      inputTypes: signature.inputTypes,
+      outputType: signature.outputType,
     },
   };
 };
@@ -509,9 +508,14 @@ const validateGraphDefinition = async (
         flowId: createFlowNodeId(node, index, seenFlowIds),
         inputTypes: inferredTypeInfo.inputTypes,
         outputType: inferredTypeInfo.outputType,
+        uniformBindingKey: isUniformInputNodeDefinition(node)
+          ? node.uniformName
+          : null,
       } satisfies ValidatedGraphNode;
     })
     .filter((node): node is ValidatedGraphNode => node !== null);
+
+  errors.push(...createSharedUniformErrors(validatedNodes));
 
   const validatedNodeByInstanceName = new Map<string, ValidatedGraphNode>();
 
