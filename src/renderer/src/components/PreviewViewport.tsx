@@ -2,7 +2,6 @@ import { type JSX, useDeferredValue, useEffect, useRef } from "react";
 import * as THREE from "three";
 import {
   DEFAULT_FRAGMENT_SHADER,
-  DEFAULT_VERTEX_SHADER,
 } from "../../../shared/default-project";
 
 import {
@@ -23,6 +22,7 @@ import {
 } from "../preview-compile";
 import { useGraphPreviewStore } from "../store/graph-preview-store";
 import { createPreviewRevision, usePreviewStore } from "../store/preview-store";
+import { getProjectVertexSource, useProjectStore } from "../store/project-store";
 import { darkThemeValues } from "../theme";
 
 const PREVIEW_CAPTURE_SIZE = 200;
@@ -73,8 +73,9 @@ export const PreviewViewport = (): JSX.Element => {
   );
   const isPreviewStale = usePreviewStore((state) => state.isStale);
 
+  const project = useProjectStore((s) => s.project);
   const fragmentSource = graphFragmentSource ?? DEFAULT_FRAGMENT_SHADER;
-  const vertexSource = DEFAULT_VERTEX_SHADER;
+  const vertexSource = getProjectVertexSource(project);
   const activeUniformValues =
     graphFragmentSource === null
       ? EMPTY_GRAPH_UNIFORM_VALUES
@@ -280,7 +281,7 @@ export const PreviewViewport = (): JSX.Element => {
       geometry = new THREE.SphereGeometry(1, 256, 128);
       const material = createPreviewMaterial(
         DEFAULT_FRAGMENT_SHADER,
-        DEFAULT_VERTEX_SHADER,
+        getProjectVertexSource(useProjectStore.getState().project),
         EMPTY_GRAPH_UNIFORM_VALUES,
       );
       mesh = new THREE.Mesh(geometry, material);

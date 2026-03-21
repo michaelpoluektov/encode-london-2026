@@ -6,7 +6,11 @@ import type {
   ProjectTreeNode,
   ShadilyManifest,
 } from "../../../shared/contracts";
-import { DEFAULT_GRAPH_SOURCE } from "../../../shared/default-project";
+import {
+  DEFAULT_GRAPH_SOURCE,
+  DEFAULT_PROJECT_FILE_PATHS,
+  DEFAULT_VERTEX_SHADER,
+} from "../../../shared/default-project";
 import { normalizeProjectPath } from "../../../shared/path-utils";
 import type { ProjectState } from "./project-store";
 
@@ -56,6 +60,16 @@ const createGraphDocument = (
   content,
 });
 
+const createVertexDocument = (
+  content: string,
+): ProjectTextEntryResult => ({
+  path: DEFAULT_PROJECT_FILE_PATHS.vertex,
+  kind: "text",
+  language: "glsl",
+  isEditable: true,
+  content,
+});
+
 export const getGraphDocumentPath = (manifest: ShadilyManifest): string =>
   normalizeProjectPath(manifest.graph.source);
 
@@ -93,6 +107,7 @@ const createSavedFiles = (
   return {
     ...savedFiles,
     [graphPath]: createGraphDocument(graphPath, result.graphSource),
+    [DEFAULT_PROJECT_FILE_PATHS.vertex]: createVertexDocument(result.vertexSource),
   };
 };
 
@@ -230,12 +245,27 @@ export const getProjectGraphSource = (project: ProjectState | null): string => {
   return document.content;
 };
 
+export const getProjectVertexSource = (project: ProjectState | null): string => {
+  if (project === null) {
+    return DEFAULT_VERTEX_SHADER;
+  }
+
+  const document = getProjectDocument(project, DEFAULT_PROJECT_FILE_PATHS.vertex);
+
+  if (document?.kind !== "text") {
+    return DEFAULT_VERTEX_SHADER;
+  }
+
+  return document.content;
+};
+
 export const createProjectSavePayload = (
   project: ProjectState,
 ): ProjectSavePayload => ({
   folderPath: project.folderPath,
   manifest: project.manifest,
   graphSource: getProjectGraphSource(project),
+  vertexSource: getProjectVertexSource(project),
 });
 
 export const selectProjectEntry = (

@@ -18,6 +18,7 @@ export {
   createProjectSavePayload,
   getProjectDocument,
   getProjectGraphSource,
+  getProjectVertexSource,
   getSavedProjectDocument,
 } from "./project-store-helpers";
 
@@ -48,6 +49,8 @@ type ProjectStore = {
   readonly setSavedDocument: (document: ProjectEntryResult) => void;
   readonly updateDraft: (path: string, content: string) => void;
 };
+
+
 
 export const useProjectStore = create<ProjectStore>((set) => ({
   project: null,

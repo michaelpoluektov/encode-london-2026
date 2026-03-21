@@ -60,8 +60,9 @@ export const saveProject = async (
   folderPath: string,
   manifest: ShadilyManifest,
   graphSource: string,
+  vertexSource: string,
 ): Promise<ProjectOpenResult> => {
-  const project = await saveProjectFiles(folderPath, manifest, graphSource);
+  const project = await saveProjectFiles(folderPath, manifest, graphSource, vertexSource);
   await upsertProjectMetadata(project.folderPath, project.manifest);
   return project;
 };

@@ -15,6 +15,7 @@ import {
   DEFAULT_AGENTS_MD,
   DEFAULT_NODE_GLSL_FILES,
   DEFAULT_PROJECT_FILE_PATHS,
+  DEFAULT_VERTEX_SHADER,
 } from "../../shared/default-project";
 import {
   buildProjectTree,
@@ -39,12 +40,24 @@ const resolveProjectPath = (folderPath: string, path: string): string => {
 };
 
 const getEditablePaths = (manifest: ShadilyManifest): Set<string> =>
-  new Set([toProjectPath(manifest.graph.source)]);
+  new Set([
+    toProjectPath(manifest.graph.source),
+    DEFAULT_PROJECT_FILE_PATHS.vertex,
+  ]);
 
 export const readGraphSource = (
   folderPath: string,
   manifest: ShadilyManifest,
 ): string => readFileSync(join(folderPath, manifest.graph.source), "utf-8");
+
+const readVertexSource = (folderPath: string): string => {
+  const vertexPath = join(folderPath, DEFAULT_PROJECT_FILE_PATHS.vertex);
+  try {
+    return readFileSync(vertexPath, "utf-8");
+  } catch {
+    return DEFAULT_VERTEX_SHADER;
+  }
+};
 
 export const createProjectOpenResult = (
   folderPath: string,
@@ -54,6 +67,7 @@ export const createProjectOpenResult = (
   folderPath,
   manifest,
   graphSource,
+  vertexSource: readVertexSource(folderPath),
   tree: buildProjectTree(folderPath, manifest),
 });
 
@@ -94,6 +108,11 @@ export const createProject = async (
   writeFileSync(
     join(folderPath, DEFAULT_PROJECT_FILE_PATHS.agentInstructions),
     DEFAULT_AGENTS_MD,
+    "utf-8",
+  );
+  writeFileSync(
+    join(folderPath, DEFAULT_PROJECT_FILE_PATHS.vertex),
+    DEFAULT_VERTEX_SHADER,
     "utf-8",
   );
 
@@ -157,6 +176,7 @@ export const saveProject = async (
   folderPath: string,
   manifest: ShadilyManifest,
   graphSource: string,
+  vertexSource: string,
 ): Promise<ProjectOpenResult> => {
   const updated: ShadilyManifest = {
     ...manifest,
@@ -164,6 +184,11 @@ export const saveProject = async (
   };
 
   writeFileSync(join(folderPath, manifest.graph.source), graphSource, "utf-8");
+  writeFileSync(
+    join(folderPath, DEFAULT_PROJECT_FILE_PATHS.vertex),
+    vertexSource,
+    "utf-8",
+  );
   writeFileSync(
     join(folderPath, DEFAULT_PROJECT_FILE_PATHS.manifest),
     JSON.stringify(updated, null, 2),

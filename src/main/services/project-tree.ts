@@ -1,11 +1,15 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { extname, join, sep } from "node:path";
 import type { ProjectTreeNode, ShadilyManifest } from "../../shared/contracts";
+import { DEFAULT_PROJECT_FILE_PATHS } from "../../shared/default-project";
 
 const toProjectPath = (path: string): string => path.split(sep).join("/");
 
 const getEditablePaths = (manifest: ShadilyManifest): Set<string> =>
-  new Set([toProjectPath(manifest.graph.source)]);
+  new Set([
+    toProjectPath(manifest.graph.source),
+    DEFAULT_PROJECT_FILE_PATHS.vertex,
+  ]);
 
 const IMAGE_EXTENSIONS = new Set([
   ".avif",
