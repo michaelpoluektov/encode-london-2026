@@ -23,7 +23,7 @@ import {
   workspaceShell,
 } from "./app-shell.css";
 import { ChatPanel } from "./components/ChatPanel";
-import { GraphPanel } from "./components/GraphPanel";
+import { GraphEditor } from "./components/GraphEditor";
 import { Panel } from "./components/Panel";
 import { PaneRestoreControl } from "./components/PaneRestoreControl";
 import { PreviewViewport } from "./components/PreviewViewport";
@@ -439,7 +439,7 @@ export const App = (): JSX.Element => {
           restorePlacement: "topRight",
         },
         {
-          content: <GraphPanel />,
+          content: <GraphEditor />,
           id: "graph-panel",
           label: "Graph",
           minSize: 180,
