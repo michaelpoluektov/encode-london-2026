@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import type { BootstrapPayload } from "../../../shared/contracts";
 
-export const WORKSPACE_PANEL_IDS = ["source", "preview", "chat"] as const;
+export const WORKSPACE_PANEL_IDS = [
+  "source",
+  "preview",
+  "graph",
+  "chat",
+] as const;
 export type WorkspacePanelId = (typeof WORKSPACE_PANEL_IDS)[number];
 
 export const WORKSPACE_REGION_IDS = ["main", "side", "bottom"] as const;
@@ -15,6 +20,10 @@ export const workspacePanelDefinitions = {
   preview: {
     description: "Live material preview",
     title: "Preview",
+  },
+  graph: {
+    description: "Shader graph workspace",
+    title: "Graph",
   },
   chat: {
     description: "LLM chat workspace",
@@ -48,6 +57,10 @@ const defaultWorkspacePanels = {
   preview: {
     isOpen: true,
     region: "bottom",
+  },
+  graph: {
+    isOpen: true,
+    region: "main",
   },
   chat: {
     isOpen: true,
@@ -110,7 +123,7 @@ const defaultActiveWorkspacePanels = deriveActiveWorkspacePanels(
   },
   {
     bottom: "preview",
-    main: "source",
+    main: "graph",
     side: "chat",
   },
 );

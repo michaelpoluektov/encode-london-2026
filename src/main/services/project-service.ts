@@ -5,6 +5,8 @@ import {
   type AppConfig,
   appConfigSchema,
   type ProjectOpenResult,
+  type ProjectSaveCapturePayload,
+  type ProjectSaveCaptureResult,
   type RecentProject,
   type ShadilyManifest,
   shadilyManifestSchema,
@@ -163,4 +165,23 @@ export const saveProject = async (
     JSON.stringify(updated, null, 2),
     "utf-8",
   );
+};
+
+export const saveCapture = async ({
+  folderPath,
+  dataUrl,
+}: ProjectSaveCapturePayload): Promise<ProjectSaveCaptureResult> => {
+  const capturesDir = join(folderPath, "captures");
+  mkdirSync(capturesDir, { recursive: true });
+
+  const base64Payload = dataUrl.replace(/^data:image\/png;base64,/, "");
+  const imageBuffer = Buffer.from(base64Payload, "base64");
+  const imageName =
+    `capture-${new Date().toISOString().replaceAll(":", "-")}-` +
+    `${Math.random().toString(36).slice(2, 8)}.png`;
+  const imagePath = join(capturesDir, imageName);
+
+  writeFileSync(imagePath, imageBuffer);
+
+  return { imagePath };
 };

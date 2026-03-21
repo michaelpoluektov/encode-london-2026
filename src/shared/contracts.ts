@@ -53,7 +53,41 @@ export type ProjectSavePayload = {
   shaders: { fragment: string; vertex: string };
 };
 
-export type ChatRole = "user" | "assistant";
+export const projectSaveCapturePayloadSchema = z.object({
+  folderPath: z.string().min(1),
+  dataUrl: z.string().startsWith("data:image/png;base64,"),
+});
+
+export type ProjectSaveCapturePayload = z.infer<
+  typeof projectSaveCapturePayloadSchema
+>;
+
+export const projectSaveCaptureResultSchema = z.object({
+  imagePath: z.string().min(1),
+});
+
+export type ProjectSaveCaptureResult = z.infer<
+  typeof projectSaveCaptureResultSchema
+>;
+
+export const chatAttachPreviewContextPayloadSchema = z.object({
+  imagePath: z.string().min(1),
+});
+
+export type ChatAttachPreviewContextPayload = z.infer<
+  typeof chatAttachPreviewContextPayloadSchema
+>;
+
+export const chatAttachPreviewContextResultSchema = z.object({
+  appliedChanges: z.boolean(),
+  responseText: z.string(),
+});
+
+export type ChatAttachPreviewContextResult = z.infer<
+  typeof chatAttachPreviewContextResultSchema
+>;
+
+export type ChatRole = "user" | "assistant" | "system";
 
 export type ChatMessage = {
   id: string;

@@ -2,8 +2,11 @@
 
 import type {
   BootstrapPayload,
+  ChatAttachPreviewContextResult,
   FileChangeInfo,
   ProjectOpenResult,
+  ProjectSaveCapturePayload,
+  ProjectSaveCaptureResult,
   ProjectSavePayload,
   RecentProject,
   ShadilyManifest,
@@ -26,6 +29,9 @@ declare global {
         open: () => Promise<ProjectOpenResult | null>;
         openPath: (folderPath: string) => Promise<ProjectOpenResult | null>;
         save: (payload: ProjectSavePayload) => Promise<void>;
+        saveCapture: (
+          payload: ProjectSaveCapturePayload,
+        ) => Promise<ProjectSaveCaptureResult>;
         getRecents: () => Promise<RecentProject[]>;
         readShaders: (
           folderPath: string,
@@ -34,6 +40,9 @@ declare global {
       };
       chat: {
         send: (prompt: string) => Promise<void>;
+        attachPreviewContext: (
+          imagePath: string,
+        ) => Promise<ChatAttachPreviewContextResult>;
         stop: () => Promise<void>;
         onChunk: (cb: (text: string) => void) => () => void;
         onFileChange: (cb: (changes: FileChangeInfo[]) => void) => () => void;

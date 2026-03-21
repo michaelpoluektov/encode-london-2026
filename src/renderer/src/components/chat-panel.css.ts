@@ -105,7 +105,9 @@ globalStyle(`${chatMarkdown} ul, ${chatMarkdown} ol`, {
   paddingLeft: themeVars.space[4],
 });
 globalStyle(`${chatMarkdown} li`, { margin: `${themeVars.space[1]} 0` });
-globalStyle(`${chatMarkdown} strong`, { fontWeight: themeVars.font.weight.strong });
+globalStyle(`${chatMarkdown} strong`, {
+  fontWeight: themeVars.font.weight.strong,
+});
 
 export const chatFileChange = style({
   alignSelf: "flex-start",
@@ -115,6 +117,30 @@ export const chatFileChange = style({
   color: themeVars.color.text.secondary,
   fontFamily: themeVars.font.family.mono,
   fontSize: themeVars.font.size.xs,
+});
+
+export const chatWarning = style({
+  alignSelf: "stretch",
+  padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
+  borderRadius: themeVars.radius.sm,
+  background: themeVars.color.surface.warningMuted,
+  color: themeVars.color.text.body,
+  fontFamily: themeVars.font.family.sans,
+  fontSize: themeVars.font.size.xs,
+});
+
+export const chatSystemMessage = style({
+  alignSelf: "center",
+  maxWidth: "100%",
+  padding: `${themeVars.space[1]} ${themeVars.space[3]}`,
+  borderRadius: themeVars.radius.pill,
+  background: themeVars.color.background.panelMuted,
+  border: `1px dashed ${themeVars.color.border.standard}`,
+  color: themeVars.color.text.secondary,
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+  lineHeight: themeVars.font.lineHeight.normal,
+  textAlign: "center",
 });
 
 export const chatEmpty = style({

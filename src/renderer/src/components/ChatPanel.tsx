@@ -1,4 +1,10 @@
-import { type JSX, type KeyboardEvent, useEffect, useRef, useState } from "react";
+import {
+  type JSX,
+  type KeyboardEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useChatStore } from "../store/chat-store";
@@ -10,11 +16,13 @@ import {
   chatMarkdown,
   chatMessageBubbleAssistant,
   chatMessageBubbleUser,
-  chatMessages,
   chatMessageRow,
+  chatMessages,
   chatPanel,
   chatStreamingBubble,
+  chatSystemMessage,
   chatTextarea,
+  chatWarning,
 } from "./chat-panel.css";
 import { Button } from "./ui/Button";
 import { Text } from "./ui/Text";
@@ -39,6 +47,7 @@ export const ChatPanel = (): JSX.Element => {
     isGenerating,
     streamingText,
     recentFileChanges,
+    warningMessage,
     sendMessage,
     cancelGeneration,
   } = useChatStore();
@@ -48,8 +57,20 @@ export const ChatPanel = (): JSX.Element => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingText]);
+    if (
+      messages.length > 0 ||
+      streamingText.length > 0 ||
+      recentFileChanges.length > 0 ||
+      warningMessage !== null
+    ) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [
+    messages.length,
+    recentFileChanges.length,
+    streamingText.length,
+    warningMessage,
+  ]);
 
   const handleSend = () => {
     const prompt = input.trim();
@@ -65,7 +86,8 @@ export const ChatPanel = (): JSX.Element => {
     }
   };
 
-  const hasContent = messages.length > 0 || isGenerating;
+  const hasContent =
+    messages.length > 0 || isGenerating || warningMessage !== null;
 
   return (
     <section className={chatPanel}>
@@ -73,8 +95,8 @@ export const ChatPanel = (): JSX.Element => {
         <div className={chatEmpty}>
           {project ? (
             <Text as="p" tone="muted" variant="caption">
-              Ask Codex to edit your shaders. It can read and write files in
-              the project.
+              Ask Codex to edit your shaders. It can read and write files in the
+              project.
             </Text>
           ) : (
             <Text as="p" tone="muted" variant="caption">
@@ -88,6 +110,10 @@ export const ChatPanel = (): JSX.Element => {
             msg.role === "user" ? (
               <div key={msg.id} className={chatMessageRow}>
                 <div className={chatMessageBubbleUser}>{msg.content}</div>
+              </div>
+            ) : msg.role === "system" ? (
+              <div key={msg.id} className={chatMessageRow}>
+                <div className={chatSystemMessage}>{msg.content}</div>
               </div>
             ) : (
               <div key={msg.id} className={chatMessageRow}>
@@ -112,6 +138,10 @@ export const ChatPanel = (): JSX.Element => {
             <div className={chatFileChange}>
               {recentFileChanges.map((c) => `${c.kind} ${c.path}`).join("\n")}
             </div>
+          )}
+
+          {warningMessage !== null && (
+            <div className={chatWarning}>{warningMessage}</div>
           )}
 
           <div ref={messagesEndRef} />
