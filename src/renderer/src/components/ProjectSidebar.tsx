@@ -137,6 +137,7 @@ const createInitialOpenState = (
   );
 
 const HIDDEN_FILENAMES = new Set(["AGENTS.md", "shadily.json"]);
+const HIDDEN_DIRECTORY_NAMES = new Set([".shadily", "docs"]);
 
 const filterTreeNodes = (
   nodes: readonly ProjectTreeNode[],
@@ -149,6 +150,10 @@ const filterTreeNodes = (
   return nodes.flatMap((node) => {
     if (node.kind === "file") {
       return HIDDEN_FILENAMES.has(node.name) ? [] : [node];
+    }
+
+    if (HIDDEN_DIRECTORY_NAMES.has(node.name)) {
+      return [];
     }
 
     const children = filterTreeNodes(node.children ?? [], showHiddenFiles);
