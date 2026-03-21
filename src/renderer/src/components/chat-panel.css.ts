@@ -1,5 +1,6 @@
 import { globalStyle, keyframes, style } from "@vanilla-extract/css";
 import { themeVars } from "../theme";
+import { fieldChrome } from "./ui/field.css";
 
 export const chatPanel = style({
   display: "flex",
@@ -14,8 +15,8 @@ export const chatHeader = style({
   flexDirection: "row",
   alignItems: "center",
   gap: themeVars.space[2],
-  borderBottom: `1px solid ${themeVars.color.border.subtle}`,
-  background: themeVars.color.background.panelMuted,
+  background: "rgba(255, 255, 255, 0.015)",
+  backdropFilter: "blur(12px)",
 });
 
 export const chatThreadHeader = style({
@@ -37,7 +38,6 @@ export const chatThreadList = style({
 
 export const chatThreadTab = style({
   flex: "0 0 auto",
-  borderRight: `1px solid ${themeVars.color.border.subtle}`,
 });
 
 export const chatThreadButton = style({
@@ -48,7 +48,6 @@ export const chatThreadButton = style({
   gap: themeVars.space[1],
   padding: `${themeVars.space[2]} ${themeVars.space[2]} ${themeVars.space[2]} ${themeVars.space[3]}`,
   border: "none",
-  borderBottom: `2px solid transparent`,
   background: "transparent",
   color: themeVars.color.text.secondary,
   textAlign: "left",
@@ -61,8 +60,7 @@ export const chatThreadButton = style({
 });
 
 export const chatThreadButtonActive = style({
-  borderBottomColor: themeVars.color.border.accent,
-  background: themeVars.color.background.panelRaised,
+  boxShadow: "inset 0 2px 0 #c799ff",
   color: themeVars.color.text.primary,
 });
 
@@ -103,8 +101,13 @@ export const chatThreadDeleteButton = style({
   color: "inherit",
   cursor: "pointer",
   fontFamily: themeVars.font.family.sans,
-  fontSize: themeVars.font.size.sm,
   lineHeight: themeVars.font.lineHeight.normal,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: themeVars.size.controlXs,
+  minHeight: themeVars.size.controlXs,
+  fontSize: themeVars.font.size.sm,
   selectors: {
     "&:hover:not(:disabled)": {
       color: themeVars.color.text.primary,
@@ -119,7 +122,7 @@ export const chatThreadDeleteButton = style({
 export const chatMessages = style({
   flex: 1,
   overflowY: "auto",
-  padding: `${themeVars.space[3]} ${themeVars.space[4]}`,
+  padding: `${themeVars.space[4]} ${themeVars.space[5]}`,
   display: "flex",
   flexDirection: "column",
   gap: themeVars.space[3],
@@ -133,12 +136,26 @@ export const chatMessageRow = style({
 
 export const chatMessageBubble = style({
   padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
-  borderRadius: themeVars.radius.md,
   maxWidth: "85%",
   wordBreak: "break-word",
   fontFamily: themeVars.font.family.sans,
   fontSize: themeVars.font.size.sm,
   lineHeight: themeVars.font.lineHeight.relaxed,
+  position: "relative",
+  selectors: {
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: "18px",
+      height: "18px",
+      borderTop: `1px solid ${themeVars.color.border.accent}`,
+      borderLeft: `1px solid ${themeVars.color.border.accent}`,
+      opacity: 0.4,
+      pointerEvents: "none",
+    },
+  },
 });
 
 export const chatMessageBody = style({
@@ -161,9 +178,10 @@ export const chatMessageBubbleAssistant = style([
   chatMessageBubble,
   {
     alignSelf: "flex-start",
-    background: themeVars.color.background.panelRaised,
+    background: "rgba(38, 38, 38, 0.7)",
     color: themeVars.color.text.body,
-    border: `1px solid ${themeVars.color.border.subtle}`,
+    backdropFilter: "blur(20px)",
+    boxShadow: "inset 0 0 0 1px rgba(72, 72, 72, 0.2)",
   },
 ]);
 
@@ -171,9 +189,10 @@ export const chatStreamingBubble = style([
   chatMessageBubble,
   {
     alignSelf: "flex-start",
-    background: themeVars.color.background.panelRaised,
+    background: "rgba(38, 38, 38, 0.7)",
     color: themeVars.color.text.body,
-    border: `1px solid ${themeVars.color.border.subtle}`,
+    backdropFilter: "blur(20px)",
+    boxShadow: "inset 0 0 0 1px rgba(72, 72, 72, 0.2)",
     opacity: 0.85,
   },
 ]);
@@ -189,7 +208,6 @@ export const chatPartReasoning = style({
   padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
   background: themeVars.color.background.panelInset,
   border: `1px dashed ${themeVars.color.border.standard}`,
-  borderRadius: themeVars.radius.sm,
 });
 
 export const chatPartPre = style({
@@ -214,8 +232,7 @@ globalStyle(`${chatMarkdown} pre`, {
   margin: `${themeVars.space[2]} 0 0`,
   padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
   background: themeVars.color.background.panelInset,
-  border: `1px solid ${themeVars.color.border.subtle}`,
-  borderRadius: themeVars.radius.sm,
+  boxShadow: "inset 0 0 0 1px rgba(72, 72, 72, 0.16)",
   overflowX: "auto",
 });
 globalStyle(`${chatMarkdown} pre code`, {
@@ -224,7 +241,6 @@ globalStyle(`${chatMarkdown} pre code`, {
   lineHeight: themeVars.font.lineHeight.relaxed,
   background: "none",
   padding: 0,
-  borderRadius: 0,
   color: themeVars.color.text.code,
 });
 globalStyle(`${chatMarkdown} code`, {
@@ -232,7 +248,6 @@ globalStyle(`${chatMarkdown} code`, {
   fontSize: themeVars.font.size.xs,
   background: themeVars.color.background.panelInset,
   padding: `1px ${themeVars.space[1]}`,
-  borderRadius: themeVars.radius.sm,
   color: themeVars.color.text.code,
 });
 globalStyle(`${chatMarkdown} ul, ${chatMarkdown} ol`, {
@@ -247,7 +262,6 @@ globalStyle(`${chatMarkdown} strong`, {
 export const chatWarning = style({
   alignSelf: "stretch",
   padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
-  borderRadius: themeVars.radius.sm,
   background: themeVars.color.surface.warningMuted,
   color: themeVars.color.text.body,
   fontFamily: themeVars.font.family.sans,
@@ -257,7 +271,6 @@ export const chatWarning = style({
 export const chatError = style({
   alignSelf: "stretch",
   padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
-  borderRadius: themeVars.radius.sm,
   background: "rgba(222, 125, 125, 0.12)",
   color: themeVars.color.surface.danger,
   fontFamily: themeVars.font.family.sans,
@@ -273,26 +286,38 @@ export const chatLoadingSpinner = style({
   display: "flex",
   gap: themeVars.space[2],
   alignItems: "center",
-  minHeight: 20,
-  padding: `${themeVars.space[2]} 0`,
+  justifyContent: "center",
+  minHeight: themeVars.size.controlSm,
+  minWidth: themeVars.size.controlMd,
 });
 
 export const chatLoadingDot = style({
-  display: "inline-block",
-  width: 4,
-  height: 4,
-  borderRadius: themeVars.radius.pill,
-  background: themeVars.color.text.muted,
+  display: "block",
+  flexShrink: 0,
+  width: 5,
+  height: 5,
+  borderRadius: "999px",
+  background: themeVars.color.text.accent,
+  boxShadow: "0 0 10px rgba(121, 190, 255, 0.2)",
   animation: `${dotBounce} 900ms ease-in-out infinite`,
 });
+
+export const chatLoadingMessage = style([
+  chatStreamingBubble,
+  {
+    display: "inline-flex",
+    alignItems: "center",
+    width: "fit-content",
+    minWidth: themeVars.size.controlMd,
+    opacity: 1,
+  },
+]);
 
 export const chatSystemMessage = style({
   alignSelf: "center",
   maxWidth: "100%",
   padding: `${themeVars.space[1]} ${themeVars.space[3]}`,
-  borderRadius: themeVars.radius.pill,
-  background: themeVars.color.background.panelMuted,
-  border: `1px dashed ${themeVars.color.border.standard}`,
+  background: "rgba(44, 44, 44, 0.7)",
   color: themeVars.color.text.secondary,
   fontFamily: themeVars.font.family.mono,
   fontSize: themeVars.font.size.xs,
@@ -309,12 +334,33 @@ export const chatEmpty = style({
 });
 
 export const chatInputArea = style({
-  padding: `${themeVars.space[3]} ${themeVars.space[4]}`,
-  borderTop: `1px solid ${themeVars.color.border.subtle}`,
-  display: "flex",
+  padding: `${themeVars.space[4]} ${themeVars.space[5]}`,
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
   gap: themeVars.space[2],
-  alignItems: "flex-end",
+  alignItems: "end",
+  background: "rgba(255, 255, 255, 0.015)",
+  backdropFilter: "blur(12px)",
 });
+
+export const chatInputFieldSlot = style({
+  minWidth: 0,
+  display: "flex",
+  alignItems: "stretch",
+});
+
+export const chatInputLoadingField = style([
+  fieldChrome,
+  {
+    width: "100%",
+    minHeight: themeVars.size.controlSm,
+    padding: `4px ${themeVars.space[3]}`,
+    display: "flex",
+    alignItems: "center",
+    gap: themeVars.space[2],
+    cursor: "progress",
+  },
+]);
 
 // File change chips (live streaming events)
 export const chatFileChangeRow = style({
@@ -329,9 +375,8 @@ export const chatFileChip = style({
   alignItems: "center",
   gap: themeVars.space[1],
   padding: `2px ${themeVars.space[2]}`,
-  borderRadius: themeVars.radius.pill,
-  background: themeVars.color.surface.successMuted,
-  color: themeVars.color.text.secondary,
+  background: "rgba(74, 248, 227, 0.12)",
+  color: themeVars.color.text.code,
   fontFamily: themeVars.font.family.mono,
   fontSize: themeVars.font.size.xs,
   lineHeight: themeVars.font.lineHeight.normal,
@@ -353,9 +398,8 @@ export const chatToolCallBlock = style({
   flexDirection: "column",
   gap: themeVars.space[1],
   padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
-  background: themeVars.color.background.panelInset,
-  border: `1px solid ${themeVars.color.border.subtle}`,
-  borderRadius: themeVars.radius.sm,
+  background: "rgba(14, 14, 14, 0.72)",
+  boxShadow: "inset 0 0 0 1px rgba(72, 72, 72, 0.18)",
   fontSize: themeVars.font.size.xs,
 });
 
@@ -420,15 +464,19 @@ export const chatCheckpointActions = style({
 });
 
 export const chatCheckpointButton = style({
-  padding: `2px ${themeVars.space[1]}`,
-  background: "transparent",
-  border: `1px solid ${themeVars.color.border.subtle}`,
-  borderRadius: themeVars.radius.sm,
+  minWidth: themeVars.size.controlSm,
+  minHeight: themeVars.size.controlSm,
+  padding: 0,
+  background: "rgba(44, 44, 44, 0.28)",
+  border: "none",
   color: themeVars.color.text.secondary,
   cursor: "pointer",
   fontFamily: themeVars.font.family.mono,
-  fontSize: themeVars.font.size.xs,
+  fontSize: themeVars.font.size.sm,
   lineHeight: themeVars.font.lineHeight.normal,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
   selectors: {
     "&:hover:not(:disabled)": {
       color: themeVars.color.text.primary,
@@ -455,7 +503,6 @@ export const chatCheckpointPreviewModal = style({
 export const chatCheckpointPreviewImage = style({
   maxWidth: "min(80vw, 600px)",
   maxHeight: "80vh",
-  borderRadius: themeVars.radius.md,
   boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
 });
 
@@ -467,7 +514,6 @@ export const chatToolCallImage = style({
   maxHeight: "200px",
   alignSelf: "flex-start",
   objectFit: "contain",
-  borderRadius: themeVars.radius.sm,
   display: "block",
   marginTop: themeVars.space[1],
 });

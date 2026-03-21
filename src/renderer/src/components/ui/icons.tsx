@@ -2,11 +2,14 @@ import type { JSX } from "react";
 
 type IconProps = {
   readonly className?: string;
-  readonly size?: number;
+  readonly size?: number | string;
   readonly strokeWidth?: number;
 };
 
-const DEFAULT_SIZE = 12;
+const DEFAULT_SIZE = "1.1em";
+
+const resolveIconSize = (size: number | string): number | string =>
+  typeof size === "number" ? size * 1.1 : size;
 
 const IconBase = ({
   children,
@@ -16,18 +19,23 @@ const IconBase = ({
 }: IconProps & {
   readonly children: JSX.Element | JSX.Element[];
   readonly viewBox?: string;
-}): JSX.Element => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    fill="none"
-    height={size}
-    viewBox={viewBox}
-    width={size}
-  >
-    {children}
-  </svg>
-);
+}): JSX.Element => {
+  const resolvedSize = resolveIconSize(size);
+
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      height={resolvedSize}
+      style={{ display: "block", flexShrink: 0 }}
+      viewBox={viewBox}
+      width={resolvedSize}
+    >
+      {children}
+    </svg>
+  );
+};
 
 export const ChevronRightIcon = ({
   className,
@@ -207,6 +215,21 @@ export const PlusIcon = ({
   <IconBase className={className} size={size}>
     <path
       d="M8 3v10M3 8h10"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth={strokeWidth}
+    />
+  </IconBase>
+);
+
+export const MinusIcon = ({
+  className,
+  size,
+  strokeWidth = 1.5,
+}: IconProps): JSX.Element => (
+  <IconBase className={className} size={size}>
+    <path
+      d="M3 8h10"
       stroke="currentColor"
       strokeLinecap="round"
       strokeWidth={strokeWidth}

@@ -3,9 +3,8 @@ import { themeVars } from "../../theme";
 
 export const fieldChrome = style({
   minWidth: 0,
-  border: `1px solid ${themeVars.color.border.standard}`,
-  borderRadius: 0,
-  background: themeVars.color.background.panelInset,
+  border: `1px solid rgba(72, 72, 72, 0.48)`,
+  background: themeVars.color.background.panel,
   color: themeVars.color.text.primary,
   outline: "none",
   transition: [
@@ -41,12 +40,12 @@ export const textareaField = style([
   fieldChrome,
   {
     width: "100%",
-    padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
+    padding: `4px ${themeVars.space[3]}`,
     fontFamily: themeVars.font.family.sans,
     fontSize: themeVars.font.size.sm,
-    lineHeight: themeVars.font.lineHeight.normal,
+    lineHeight: "20px",
     resize: "none",
-    minHeight: "2.5rem",
+    minHeight: themeVars.size.controlSm,
     maxHeight: "8rem",
     overflowY: "auto",
   },

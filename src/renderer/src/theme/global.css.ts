@@ -5,8 +5,9 @@ export const themeRoot = style({
   height: "100%",
   minHeight: 0,
   background: [
-    `radial-gradient(circle at top, ${themeVars.color.background.heroGlow} 0%, transparent 42%)`,
-    `linear-gradient(180deg, #0d1324 0%, ${themeVars.color.background.app} 100%)`,
+    "radial-gradient(circle at top right, rgba(74, 248, 227, 0.08) 0%, transparent 26%)",
+    `radial-gradient(circle at top left, ${themeVars.color.background.heroGlow} 0%, transparent 34%)`,
+    `linear-gradient(180deg, #141214 0%, ${themeVars.color.background.app} 100%)`,
   ].join(", "),
   color: themeVars.color.text.primary,
   fontFamily: themeVars.font.family.sans,
@@ -47,10 +48,6 @@ globalStyle("*, *::before, *::after", {
 globalStyle("button, input, textarea, select", {
   font: "inherit",
   color: "inherit",
-});
-
-globalStyle("button", {
-  cursor: "pointer",
 });
 
 globalStyle("h1, h2, h3, h4, h5, h6, p", {

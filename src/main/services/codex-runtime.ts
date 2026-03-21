@@ -1,3 +1,6 @@
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync } from "node:fs";
+import { join, resolve } from "node:path";
 import type { Thread, ThreadItem, Usage } from "@openai/codex-sdk";
 import { Codex } from "@openai/codex-sdk";
 import type {
@@ -27,6 +30,44 @@ import { readProjectSnapshotFiles } from "./project-snapshot-files";
 
 let _codex: Codex | null = null;
 let _mcpPort: number | null = null;
+
+const getProjectSandboxRoot = (folderPath: string): string =>
+  resolve(folderPath);
+
+const ensureProjectSandboxRoot = (folderPath: string): string => {
+  const sandboxRoot = getProjectSandboxRoot(folderPath);
+  const gitMetadataPath = join(sandboxRoot, ".git");
+
+  if (existsSync(gitMetadataPath)) {
+    return sandboxRoot;
+  }
+
+  const internalGitDir = join(sandboxRoot, ".shadily", "codex-git");
+  mkdirSync(internalGitDir, { recursive: true });
+
+  const result = spawnSync(
+    "git",
+    ["init", "--quiet", "--separate-git-dir", internalGitDir, sandboxRoot],
+    {
+      encoding: "utf-8",
+    },
+  );
+
+  if (result.status === 0) {
+    return sandboxRoot;
+  }
+
+  const failureOutput =
+    result.stderr.trim().length > 0
+      ? result.stderr.trim()
+      : result.stdout.trim().length > 0
+        ? result.stdout.trim()
+        : "git init exited unsuccessfully.";
+
+  throw new Error(
+    `Failed to create an isolated Codex sandbox root for ${sandboxRoot}: ${failureOutput}`,
+  );
+};
 
 const getCodex = (): Codex => {
   if (_codex === null) {
@@ -256,11 +297,13 @@ const getOrCreateThreadSession = async (
     );
   }
 
+  const sandboxRoot = ensureProjectSandboxRoot(folderPath);
+
   if (existingThread !== undefined) {
     return {
       codexThreadId: session.codexThreadId,
       thread: existingThread,
-      folderPath,
+      folderPath: sandboxRoot,
     };
   }
 
@@ -268,14 +311,14 @@ const getOrCreateThreadSession = async (
   const thread =
     session.codexThreadId === null
       ? codexInstance.startThread({
-          workingDirectory: folderPath,
-          skipGitRepoCheck: true,
+          workingDirectory: sandboxRoot,
+          additionalDirectories: [],
           sandboxMode: "workspace-write",
           approvalPolicy: "never",
         })
       : codexInstance.resumeThread(session.codexThreadId, {
-          workingDirectory: folderPath,
-          skipGitRepoCheck: true,
+          workingDirectory: sandboxRoot,
+          additionalDirectories: [],
           sandboxMode: "workspace-write",
           approvalPolicy: "never",
         });
@@ -285,7 +328,7 @@ const getOrCreateThreadSession = async (
   return {
     codexThreadId: session.codexThreadId,
     thread,
-    folderPath,
+    folderPath: sandboxRoot,
   };
 };
 

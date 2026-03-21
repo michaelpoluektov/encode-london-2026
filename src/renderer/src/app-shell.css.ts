@@ -14,8 +14,8 @@ export const footerBar = style({
   alignItems: "center",
   justifyContent: "space-between",
   padding: `0 ${themeVars.space[5]}`,
-  borderTop: `1px solid ${themeVars.color.border.standard}`,
-  background: themeVars.color.background.panelMuted,
+  background: "rgba(255, 255, 255, 0.015)",
+  backdropFilter: "blur(14px)",
   color: themeVars.color.text.muted,
   fontFamily: themeVars.font.family.mono,
   fontSize: themeVars.font.size.xs,
@@ -74,7 +74,7 @@ export const editorEmptyState = style({
   minWidth: 0,
   padding: themeVars.space[8],
   textAlign: "center",
-  background: `linear-gradient(180deg, ${themeVars.color.background.panel} 0%, ${themeVars.color.background.panelInset} 100%)`,
+  background: themeVars.color.background.panel,
 });
 
 export const editorImageFrame = style({
@@ -86,7 +86,7 @@ export const editorImageFrame = style({
   minHeight: 0,
   minWidth: 0,
   padding: themeVars.space[7],
-  background: `linear-gradient(180deg, ${themeVars.color.background.panel} 0%, ${themeVars.color.background.panelInset} 100%)`,
+  background: themeVars.color.background.panel,
 });
 
 export const editorImageCaption = style({
@@ -105,7 +105,6 @@ export const editorImagePreview = style({
   minWidth: 0,
   minHeight: 0,
   objectFit: "contain",
-  borderRadius: themeVars.radius.lg,
   boxShadow: themeVars.shadow.panel,
 });
 
@@ -151,7 +150,7 @@ export const footerStatusButton = style({
   gap: themeVars.space[2],
   minHeight: "20px",
   padding: `${themeVars.space[1]} ${themeVars.space[2]}`,
-  border: `1px solid transparent`,
+  border: "none",
   background: "transparent",
   color: themeVars.color.text.secondary,
   fontFamily: themeVars.font.family.mono,
@@ -179,8 +178,8 @@ export const footerStatusButtonDirty = style({
 export const footerStatusDot = style({
   width: "8px",
   height: "8px",
-  borderRadius: themeVars.radius.pill,
   background: themeVars.color.surface.success,
+  transform: "rotate(45deg)",
   boxShadow: "0 0 10px rgba(113, 199, 154, 0.28)",
 });
 
@@ -198,8 +197,9 @@ export const footerDiagnosticPopover = style({
   gap: themeVars.space[2],
   width: "min(42rem, calc(100vw - 2rem))",
   padding: `${themeVars.space[3]} ${themeVars.space[4]}`,
-  border: `1px solid ${themeVars.color.border.strong}`,
-  background: "rgba(20, 27, 38, 0.97)",
+  border: "none",
+  background: "rgba(38, 38, 38, 0.7)",
+  backdropFilter: "blur(20px)",
   boxShadow: themeVars.shadow.panel,
   zIndex: 2,
 });

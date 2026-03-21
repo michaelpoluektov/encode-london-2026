@@ -6,7 +6,7 @@ export const graphPanel = style({
   placeItems: "center",
   height: "100%",
   minHeight: 0,
-  padding: themeVars.space[4],
+  padding: themeVars.space[5],
   overflow: "hidden",
 });
 

@@ -188,7 +188,7 @@ export const FloatingPreview = ({
           type="button"
         >
           <span aria-hidden="true" className={gripIcon}>
-            <GripIcon size={12} />
+            <GripIcon />
           </span>
           Preview
           <button
@@ -202,7 +202,7 @@ export const FloatingPreview = ({
               setIsFullscreen(true);
             }}
           >
-            <ExpandIcon size={12} />
+            <ExpandIcon />
           </button>
         </button>
         <div className={previewBody}>

@@ -7,9 +7,8 @@ export const graphCanvas = style({
   height: "100%",
   minHeight: 0,
   overflow: "hidden",
-  borderRadius: themeVars.radius.lg,
-  border: `1px solid ${themeVars.color.border.standard}`,
-  background: themeVars.color.background.panelInset,
+  background: themeVars.color.background.canvas,
+  boxShadow: "inset 0 0 0 1px rgba(72, 72, 72, 0.14)",
 });
 
 globalStyle(`${graphCanvas} .react-flow`, {
@@ -21,7 +20,7 @@ globalStyle(`${graphCanvas} .react-flow`, {
     "--xy-background-color": themeVars.color.background.panelInset,
     "--xy-background-pattern-dots-color": themeVars.color.border.subtle,
     "--xy-edge-stroke": themeVars.color.border.accent,
-    "--xy-node-border": `1px solid ${themeVars.color.border.standard}`,
+    "--xy-node-border": "none",
     "--xy-node-background-color": themeVars.color.background.panelRaised,
     "--xy-node-color": themeVars.color.text.primary,
     "--xy-node-boxshadow-hover": themeVars.shadow.panel,
@@ -32,7 +31,6 @@ globalStyle(`${graphCanvas} .react-flow`, {
 });
 
 globalStyle(`${graphCanvas} .react-flow__node`, {
-  borderRadius: themeVars.radius.md,
   overflow: "visible",
   userSelect: "none",
 });

@@ -55,35 +55,31 @@ const getItemIcon = (node: ProjectTreeNode, isOpen: boolean): JSX.Element => {
     case "directory":
       return (
         <span className={cx(treeGlyph, folderGlyph)}>
-          {isOpen ? (
-            <FolderOpenIcon size={14} />
-          ) : (
-            <FolderClosedIcon size={14} />
-          )}
+          {isOpen ? <FolderOpenIcon /> : <FolderClosedIcon />}
         </span>
       );
     case "editable":
       return (
         <span className={cx(treeGlyph, editableGlyph)}>
-          <FileIcon size={14} />
+          <FileIcon />
         </span>
       );
     case "image":
       return (
         <span className={cx(treeGlyph, imageGlyph)}>
-          <ImageFileIcon size={14} />
+          <ImageFileIcon />
         </span>
       );
     case "binary":
       return (
         <span className={cx(treeGlyph, binaryGlyph)}>
-          <DocumentIcon size={14} />
+          <DocumentIcon />
         </span>
       );
     case "readOnly":
       return (
         <span className={cx(treeGlyph, readOnlyGlyph)}>
-          <ReadOnlyFileIcon size={14} />
+          <ReadOnlyFileIcon />
         </span>
       );
   }
@@ -110,11 +106,7 @@ const ProjectTreeRow = ({
         aria-hidden="true"
         className={cx(treeCaret, node.isLeaf && treeCaretHidden)}
       >
-        {node.isOpen ? (
-          <ChevronDownIcon size={12} />
-        ) : (
-          <ChevronRightIcon size={12} />
-        )}
+        {node.isOpen ? <ChevronDownIcon /> : <ChevronRightIcon />}
       </span>
       {getItemIcon(node.data, node.isOpen)}
       <div className={treeLabelGroup}>
@@ -267,7 +259,7 @@ export const ProjectSidebar = (): JSX.Element => {
               size="sm"
               variant="outline"
             >
-              <PlusIcon size={12} />
+              <PlusIcon />
               New
             </Button>
             <Button
@@ -278,7 +270,7 @@ export const ProjectSidebar = (): JSX.Element => {
               size="sm"
               variant="outline"
             >
-              <DocumentIcon size={12} />
+              <DocumentIcon />
               Open
             </Button>
           </div>
@@ -294,7 +286,7 @@ export const ProjectSidebar = (): JSX.Element => {
             square
             variant="plain"
           >
-            {showHiddenFiles ? <EyeOffIcon size={12} /> : <EyeIcon size={12} />}
+            {showHiddenFiles ? <EyeOffIcon /> : <EyeIcon />}
           </Button>
         </div>
       </section>

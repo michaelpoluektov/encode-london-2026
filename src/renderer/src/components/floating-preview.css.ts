@@ -9,10 +9,8 @@ export const floatingPanel = style({
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  borderRadius: themeVars.radius.md,
   boxShadow: themeVars.shadow.panel,
-  background: themeVars.color.background.panelRaised,
-  border: `1px solid ${themeVars.color.border.subtle}`,
+  background: themeVars.color.background.canvas,
 });
 
 export const dragHandle = style({
@@ -27,9 +25,10 @@ export const dragHandle = style({
   cursor: "grab",
   userSelect: "none",
   border: 0,
-  background: "transparent",
-  borderBottom: `1px solid ${themeVars.color.border.subtle}`,
+  borderBottom: "none",
   color: themeVars.color.text.muted,
+  background: "rgba(38, 38, 38, 0.62)",
+  backdropFilter: "blur(20px)",
   fontFamily: themeVars.font.family.mono,
   fontSize: themeVars.font.size.xs,
   selectors: {
@@ -44,6 +43,7 @@ export const gripIcon = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
+  fontSize: themeVars.font.size.sm,
 });
 
 export const expandButton = style({
@@ -51,14 +51,15 @@ export const expandButton = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: "18px",
-  height: "18px",
+  width: "22px",
+  height: "22px",
   border: "none",
   background: "transparent",
-  color: themeVars.color.text.muted,
+  color: themeVars.color.text.secondary,
   cursor: "pointer",
   padding: 0,
   flexShrink: 0,
+  fontSize: themeVars.font.size.md,
   selectors: {
     "&:hover": {
       color: themeVars.color.text.primary,

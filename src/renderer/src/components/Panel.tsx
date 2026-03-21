@@ -5,8 +5,10 @@ import {
   panelBody,
   panelHeader,
   panelHeaderControls,
+  panelHeaderLabel,
 } from "./panel.css";
 import { Button } from "./ui/Button";
+import { MinusIcon } from "./ui/icons";
 
 export type PanelHeaderAction = {
   readonly ariaLabel: string;
@@ -31,7 +33,7 @@ export const Panel = ({
   children,
   label,
   collapseDisabled = false,
-  collapseSymbol = "-",
+  collapseSymbol = <MinusIcon />,
   headerActions = [],
   onToggleCollapsed,
   bodyClassName,
@@ -46,7 +48,7 @@ export const Panel = ({
         aria-label={`Collapse ${label}`}
         disabled={collapseDisabled}
         onClick={onToggleCollapsed}
-        size="xs"
+        size="sm"
         square
         variant="plain"
       >
@@ -59,7 +61,7 @@ export const Panel = ({
       aria-label={action.ariaLabel}
       disabled={action.disabled}
       onClick={action.onClick}
-      size="xs"
+      size="sm"
       square
       variant="plain"
     >
@@ -71,7 +73,10 @@ export const Panel = ({
     <section aria-label={`${label} panel`} className={panel}>
       {hasHeader ? (
         <header className={headerClassNames}>
-          <div className={panelHeaderControls}>{actionButtons}</div>
+          <div className={panelHeaderControls}>
+            <span className={panelHeaderLabel}>{label}</span>
+            {actionButtons}
+          </div>
           {toggleButton}
         </header>
       ) : null}

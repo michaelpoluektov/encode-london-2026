@@ -22,7 +22,7 @@ type PaneRestoreControlProps = {
 export const PaneRestoreControl = ({
   label,
   placement,
-  restoreIcon = <ChevronRightIcon size={12} />,
+  restoreIcon = <ChevronRightIcon />,
   onRestore,
 }: PaneRestoreControlProps): JSX.Element => {
   const showsBarLabel = placement !== "leftCenter";

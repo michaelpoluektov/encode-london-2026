@@ -57,7 +57,7 @@ export const EditorTabBar = ({
                 className={tabBell}
                 title="Modified by AI"
               >
-                <MagnifyingGlassIcon size={10} />
+                <MagnifyingGlassIcon />
               </span>
             ) : null}
             <button
@@ -69,7 +69,7 @@ export const EditorTabBar = ({
                 onCloseTab(path);
               }}
             >
-              <CloseIcon size={10} />
+              <CloseIcon />
             </button>
           </div>
         );

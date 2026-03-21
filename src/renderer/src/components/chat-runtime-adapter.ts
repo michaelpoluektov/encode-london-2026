@@ -134,7 +134,7 @@ export const useChatRuntime = (isTurnActive: boolean) => {
   } = useChatStore();
 
   const allMessages: readonly ChatMessage[] =
-    isTurnActive && activeThread !== null
+    isTurnActive && activeThread !== null && streamingText.length > 0
       ? [...messages, buildStreamingMessage(activeThread.id, streamingText)]
       : messages;
 

@@ -84,13 +84,6 @@ export const themeVars = createThemeContract({
     controlMd: null,
     editorPaddingTop: null,
   },
-  radius: {
-    sm: null,
-    md: null,
-    lg: null,
-    xl: null,
-    pill: null,
-  },
   font: {
     family: {
       sans: null,

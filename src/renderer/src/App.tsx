@@ -195,7 +195,7 @@ const WorkspaceColumnLayout = ({
             key={`${pane.id}-restore`}
             label={pane.label}
             placement={pane.restorePlacement}
-            restoreIcon={<ChevronRightIcon size={12} />}
+            restoreIcon={<ChevronRightIcon />}
             onRestore={() => {
               togglePaneCollapsed(pane.paneId);
             }}
@@ -470,7 +470,7 @@ export const App = (): JSX.Element => {
 
   const captureAction: PanelHeaderAction = {
     ariaLabel: "Capture preview",
-    content: <CaptureIcon size={12} />,
+    content: <CaptureIcon />,
     disabled: project === null,
     key: "capture",
     onClick: () => {
@@ -565,7 +565,7 @@ export const App = (): JSX.Element => {
           <PaneRestoreControl
             label="Project"
             placement="leftCenter"
-            restoreIcon={<ChevronRightIcon size={12} />}
+            restoreIcon={<ChevronRightIcon />}
             onRestore={() => {
               handleTogglePaneCollapsed("project");
             }}
@@ -588,7 +588,7 @@ export const App = (): JSX.Element => {
             {
               content: (
                 <Panel
-                  collapseSymbol={<ChevronLeftIcon size={12} />}
+                  collapseSymbol={<ChevronLeftIcon />}
                   label="Project"
                   onToggleCollapsed={() => {
                     handleTogglePaneCollapsed("project");

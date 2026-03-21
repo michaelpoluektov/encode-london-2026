@@ -26,6 +26,8 @@ import {
   chatFileChipKind,
   chatHeader,
   chatInputArea,
+  chatInputFieldSlot,
+  chatInputLoadingField,
   chatLoadingDot,
   chatLoadingSpinner,
   chatMarkdown,
@@ -38,7 +40,6 @@ import {
   chatPartBlock,
   chatPartPre,
   chatPartReasoning,
-  chatStreamingBubble,
   chatSystemMessage,
   chatThreadButton,
   chatThreadButtonActive,
@@ -198,18 +199,10 @@ const UserMessage = (): JSX.Element => (
   </div>
 );
 
-const AssistantMessageBubble = ({
-  isStreaming,
-}: {
-  isStreaming: boolean;
-}): JSX.Element => {
+const AssistantMessageBubble = (): JSX.Element => {
   return (
     <div className={chatMessageRow}>
-      <div
-        className={
-          isStreaming ? chatStreamingBubble : chatMessageBubbleAssistant
-        }
-      >
+      <div className={chatMessageBubbleAssistant}>
         <div className={chatMessageBody}>
           <MessagePrimitive.Content
             components={{
@@ -220,17 +213,6 @@ const AssistantMessageBubble = ({
               },
             }}
           />
-          {isStreaming && (
-            <div className={chatLoadingSpinner}>
-              {([0, 200, 400] as const).map((delay) => (
-                <span
-                  key={delay}
-                  className={chatLoadingDot}
-                  style={{ animationDelay: `${delay}ms` }}
-                />
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -388,7 +370,7 @@ export const ChatPanel = (): JSX.Element => {
                         }}
                         type="button"
                       >
-                        <CloseIcon size={10} />
+                        <CloseIcon />
                       </button>
                     </div>
                   </div>
@@ -408,7 +390,7 @@ export const ChatPanel = (): JSX.Element => {
               square
               variant="plain"
             >
-              <PlusIcon size={10} />
+              <PlusIcon />
             </Button>
           </div>
         </div>
@@ -447,12 +429,7 @@ export const ChatPanel = (): JSX.Element => {
                   );
                 }
                 if (message.role === "assistant") {
-                  return (
-                    <AssistantMessageBubble
-                      key={message.id}
-                      isStreaming={message.id === "$$streaming"}
-                    />
-                  );
+                  return <AssistantMessageBubble key={message.id} />;
                 }
                 return <SystemMessage key={message.id} />;
               }}
@@ -474,19 +451,42 @@ export const ChatPanel = (): JSX.Element => {
         )}
 
         <div className={chatInputArea}>
-          <textarea
-            className={textareaField}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              project && activeThread !== null
-                ? "Message Codex..."
-                : "Open a project first"
-            }
-            disabled={!project || activeThread === null || isTurnActive}
-            rows={1}
-          />
+          <div className={chatInputFieldSlot}>
+            {isTurnActive ? (
+              <div
+                aria-live="polite"
+                className={chatInputLoadingField}
+                role="status"
+              >
+                <div className={chatLoadingSpinner}>
+                  {([0, 200, 400] as const).map((delay) => (
+                    <span
+                      key={delay}
+                      className={chatLoadingDot}
+                      style={{ animationDelay: `${delay}ms` }}
+                    />
+                  ))}
+                </div>
+                <Text as="span" tone="muted" variant="body">
+                  Codex is responding...
+                </Text>
+              </div>
+            ) : (
+              <textarea
+                className={textareaField}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  project && activeThread !== null
+                    ? "Message Codex..."
+                    : "Open a project first"
+                }
+                disabled={!project || activeThread === null}
+                rows={1}
+              />
+            )}
+          </div>
           {isTurnActive ? (
             <Button size="sm" variant="outline" onClick={cancelGeneration}>
               Stop

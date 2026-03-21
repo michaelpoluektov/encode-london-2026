@@ -24,7 +24,7 @@ export const textVariant = styleVariants({
   },
   label: {
     color: themeVars.color.text.label,
-    fontFamily: themeVars.font.family.mono,
+    fontFamily: '"Space Grotesk", "Inter", sans-serif',
     fontSize: themeVars.font.size.xs,
     fontWeight: themeVars.font.weight.medium,
     letterSpacing: themeVars.font.tracking.eyebrow,
@@ -35,6 +35,7 @@ export const textVariant = styleVariants({
     color: themeVars.color.text.heading,
     fontSize: themeVars.font.size.md,
     fontWeight: themeVars.font.weight.medium,
+    fontFamily: '"Inter", "Segoe UI", sans-serif',
     lineHeight: themeVars.font.lineHeight.tight,
   },
 });

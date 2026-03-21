@@ -13,10 +13,8 @@ export const graphNodeCard = style({
   gap: themeVars.space[3],
   minWidth: 0,
   padding: themeVars.space[4],
-  borderRadius: themeVars.radius.lg,
-  border: `1px solid ${themeVars.color.border.standard}`,
-  background: themeVars.color.background.panelRaised,
-  boxShadow: themeVars.shadow.panel,
+  background: "#262626",
+  boxShadow: "inset 0 0 0 1px rgba(72, 72, 72, 0.2)",
   cursor: "default",
   transition: [
     `border-color ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
@@ -24,8 +22,10 @@ export const graphNodeCard = style({
   ].join(", "),
   selectors: {
     "&:hover": {
-      borderColor: themeVars.color.border.accent,
-      boxShadow: themeVars.shadow.focus,
+      boxShadow: [
+        themeVars.shadow.panel,
+        "inset 0 0 0 1px rgba(72, 72, 72, 0.2)",
+      ].join(", "),
     },
   },
 });
@@ -83,9 +83,8 @@ export const graphNodeInputRow = style({
   paddingLeft: themeVars.space[7],
   display: "flex",
   alignItems: "center",
-  borderRadius: themeVars.radius.md,
   background: themeVars.color.background.panelInset,
-  border: `1px solid ${themeVars.color.border.subtle}`,
+  boxShadow: "inset 0 0 0 1px rgba(72, 72, 72, 0.18)",
 });
 
 export const graphNodeInputHandle = style({
@@ -95,9 +94,8 @@ export const graphNodeInputHandle = style({
   transform: "translate(-50%, -50%)",
   width: 12,
   height: 12,
-  borderRadius: "50%",
-  border: `2px solid ${themeVars.color.background.panelRaised}`,
-  background: themeVars.color.border.accent,
+  border: `2px solid #262626`,
+  background: themeVars.color.surface.success,
 });
 
 export const graphNodeOutputHandle = style({
@@ -107,9 +105,8 @@ export const graphNodeOutputHandle = style({
   transform: "translate(50%, -50%)",
   width: 12,
   height: 12,
-  borderRadius: "50%",
-  border: `2px solid ${themeVars.color.background.panelRaised}`,
-  background: themeVars.color.border.accent,
+  border: `2px solid #262626`,
+  background: themeVars.color.surface.accent,
 });
 
 export const graphNodePreviewSlot = style({
@@ -125,9 +122,9 @@ const graphNodeControlBase = style({
   minWidth: 0,
   minHeight: themeVars.size.controlSm,
   padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
-  borderRadius: themeVars.radius.md,
-  border: `1px solid ${themeVars.color.border.subtle}`,
-  background: themeVars.color.background.panelInset,
+  border: "none",
+  borderBottom: `1px solid rgba(72, 72, 72, 0.48)`,
+  background: themeVars.color.background.panel,
   color: themeVars.color.text.body,
   fontFamily: themeVars.font.family.mono,
   fontSize: themeVars.font.size.sm,
@@ -138,8 +135,8 @@ const graphNodeControlBase = style({
   ].join(", "),
   selectors: {
     "&:focus": {
-      borderColor: themeVars.color.border.accent,
-      boxShadow: `0 0 0 3px ${themeVars.color.focus.ring}`,
+      borderBottomColor: themeVars.color.surface.accent,
+      boxShadow: `inset 0 -1px 0 ${themeVars.color.surface.accent}`,
     },
   },
 });

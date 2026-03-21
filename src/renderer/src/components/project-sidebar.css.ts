@@ -10,8 +10,8 @@ export const projectSidebar = style({
 
 export const projectSection = style({
   display: "grid",
-  gap: themeVars.space[0],
-  padding: themeVars.space[2],
+  gap: themeVars.space[3],
+  padding: themeVars.space[4],
 });
 
 export const projectActions = style({
@@ -29,13 +29,14 @@ export const projectActionsPrimary = style({
 export const projectActionsToggle = style({
   marginLeft: "auto",
   color: themeVars.color.text.muted,
+  fontSize: themeVars.font.size.sm,
 });
 
 export const treeShell = style({
   flex: 1,
   height: "100%",
   minHeight: 0,
-  background: `linear-gradient(180deg, ${themeVars.color.background.panel} 0%, ${themeVars.color.background.panelInset} 100%)`,
+  background: themeVars.color.background.panel,
   overflow: "hidden",
 });
 
@@ -80,7 +81,7 @@ export const treeRow = style({
   margin: "0",
   selectors: {
     "&:hover": {
-      background: themeVars.color.surface.interactive,
+      background: "rgba(255, 255, 255, 0.03)",
       color: themeVars.color.text.primary,
     },
   },
@@ -89,6 +90,7 @@ export const treeRow = style({
 export const treeRowSelected = style({
   background: themeVars.color.surface.accentMuted,
   color: themeVars.color.text.heading,
+  boxShadow: "inset 2px 0 0 #c799ff",
 });
 
 export const treeCaret = style({
@@ -97,6 +99,7 @@ export const treeCaret = style({
   justifyContent: "center",
   width: "16px",
   height: "16px",
+  fontSize: themeVars.font.size.xs,
   color: themeVars.color.text.muted,
   flexShrink: 0,
 });
@@ -112,6 +115,7 @@ export const treeGlyph = style({
   flexShrink: 0,
   width: "16px",
   height: "16px",
+  fontSize: themeVars.font.size.sm,
   marginRight: "6px",
   color: themeVars.color.text.muted,
 });

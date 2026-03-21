@@ -88,11 +88,7 @@ export const CheckpointDivider = ({
             }
             type="button"
           >
-            {isPreviewing ? (
-              <CloseIcon size={12} />
-            ) : (
-              <MagnifyingGlassIcon size={12} />
-            )}
+            {isPreviewing ? <CloseIcon /> : <MagnifyingGlassIcon />}
           </button>
         )}
         <button
@@ -103,7 +99,7 @@ export const CheckpointDivider = ({
           title="Revert project files to this checkpoint"
           type="button"
         >
-          {isReverting ? "…" : <UndoIcon size={12} />}
+          {isReverting ? "…" : <UndoIcon />}
         </button>
       </div>
       <div className={chatCheckpointLine} />

@@ -41,17 +41,13 @@ export const paneRestorePlacementButton = styleVariants({
     height: themeVars.size.panelHeaderHeight,
     justifyContent: "space-between",
     padding: `0 ${themeVars.space[3]}`,
-    borderTop: `1px solid ${themeVars.color.border.subtle}`,
     background: themeVars.color.background.panelMuted,
   },
   leftCenter: {
     width: themeVars.size.controlXs,
     height: `calc(${themeVars.size.controlXs} * 2)`,
     padding: 0,
-    borderTopRightRadius: themeVars.radius.sm,
-    borderBottomRightRadius: themeVars.radius.sm,
-    border: `1px solid ${themeVars.color.border.standard}`,
-    borderLeft: "none",
+    border: "none",
     background: themeVars.color.background.panelMuted,
   },
   topRight: {
@@ -59,7 +55,6 @@ export const paneRestorePlacementButton = styleVariants({
     height: themeVars.size.panelHeaderHeight,
     justifyContent: "space-between",
     padding: `0 ${themeVars.space[3]}`,
-    borderBottom: `1px solid ${themeVars.color.border.subtle}`,
     background: themeVars.color.background.panelMuted,
   },
 });
