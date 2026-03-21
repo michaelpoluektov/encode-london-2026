@@ -33,7 +33,114 @@ type ProjectLayoutsTable = {
   updated_at: string;
 };
 
-type MetadataDatabase = {
+type ChatThreadsTable = {
+  id: string;
+  project_id: string;
+  codex_thread_id: string | null;
+  title: string | null;
+  status: "regular" | "archived";
+  created_at: string;
+  updated_at: string;
+  last_used_at: string;
+  last_message_at: string | null;
+};
+
+type ProjectChatStateTable = {
+  project_id: string;
+  active_thread_id: string | null;
+};
+
+type ChatMessagesTable = {
+  id: string;
+  thread_id: string;
+  role: "user" | "assistant" | "system";
+  sequence_no: number;
+  run_id: string | null;
+  status_type: string | null;
+  status_reason: string | null;
+  error_json: string | null;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type ChatMessagePartsTable = {
+  id: string;
+  message_id: string;
+  ordinal: number;
+  part_type: "text" | "reasoning" | "image" | "file" | "data" | "tool-call";
+  parent_part_id: string | null;
+  text_value: string | null;
+  image_path: string | null;
+  file_path: string | null;
+  filename: string | null;
+  mime_type: string | null;
+  data_name: string | null;
+  data_json: string | null;
+  tool_call_id: string | null;
+  tool_name: string | null;
+  tool_args_text: string | null;
+  tool_result_text: string | null;
+  tool_is_error: number | null;
+};
+
+type ChatAttachmentsTable = {
+  id: string;
+  message_id: string;
+  ordinal: number;
+  attachment_type: "image" | "file";
+  name: string | null;
+  mime_type: string | null;
+  path: string | null;
+  content_url: string | null;
+  status: "complete" | "pending";
+  metadata_json: string;
+};
+
+type ChatRunsTable = {
+  id: string;
+  thread_id: string;
+  project_id: string;
+  codex_thread_id: string | null;
+  kind: "prompt" | "tool_resume";
+  trigger_message_id: string | null;
+  result_message_id: string | null;
+  status: "running" | "completed" | "failed" | "cancelled";
+  input_tokens: number | null;
+  cached_input_tokens: number | null;
+  output_tokens: number | null;
+  error_message: string | null;
+  started_at: string;
+  completed_at: string | null;
+};
+
+type ChatRunItemsTable = {
+  id: string;
+  run_id: string;
+  codex_item_id: string | null;
+  ordinal: number;
+  item_type:
+    | "agent_message"
+    | "reasoning"
+    | "command_execution"
+    | "file_change"
+    | "mcp_tool_call"
+    | "web_search"
+    | "todo_list"
+    | "error";
+  status: string | null;
+  payload_json: string;
+  created_at: string;
+};
+
+export type MetadataDatabase = {
+  chat_attachments: ChatAttachmentsTable;
+  chat_message_parts: ChatMessagePartsTable;
+  chat_messages: ChatMessagesTable;
+  chat_run_items: ChatRunItemsTable;
+  chat_runs: ChatRunsTable;
+  chat_threads: ChatThreadsTable;
+  project_chat_state: ProjectChatStateTable;
   project_layouts: ProjectLayoutsTable;
   project_metadata: ProjectMetadataTable;
 };
@@ -137,21 +244,131 @@ const createDatabase = async (): Promise<Kysely<MetadataDatabase>> => {
     )
   `.execute(db);
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_threads (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      codex_thread_id TEXT,
+      title TEXT,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_used_at TEXT NOT NULL,
+      last_message_at TEXT
+    )
+  `.execute(db);
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS project_chat_state (
+      project_id TEXT PRIMARY KEY,
+      active_thread_id TEXT
+    )
+  `.execute(db);
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id TEXT PRIMARY KEY,
+      thread_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      sequence_no INTEGER NOT NULL,
+      run_id TEXT,
+      status_type TEXT,
+      status_reason TEXT,
+      error_json TEXT,
+      metadata_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(thread_id, sequence_no)
+    )
+  `.execute(db);
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_message_parts (
+      id TEXT PRIMARY KEY,
+      message_id TEXT NOT NULL,
+      ordinal INTEGER NOT NULL,
+      part_type TEXT NOT NULL,
+      parent_part_id TEXT,
+      text_value TEXT,
+      image_path TEXT,
+      file_path TEXT,
+      filename TEXT,
+      mime_type TEXT,
+      data_name TEXT,
+      data_json TEXT,
+      tool_call_id TEXT,
+      tool_name TEXT,
+      tool_args_text TEXT,
+      tool_result_text TEXT,
+      tool_is_error INTEGER,
+      UNIQUE(message_id, ordinal)
+    )
+  `.execute(db);
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_attachments (
+      id TEXT PRIMARY KEY,
+      message_id TEXT NOT NULL,
+      ordinal INTEGER NOT NULL,
+      attachment_type TEXT NOT NULL,
+      name TEXT,
+      mime_type TEXT,
+      path TEXT,
+      content_url TEXT,
+      status TEXT NOT NULL,
+      metadata_json TEXT NOT NULL,
+      UNIQUE(message_id, ordinal)
+    )
+  `.execute(db);
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_runs (
+      id TEXT PRIMARY KEY,
+      thread_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      codex_thread_id TEXT,
+      kind TEXT NOT NULL,
+      trigger_message_id TEXT,
+      result_message_id TEXT,
+      status TEXT NOT NULL,
+      input_tokens INTEGER,
+      cached_input_tokens INTEGER,
+      output_tokens INTEGER,
+      error_message TEXT,
+      started_at TEXT NOT NULL,
+      completed_at TEXT
+    )
+  `.execute(db);
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_run_items (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL,
+      codex_item_id TEXT,
+      ordinal INTEGER NOT NULL,
+      item_type TEXT NOT NULL,
+      status TEXT,
+      payload_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE(run_id, ordinal)
+    )
+  `.execute(db);
+
   return db;
 };
 
-const getDatabase = (): Promise<Kysely<MetadataDatabase>> => {
+export const getMetadataDatabase = (): Promise<Kysely<MetadataDatabase>> => {
   databasePromise ??= createDatabase();
   return databasePromise;
 };
 
-const getTimestamp = (): string => new Date().toISOString();
+export const getTimestamp = (): string => new Date().toISOString();
 
 export const upsertProjectMetadata = async (
   folderPath: string,
   manifest: ShadilyManifest,
 ): Promise<void> => {
-  const db = await getDatabase();
+  const db = await getMetadataDatabase();
   const now = getTimestamp();
 
   await db
@@ -190,7 +407,7 @@ export const upsertOpenProjectMetadata = async (
 export const listRecentProjectMetadata = async (): Promise<
   readonly ProjectMetadataRow[]
 > => {
-  const db = await getDatabase();
+  const db = await getMetadataDatabase();
 
   return projectMetadataRowSchema
     .array()
@@ -206,7 +423,7 @@ export const listRecentProjectMetadata = async (): Promise<
 export const deleteProjectMetadata = async (
   projectId: string,
 ): Promise<void> => {
-  const db = await getDatabase();
+  const db = await getMetadataDatabase();
 
   await db
     .deleteFrom("project_metadata")
@@ -217,7 +434,7 @@ export const deleteProjectMetadata = async (
 export const deleteProjectMetadataByPath = async (
   folderPath: string,
 ): Promise<void> => {
-  const db = await getDatabase();
+  const db = await getMetadataDatabase();
 
   await db
     .deleteFrom("project_metadata")
@@ -228,7 +445,7 @@ export const deleteProjectMetadataByPath = async (
 export const getProjectLayout = async (
   projectId: string,
 ): Promise<ProjectLayoutState | null> => {
-  const db = await getDatabase();
+  const db = await getMetadataDatabase();
   const row = await db
     .selectFrom("project_layouts")
     .select("layout_json")
@@ -251,11 +468,24 @@ export const getProjectLayout = async (
   }
 };
 
+export const getProjectFolderPath = async (
+  projectId: string,
+): Promise<string | null> => {
+  const db = await getMetadataDatabase();
+  const row = await db
+    .selectFrom("project_metadata")
+    .select("folder_path")
+    .where("project_id", "=", projectId)
+    .executeTakeFirst();
+
+  return row?.folder_path ?? null;
+};
+
 export const saveProjectLayout = async (
   projectId: string,
   layout: ProjectLayoutState,
 ): Promise<void> => {
-  const db = await getDatabase();
+  const db = await getMetadataDatabase();
   const serializedLayout = JSON.stringify(
     projectLayoutStateSchema.parse(layout),
   );

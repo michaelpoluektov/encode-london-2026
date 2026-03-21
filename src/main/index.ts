@@ -2,8 +2,9 @@ import { join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import {
   bootstrapPayloadSchema,
-  chatAttachPreviewContextPayloadSchema,
-  chatPromptSchema,
+  chatProjectRequestSchema,
+  chatSendPayloadSchema,
+  chatThreadRequestSchema,
   projectCreatePayloadSchema,
   projectEntryRequestSchema,
   projectFolderPathSchema,
@@ -12,6 +13,7 @@ import {
   projectSaveCapturePayloadSchema,
   projectSavePayloadSchema,
 } from "../shared/contracts";
+import * as chatService from "./services/chat-service";
 import * as codexRuntime from "./services/codex-runtime";
 import * as projectService from "./services/project-service";
 
@@ -73,10 +75,6 @@ app.whenReady().then(async () => {
   ipcMain.handle("app:get-bootstrap-payload", async () => {
     const initialProject = await projectService.openMostRecentProject();
 
-    if (initialProject !== null) {
-      codexRuntime.startSession(initialProject.folderPath);
-    }
-
     return bootstrapPayloadSchema.parse({
       appName: "Shadily",
       platform: process.platform,
@@ -98,7 +96,6 @@ app.whenReady().then(async () => {
       parsedPayload.parentDir,
       parsedPayload.name,
     );
-    if (result) codexRuntime.startSession(result.folderPath);
     return result;
   });
 
@@ -107,9 +104,7 @@ app.whenReady().then(async () => {
       properties: ["openDirectory"],
     });
     if (canceled) return null;
-    const result = await projectService.openProject(filePaths[0]);
-    if (result) codexRuntime.startSession(result.folderPath);
-    return result;
+    return projectService.openProject(filePaths[0]);
   });
 
   ipcMain.handle("project:save", async (_e, payload: unknown) => {
@@ -147,29 +142,42 @@ app.whenReady().then(async () => {
     );
   });
 
+  ipcMain.handle("chat:listThreads", async (_event, payload: unknown) => {
+    const parsedPayload = chatProjectRequestSchema.parse(payload);
+    return chatService.listProjectThreads(parsedPayload.projectId);
+  });
+
+  ipcMain.handle("chat:getActiveThread", async (_event, payload: unknown) => {
+    const parsedPayload = chatProjectRequestSchema.parse(payload);
+    return chatService.getActiveThread(parsedPayload);
+  });
+
+  ipcMain.handle("chat:createThread", async (_event, payload: unknown) => {
+    const parsedPayload = chatProjectRequestSchema.parse(payload);
+    return chatService.createThread(parsedPayload);
+  });
+
+  ipcMain.handle("chat:switchThread", async (_event, payload: unknown) => {
+    const parsedPayload = chatThreadRequestSchema.parse(payload);
+    return chatService.switchThread(parsedPayload);
+  });
+
+  ipcMain.handle("chat:deleteThread", async (_event, payload: unknown) => {
+    const parsedPayload = chatThreadRequestSchema.parse(payload);
+    return chatService.deleteThread(parsedPayload);
+  });
+
   ipcMain.handle("chat:send", async (event, payload: unknown) => {
-    const prompt = chatPromptSchema.parse(payload);
-    await codexRuntime.sendMessage(
-      prompt,
+    const parsedPayload = chatSendPayloadSchema.parse(payload);
+    return chatService.sendMessage(
+      parsedPayload,
       (text) => event.sender.send("chat:chunk", text),
       (changes) => event.sender.send("chat:file-change", changes),
     );
   });
 
-  ipcMain.handle(
-    "chat:attachPreviewContext",
-    async (event, payload: unknown) => {
-      const parsedPayload =
-        chatAttachPreviewContextPayloadSchema.parse(payload);
-      return codexRuntime.attachPreviewContext(
-        parsedPayload.imagePath,
-        (changes) => event.sender.send("chat:file-change", changes),
-      );
-    },
-  );
-
   ipcMain.handle("chat:stop", () => {
-    codexRuntime.abortActiveTurn();
+    chatService.stopActiveTurn();
   });
 
   await createMainWindow();

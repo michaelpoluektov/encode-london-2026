@@ -1,18 +1,17 @@
 import { create } from "zustand";
-import type { ChatMessage, FileChangeInfo } from "../../../shared/contracts";
-import { captureRegisteredPreview } from "../preview-capture";
+import type {
+  ChatMessage,
+  ChatMessagePart,
+  ChatThreadDetail,
+  ChatThreadSummary,
+  FileChangeInfo,
+} from "../../../shared/contracts";
 import { useProjectStore } from "./project-store";
 
 let chunkUnsubscribe: (() => void) | null = null;
 let fileChangeUnsubscribe: (() => void) | null = null;
 let pendingShaderReload: Promise<void> = Promise.resolve();
-
-const MAX_PREVIEW_FOLLOW_UPS = 3;
-
-const waitForAnimationFrame = async (): Promise<void> =>
-  new Promise((resolve) => {
-    window.requestAnimationFrame(() => resolve());
-  });
+let loadRequestVersion = 0;
 
 const isAbortError = (error: unknown): boolean =>
   error instanceof Error && error.message.toLowerCase().includes("abort");
@@ -88,10 +87,10 @@ const clearChatSubscriptions = (): void => {
   fileChangeUnsubscribe = null;
 };
 
-const getImageLabel = (imagePath: string): string =>
-  imagePath.split("/").pop() ?? imagePath;
-
 type ChatStoreState = {
+  readonly currentProjectId: string | null;
+  readonly threads: readonly ChatThreadSummary[];
+  readonly activeThread: ChatThreadSummary | null;
   readonly messages: ChatMessage[];
   readonly isGenerating: boolean;
   readonly streamingText: string;
@@ -105,23 +104,71 @@ type ChatStoreSetter = (
     | ((state: ChatStoreState) => Partial<ChatStoreState> | ChatStoreState),
 ) => void;
 
-const appendChatMessage = (
-  setState: ChatStoreSetter,
-  message: ChatMessage,
-): void => {
-  setState((state) => ({ messages: [...state.messages, message] }));
+const createOptimisticUserMessage = (
+  threadId: string,
+  prompt: string,
+): ChatMessage => {
+  const now = new Date().toISOString();
+  const textPart: ChatMessagePart = {
+    id: crypto.randomUUID(),
+    type: "text",
+    text: prompt,
+    parentPartId: null,
+  };
+
+  return {
+    id: crypto.randomUUID(),
+    threadId,
+    role: "user",
+    runId: null,
+    createdAt: now,
+    updatedAt: now,
+    status: null,
+    parts: [textPart],
+  };
 };
 
-const updateChatMessage = (
+const upsertThreadSummary = (
+  threads: readonly ChatThreadSummary[],
+  nextThread: ChatThreadSummary,
+): readonly ChatThreadSummary[] => {
+  const remainingThreads = threads.filter(
+    (thread) => thread.id !== nextThread.id,
+  );
+  return [nextThread, ...remainingThreads].sort(
+    (left, right) =>
+      new Date(right.lastUsedAt).getTime() -
+      new Date(left.lastUsedAt).getTime(),
+  );
+};
+
+const replaceThreadState = (
   setState: ChatStoreSetter,
-  messageId: string,
-  content: string,
+  detail: ChatThreadDetail,
+  threads: readonly ChatThreadSummary[] | null,
 ): void => {
   setState((state) => ({
-    messages: state.messages.map((message) =>
-      message.id === messageId ? { ...message, content } : message,
-    ),
+    activeThread: detail.thread,
+    messages: detail.messages,
+    threads:
+      threads === null
+        ? upsertThreadSummary(state.threads, detail.thread)
+        : threads,
   }));
+};
+
+const loadThreadCollection = async (
+  projectId: string,
+): Promise<{
+  detail: ChatThreadDetail;
+  threads: readonly ChatThreadSummary[];
+}> => {
+  const [detail, threads] = await Promise.all([
+    window.shadily.chat.getActiveThread(projectId),
+    window.shadily.chat.listThreads(projectId),
+  ]);
+
+  return { detail, threads };
 };
 
 const beginChatTurn = (setState: ChatStoreSetter): void => {
@@ -142,139 +189,197 @@ const endChatTurn = (): void => {
   resetPendingShaderReload();
 };
 
-const flushStreamingMessage = (
-  setState: ChatStoreSetter,
-  getState: () => Pick<ChatStoreState, "streamingText">,
-): void => {
-  const finalText = getState().streamingText;
-
-  if (!finalText) {
-    setState({ streamingText: "" });
-    return;
-  }
-
-  appendChatMessage(setState, {
-    id: crypto.randomUUID(),
-    role: "assistant",
-    content: finalText,
-  });
-  setState({ streamingText: "" });
-};
-
-const runPreviewFollowUps = async (
-  setState: ChatStoreSetter,
-): Promise<void> => {
-  for (let iteration = 1; iteration <= MAX_PREVIEW_FOLLOW_UPS; iteration += 1) {
-    const project = useProjectStore.getState().project;
-
-    if (project === null) {
-      return;
-    }
-
-    const statusMessageId = crypto.randomUUID();
-    appendChatMessage(setState, {
-      id: statusMessageId,
-      role: "system",
-      content: `Visual follow-up ${iteration}/${MAX_PREVIEW_FOLLOW_UPS}: capturing the current preview...`,
-    });
-
-    const captureResult = await captureRegisteredPreview();
-
-    if (captureResult.kind === "error") {
-      updateChatMessage(
-        setState,
-        statusMessageId,
-        `Visual follow-up ${iteration}/${MAX_PREVIEW_FOLLOW_UPS}: ${captureResult.message}`,
-      );
-      setState({ warningMessage: captureResult.message });
-      return;
-    }
-
-    updateChatMessage(
-      setState,
-      statusMessageId,
-      `Visual follow-up ${iteration}/${MAX_PREVIEW_FOLLOW_UPS}: sending the latest preview image to Codex...`,
-    );
-
-    try {
-      const { imagePath } = await window.shadily.project.saveCapture({
-        folderPath: project.folderPath,
-        dataUrl: captureResult.dataUrl,
-      });
-      const imageLabel = getImageLabel(imagePath);
-      const result = await window.shadily.chat.attachPreviewContext(imagePath);
-
-      await waitForPendingShaderReload();
-
-      if (!result.appliedChanges) {
-        updateChatMessage(
-          setState,
-          statusMessageId,
-          `Visual follow-up ${iteration}/${MAX_PREVIEW_FOLLOW_UPS}: Codex reviewed ${imageLabel} and made no further code changes.`,
-        );
-        return;
-      }
-
-      if (iteration === MAX_PREVIEW_FOLLOW_UPS) {
-        updateChatMessage(
-          setState,
-          statusMessageId,
-          `Visual follow-up ${iteration}/${MAX_PREVIEW_FOLLOW_UPS}: Codex revised the code after reviewing ${imageLabel}. The automatic iteration cap was reached.`,
-        );
-        return;
-      }
-
-      updateChatMessage(
-        setState,
-        statusMessageId,
-        `Visual follow-up ${iteration}/${MAX_PREVIEW_FOLLOW_UPS}: Codex revised the code after reviewing ${imageLabel}. Capturing another preview...`,
-      );
-
-      await waitForAnimationFrame();
-    } catch (error) {
-      if (isAbortError(error)) {
-        throw error;
-      }
-
-      updateChatMessage(
-        setState,
-        statusMessageId,
-        `Visual follow-up ${iteration}/${MAX_PREVIEW_FOLLOW_UPS}: automatic refinement stopped because the preview review turn failed.`,
-      );
-      setState({
-        warningMessage:
-          error instanceof Error
-            ? error.message
-            : "The preview-guided follow-up turn failed.",
-      });
-      return;
-    }
-  }
-};
-
 type ChatStore = ChatStoreState & {
+  readonly hydrateProject: (projectId: string | null) => Promise<void>;
+  readonly createThread: (projectId: string) => Promise<void>;
+  readonly switchThread: (projectId: string, threadId: string) => Promise<void>;
+  readonly deleteThread: (projectId: string, threadId: string) => Promise<void>;
   readonly sendMessage: (prompt: string) => Promise<void>;
   readonly cancelGeneration: () => void;
 };
 
 export const useChatStore = create<ChatStore>((set, get) => ({
+  currentProjectId: null,
+  threads: [],
+  activeThread: null,
   messages: [],
   isGenerating: false,
   streamingText: "",
   recentFileChanges: [],
   warningMessage: null,
 
-  sendMessage: async (prompt) => {
-    if (get().isGenerating) return;
+  hydrateProject: async (projectId) => {
+    loadRequestVersion += 1;
+    const requestVersion = loadRequestVersion;
 
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: prompt,
-    };
+    endChatTurn();
+    set({
+      currentProjectId: projectId,
+      threads: [],
+      activeThread: null,
+      messages: [],
+      isGenerating: false,
+      streamingText: "",
+      recentFileChanges: [],
+      warningMessage: null,
+    });
+
+    if (projectId === null) {
+      return;
+    }
+
+    try {
+      const { detail, threads } = await loadThreadCollection(projectId);
+
+      if (
+        requestVersion !== loadRequestVersion ||
+        get().currentProjectId !== projectId
+      ) {
+        return;
+      }
+
+      replaceThreadState(set, detail, threads);
+    } catch (error) {
+      if (
+        requestVersion !== loadRequestVersion ||
+        get().currentProjectId !== projectId
+      ) {
+        return;
+      }
+
+      set({
+        warningMessage:
+          error instanceof Error
+            ? error.message
+            : "Failed to load chat threads.",
+      });
+    }
+  },
+
+  createThread: async (projectId) => {
+    if (get().isGenerating || get().currentProjectId !== projectId) {
+      return;
+    }
+
+    set({
+      warningMessage: null,
+      recentFileChanges: [],
+      streamingText: "",
+    });
+
+    try {
+      const detail = await window.shadily.chat.createThread(projectId);
+      const threads = await window.shadily.chat.listThreads(projectId);
+
+      if (get().currentProjectId !== projectId) {
+        return;
+      }
+
+      replaceThreadState(set, detail, threads);
+    } catch (error) {
+      if (get().currentProjectId !== projectId) {
+        return;
+      }
+
+      set({
+        warningMessage:
+          error instanceof Error ? error.message : "Failed to create a thread.",
+      });
+    }
+  },
+
+  switchThread: async (projectId, threadId) => {
+    if (get().isGenerating || get().currentProjectId !== projectId) {
+      return;
+    }
+
+    set({
+      warningMessage: null,
+      recentFileChanges: [],
+      streamingText: "",
+    });
+
+    try {
+      const detail = await window.shadily.chat.switchThread({
+        projectId,
+        threadId,
+      });
+      const threads = await window.shadily.chat.listThreads(projectId);
+
+      if (get().currentProjectId !== projectId) {
+        return;
+      }
+
+      replaceThreadState(set, detail, threads);
+    } catch (error) {
+      if (get().currentProjectId !== projectId) {
+        return;
+      }
+
+      set({
+        warningMessage:
+          error instanceof Error ? error.message : "Failed to switch threads.",
+      });
+    }
+  },
+
+  deleteThread: async (projectId, threadId) => {
+    if (
+      get().isGenerating ||
+      get().currentProjectId !== projectId ||
+      get().threads.length <= 1
+    ) {
+      return;
+    }
+
+    set({
+      warningMessage: null,
+      recentFileChanges: [],
+    });
+
+    try {
+      const detail = await window.shadily.chat.deleteThread({
+        projectId,
+        threadId,
+      });
+      const threads = await window.shadily.chat.listThreads(projectId);
+
+      if (get().currentProjectId !== projectId) {
+        return;
+      }
+
+      replaceThreadState(set, detail, threads);
+    } catch (error) {
+      if (get().currentProjectId !== projectId) {
+        return;
+      }
+
+      set({
+        warningMessage:
+          error instanceof Error ? error.message : "Failed to delete thread.",
+      });
+    }
+  },
+
+  sendMessage: async (prompt) => {
+    const currentProjectId = get().currentProjectId;
+    const activeThread = get().activeThread;
+    const trimmedPrompt = prompt.trim();
+
+    if (
+      get().isGenerating ||
+      currentProjectId === null ||
+      activeThread === null ||
+      trimmedPrompt.length === 0
+    ) {
+      return;
+    }
 
     set((s) => ({
-      messages: [...s.messages, userMessage],
+      messages: [
+        ...s.messages,
+        createOptimisticUserMessage(activeThread.id, trimmedPrompt),
+      ],
       isGenerating: true,
       streamingText: "",
       recentFileChanges: [],
@@ -284,38 +389,54 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     beginChatTurn(set);
 
     try {
-      await window.shadily.chat.send(prompt);
-      flushStreamingMessage(set, get);
-
+      const detail = await window.shadily.chat.send({
+        projectId: currentProjectId,
+        threadId: activeThread.id,
+        prompt: trimmedPrompt,
+      });
+      const threadListResult = await window.shadily.chat
+        .listThreads(currentProjectId)
+        .catch(() => null);
       await waitForPendingShaderReload();
-      await waitForAnimationFrame();
 
-      if (useProjectStore.getState().project !== null) {
-        await runPreviewFollowUps(set);
+      if (get().currentProjectId !== currentProjectId) {
+        return;
       }
 
-      set({ isGenerating: false, streamingText: "" });
+      set({
+        isGenerating: false,
+        streamingText: "",
+      });
+      replaceThreadState(set, detail, threadListResult);
     } catch (error) {
-      if (!isAbortError(error)) {
-        set({ warningMessage: "The Codex turn failed before completion." });
+      const [detailResult, threadListResult] = await Promise.all([
+        window.shadily.chat.getActiveThread(currentProjectId).catch(() => null),
+        window.shadily.chat.listThreads(currentProjectId).catch(() => null),
+      ]);
+
+      if (get().currentProjectId !== currentProjectId) {
+        return;
       }
-      set({ isGenerating: false, streamingText: "" });
+
+      if (detailResult !== null) {
+        replaceThreadState(set, detailResult, threadListResult);
+      }
+
+      set({
+        isGenerating: false,
+        streamingText: "",
+        warningMessage: isAbortError(error)
+          ? null
+          : error instanceof Error
+            ? error.message
+            : "The Codex turn failed before completion.",
+      });
     } finally {
       endChatTurn();
     }
   },
 
   cancelGeneration: () => {
-    window.shadily.chat.stop();
-    const partial = useChatStore.getState().streamingText;
-    if (partial) {
-      const msg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: partial,
-      };
-      appendChatMessage(set, msg);
-    }
-    set({ isGenerating: false, streamingText: "" });
+    void window.shadily.chat.stop();
   },
 }));
