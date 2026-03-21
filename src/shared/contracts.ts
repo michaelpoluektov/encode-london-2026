@@ -69,8 +69,16 @@ export const bootstrapPayloadSchema = z.object({
 
 export type BootstrapPayload = z.infer<typeof bootstrapPayloadSchema>;
 
+export const projectFolderPathSchema = z.string().min(1);
+export const projectNameSchema = z.string().trim().min(1);
+export const projectCreatePayloadSchema = z.object({
+  parentDir: projectFolderPathSchema,
+  name: projectNameSchema,
+});
+export const pickFolderResultSchema = projectFolderPathSchema.nullable();
+
 export const projectSavePayloadSchema = z.object({
-  folderPath: z.string().min(1),
+  folderPath: projectFolderPathSchema,
   manifest: shadilyManifestSchema,
   shaders: z.object({ fragment: z.string(), vertex: z.string() }),
 });
@@ -78,7 +86,7 @@ export const projectSavePayloadSchema = z.object({
 export type ProjectSavePayload = z.infer<typeof projectSavePayloadSchema>;
 
 export const projectEntryRequestSchema = z.object({
-  folderPath: z.string().min(1),
+  folderPath: projectFolderPathSchema,
   manifest: shadilyManifestSchema,
   path: z.string().min(1),
 });
@@ -125,7 +133,7 @@ export type ProjectBinaryEntryResult = z.infer<
 export type ProjectEntryResult = z.infer<typeof projectEntryResultSchema>;
 
 export const projectSaveCapturePayloadSchema = z.object({
-  folderPath: z.string().min(1),
+  folderPath: projectFolderPathSchema,
   dataUrl: z.string().startsWith("data:image/png;base64,"),
 });
 
@@ -140,6 +148,8 @@ export const projectSaveCaptureResultSchema = z.object({
 export type ProjectSaveCaptureResult = z.infer<
   typeof projectSaveCaptureResultSchema
 >;
+
+export const chatPromptSchema = z.string().trim().min(1);
 
 export const chatAttachPreviewContextPayloadSchema = z.object({
   imagePath: z.string().min(1),

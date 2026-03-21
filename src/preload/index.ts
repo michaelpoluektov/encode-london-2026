@@ -13,7 +13,11 @@ import {
   type BootstrapPayload,
   bootstrapPayloadSchema,
   chatAttachPreviewContextResultSchema,
+  chatPromptSchema,
+  pickFolderResultSchema,
+  projectCreatePayloadSchema,
   projectEntryResultSchema,
+  projectFolderPathSchema,
   projectOpenResultSchema,
   projectSaveCaptureResultSchema,
 } from "../shared/contracts";
@@ -24,13 +28,18 @@ const shadilyDesktopApi = {
       await ipcRenderer.invoke("app:get-bootstrap-payload"),
     ),
   project: {
-    pickFolder: (): Promise<string | null> =>
-      ipcRenderer.invoke("project:pickFolder"),
+    pickFolder: async (): Promise<string | null> =>
+      pickFolderResultSchema.parse(
+        await ipcRenderer.invoke("project:pickFolder"),
+      ),
     create: async (
       dir: string,
       name: string,
     ): Promise<ProjectOpenResult | null> => {
-      const result = await ipcRenderer.invoke("project:create", dir, name);
+      const result = await ipcRenderer.invoke(
+        "project:create",
+        projectCreatePayloadSchema.parse({ parentDir: dir, name }),
+      );
       return result === null ? null : projectOpenResultSchema.parse(result);
     },
     open: async (): Promise<ProjectOpenResult | null> => {
@@ -39,7 +48,10 @@ const shadilyDesktopApi = {
     },
     reload: async (folderPath: string): Promise<ProjectOpenResult> =>
       projectOpenResultSchema.parse(
-        await ipcRenderer.invoke("project:reload", folderPath),
+        await ipcRenderer.invoke(
+          "project:reload",
+          projectFolderPathSchema.parse(folderPath),
+        ),
       ),
     save: async (payload: ProjectSavePayload): Promise<ProjectOpenResult> =>
       projectOpenResultSchema.parse(
@@ -60,7 +72,7 @@ const shadilyDesktopApi = {
   },
   chat: {
     send: (prompt: string): Promise<void> =>
-      ipcRenderer.invoke("chat:send", prompt),
+      ipcRenderer.invoke("chat:send", chatPromptSchema.parse(prompt)),
     attachPreviewContext: async (
       imagePath: string,
     ): Promise<ChatAttachPreviewContextResult> =>
