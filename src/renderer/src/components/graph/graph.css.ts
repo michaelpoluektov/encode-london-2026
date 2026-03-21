@@ -1,0 +1,37 @@
+import { globalStyle, style } from "@vanilla-extract/css";
+import { themeVars } from "../../theme";
+
+export const graphCanvas = style({
+  position: "relative",
+  width: "100%",
+  height: "100%",
+  minHeight: 0,
+  overflow: "hidden",
+  borderRadius: themeVars.radius.lg,
+  border: `1px solid ${themeVars.color.border.standard}`,
+  background: themeVars.color.background.panelInset,
+});
+
+globalStyle(`${graphCanvas} .react-flow`, {
+  width: "100%",
+  height: "100%",
+  background: themeVars.color.background.panelInset,
+  color: themeVars.color.text.primary,
+  vars: {
+    "--xy-background-color": themeVars.color.background.panelInset,
+    "--xy-background-pattern-dots-color": themeVars.color.border.subtle,
+    "--xy-edge-stroke": themeVars.color.border.accent,
+    "--xy-node-border": `1px solid ${themeVars.color.border.standard}`,
+    "--xy-node-background-color": themeVars.color.background.panelRaised,
+    "--xy-node-color": themeVars.color.text.primary,
+    "--xy-node-boxshadow-hover": themeVars.shadow.panel,
+    "--xy-node-boxshadow-selected": `0 0 0 1px ${themeVars.color.border.accent}`,
+    "--xy-handle-background-color": themeVars.color.border.accent,
+    "--xy-handle-border-color": themeVars.color.background.panelRaised,
+  },
+});
+
+globalStyle(`${graphCanvas} .react-flow__node`, {
+  borderRadius: themeVars.radius.md,
+  overflow: "visible",
+});
