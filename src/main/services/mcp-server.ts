@@ -202,7 +202,9 @@ const createMcpServerInstance = (): McpServer => {
       inputSchema: {
         node_instance_name: z
           .string()
-          .describe("The instance name of the node to render the subgraph for."),
+          .describe(
+            "The instance name of the node to render the subgraph for.",
+          ),
       },
     },
     async (args) => {
@@ -218,10 +220,7 @@ const createMcpServerInstance = (): McpServer => {
           isError: true,
         };
       }
-      const base64Data = result.dataUrl.replace(
-        /^data:image\/png;base64,/,
-        "",
-      );
+      const base64Data = result.dataUrl.replace(/^data:image\/png;base64,/, "");
       return {
         content: [
           {

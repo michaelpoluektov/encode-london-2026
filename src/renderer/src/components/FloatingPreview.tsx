@@ -226,7 +226,9 @@ export const FloatingPreview = ({
               {PREVIEW_MODELS.map((m) => (
                 <button
                   key={m.id}
-                  className={modelButton[previewMesh === m.id ? "active" : "inactive"]}
+                  className={
+                    modelButton[previewMesh === m.id ? "active" : "inactive"]
+                  }
                   type="button"
                   onMouseDown={(e) => {
                     e.stopPropagation();

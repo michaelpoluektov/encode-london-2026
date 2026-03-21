@@ -1,4 +1,10 @@
-import { type JSX, useCallback, useDeferredValue, useEffect, useRef } from "react";
+import {
+  type JSX,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useRef,
+} from "react";
 import { createPortal } from "react-dom";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -7,12 +13,16 @@ import {
   PREVIEW_MODELS,
   type PreviewModelId,
 } from "../../../shared/default-project";
-import { createPreviewGeometry } from "../preview-geometry";
 import {
   applyPreviewUniforms,
   compilePreviewMaterial,
   createPreviewMaterial,
 } from "../preview-compile";
+import { createPreviewGeometry } from "../preview-geometry";
+import {
+  createProjectSavePayload,
+  useProjectStore,
+} from "../store/project-store";
 import { darkThemeValues } from "../theme";
 import type { GraphUniformValues } from "./graph/graph-types";
 import { usePreviewGraphShader } from "./graph/internal/use-preview-graph-shader";
@@ -25,10 +35,6 @@ import {
   sceneHost,
   topBar,
 } from "./preview-fullscreen.css";
-import {
-  createProjectSavePayload,
-  useProjectStore,
-} from "../store/project-store";
 import { CloseIcon } from "./ui/icons";
 
 const EMPTY_UNIFORM_VALUES: GraphUniformValues = Object.freeze({});
@@ -220,7 +226,7 @@ export const PreviewFullscreen = ({
       controlsRef.current = null;
       hasInitializedSceneRef.current = false;
     };
-  }, [fragmentSource]);
+  }, [fragmentSource, previewMesh]);
 
   // Shader recompilation
   useEffect(() => {
@@ -294,7 +300,9 @@ export const PreviewFullscreen = ({
           {PREVIEW_MODELS.map((m) => (
             <button
               key={m.id}
-              className={modelButton[previewMesh === m.id ? "active" : "inactive"]}
+              className={
+                modelButton[previewMesh === m.id ? "active" : "inactive"]
+              }
               type="button"
               onClick={() => {
                 handleSelectMesh(m.id);

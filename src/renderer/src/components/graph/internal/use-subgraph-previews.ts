@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
+import { useProjectStore } from "../../../store/project-store";
 import type { GraphUniformValues, ValidatedGraph } from "../graph-types";
 import { compileSubgraphFragmentShader } from "./compile-fragment-shader";
 import { renderSubgraphToDataUrl } from "./render-subgraph";
-import { useProjectStore } from "../../../store/project-store";
 
 const SUBGRAPH_PREVIEW_WIDTH = 240;
 const SUBGRAPH_PREVIEW_HEIGHT = 120;
@@ -74,8 +74,7 @@ export const useSubgraphPreviews = (
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [validatedGraph, previewMesh]);
+  }, [validatedGraph, previewMesh, uniformValues]);
 
   return previews;
 };

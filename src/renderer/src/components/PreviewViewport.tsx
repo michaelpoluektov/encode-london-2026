@@ -1,8 +1,6 @@
 import { type JSX, useDeferredValue, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { DEFAULT_VERTEX_SHADER } from "../../../shared/default-project";
-import { createPreviewGeometry } from "../preview-geometry";
-
 import {
   previewFrame,
   previewFrameStale,
@@ -20,6 +18,7 @@ import {
   compilePreviewMaterial,
   createPreviewMaterial,
 } from "../preview-compile";
+import { createPreviewGeometry } from "../preview-geometry";
 import { createPreviewRevision, usePreviewStore } from "../store/preview-store";
 import { useProjectStore } from "../store/project-store";
 import { darkThemeValues } from "../theme";
@@ -394,7 +393,7 @@ export const PreviewViewport = (): JSX.Element => {
       meshRef.current = null;
       hasInitializedSceneRef.current = false;
     };
-  }, [fragmentSource]);
+  }, [fragmentSource, previewMesh]);
 
   useEffect(() => {
     const renderer = rendererRef.current;

@@ -316,5 +316,8 @@ export const syncReactFlowGraphSubgraphPreviews = (
       return node;
     }
 
-    return { ...node, data: { ...node.data, previewDataUrl: nextPreviewDataUrl } };
+    return {
+      ...node,
+      data: { ...node.data, previewDataUrl: nextPreviewDataUrl },
+    };
   });

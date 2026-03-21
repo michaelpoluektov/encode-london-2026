@@ -55,7 +55,8 @@ export const defineShadilyMonacoTheme = (monaco: typeof Monaco): void => {
       "editorOverviewRuler.modifiedForeground": "rgba(199, 153, 255, 0.5)",
       "editorOverviewRuler.deletedForeground": "rgba(199, 153, 255, 0.5)",
       "editorOverviewRuler.findMatchForeground": "rgba(199, 153, 255, 0.5)",
-      "editorOverviewRuler.selectionHighlightForeground": "rgba(199, 153, 255, 0.3)",
+      "editorOverviewRuler.selectionHighlightForeground":
+        "rgba(199, 153, 255, 0.3)",
     },
   });
 };

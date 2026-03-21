@@ -1,8 +1,11 @@
 import * as THREE from "three";
-import { DEFAULT_VERTEX_SHADER, type PreviewModelId } from "../../../../../shared/default-project";
-import type { GraphUniformValues } from "../graph-types";
+import {
+  DEFAULT_VERTEX_SHADER,
+  type PreviewModelId,
+} from "../../../../../shared/default-project";
 import { createPreviewMaterial } from "../../../preview-compile";
 import { createPreviewGeometry } from "../../../preview-geometry";
+import type { GraphUniformValues } from "../graph-types";
 
 // Matches the graphNodeCard background in graph-node.css.ts
 const PREVIEW_BACKGROUND_COLOR = 0x262626;
@@ -56,7 +59,10 @@ export const renderSubgraphToDataUrl = async (
   let renderTarget: THREE.WebGLRenderTarget | null = null;
 
   try {
-    renderer = new THREE.WebGLRenderer({ canvas: hiddenCanvas, antialias: false });
+    renderer = new THREE.WebGLRenderer({
+      canvas: hiddenCanvas,
+      antialias: false,
+    });
     renderer.setPixelRatio(1);
     renderer.setSize(width, height);
     renderer.setClearColor(PREVIEW_BACKGROUND_COLOR, 1);
@@ -66,7 +72,11 @@ export const renderSubgraphToDataUrl = async (
     camera.lookAt(0, 0, 0);
 
     geometry = createPreviewGeometry(modelId);
-    material = createPreviewMaterial(fragmentSource, DEFAULT_VERTEX_SHADER, uniformValues);
+    material = createPreviewMaterial(
+      fragmentSource,
+      DEFAULT_VERTEX_SHADER,
+      uniformValues,
+    );
 
     const scene = new THREE.Scene();
     const mesh = new THREE.Mesh(geometry, material);
