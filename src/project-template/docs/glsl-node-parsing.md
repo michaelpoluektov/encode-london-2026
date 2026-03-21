@@ -1,64 +1,14 @@
-import type { GraphSourceLoader } from "../graph-types";
-import { type GlslValueType, SUPPORTED_GLSL_TYPES } from "./glsl-type-registry";
-import type { CustomNode } from "./json-schema";
+# Custom GLSL Node Parsing And Validation
 
-export type ParsedGlslFunctionSignature = {
-  readonly inputTypes: ReadonlyMap<string, GlslValueType>;
-  readonly name: string;
-  readonly outputType: GlslValueType;
-};
+These excerpts mirror the implementation used by the app that implements the tools.
 
+## Signature parsing and matching
+
+```ts
 const supportedGlslTypeSet = new Set<GlslValueType>(SUPPORTED_GLSL_TYPES);
 
 const glslFunctionPattern =
   /\b(?<returnType>[A-Za-z_]\w*)\s+(?<name>[A-Za-z_]\w*)\s*\((?<parameters>[^)]*)\)\s*\{/g;
-
-const exampleNodeSourceLoaders = import.meta.glob(
-  "../../../../../project-template/nodes/*.glsl",
-  {
-    import: "default",
-    query: "?raw",
-  },
-);
-
-const normalizeExampleNodePath = (filepath: string): string | null => {
-  const normalizedFilePath = filepath.replace(/\\/g, "/");
-  const nodePathIndex = normalizedFilePath.indexOf("/nodes/");
-
-  if (normalizedFilePath.startsWith("./nodes/")) {
-    return normalizedFilePath;
-  }
-
-  if (nodePathIndex >= 0) {
-    return `.${normalizedFilePath.slice(nodePathIndex)}`;
-  }
-
-  return null;
-};
-
-const loadExampleNodeSource = async (
-  filepath: string,
-): Promise<string | null> => {
-  const normalizedFilePath = normalizeExampleNodePath(filepath);
-
-  if (normalizedFilePath === null) {
-    return null;
-  }
-
-  for (const [modulePath, loadModule] of Object.entries(
-    exampleNodeSourceLoaders,
-  )) {
-    const normalizedModulePath = normalizeExampleNodePath(modulePath);
-
-    if (normalizedModulePath === normalizedFilePath) {
-      const source = await loadModule();
-
-      return typeof source === "string" ? source : null;
-    }
-  }
-
-  return null;
-};
 
 const parseParameter = (
   parameterSource: string,
@@ -84,16 +34,6 @@ const parseParameter = (
     name: parameterMatch.groups.name,
     type: parameterMatch.groups.type as GlslValueType,
   };
-};
-
-export const formatFunctionSignature = (
-  signature: ParsedGlslFunctionSignature,
-): string => {
-  const parameters = Array.from(signature.inputTypes.entries())
-    .map(([name, type]) => `${type} ${name}`)
-    .join(", ");
-
-  return `${signature.outputType} ${signature.name}(${parameters})`;
 };
 
 export const parseFunctionSignatures = (
@@ -178,24 +118,49 @@ export const matchCustomNodeSignature = (
     signature,
   };
 };
+```
 
-export const loadResolvedCustomNodeSource = async (
+## Source loading and validation outcome
+
+```ts
+const inferCustomNodeData = async (
   node: CustomNode,
-  loadCustomNodeSource?: GraphSourceLoader,
-): Promise<string> => {
-  const loadSource =
-    loadCustomNodeSource ??
-    (async (filepath: string) => {
-      const source = await loadExampleNodeSource(filepath);
+  loadCustomNodeSource: GraphSourceLoader | undefined,
+): Promise<
+  | { readonly data: InferredCustomNodeData; readonly errors: readonly [] }
+  | { readonly data: null; readonly errors: readonly string[] }
+> => {
+  let source: string;
 
-      if (source === null) {
-        throw new Error(
-          `No source loader is configured for custom node file [${filepath}].`,
-        );
-      }
+  try {
+    source = await loadResolvedCustomNodeSource(node, loadCustomNodeSource);
+  } catch (error) {
+    return {
+      data: null,
+      errors: [
+        `node [${node.instanceName}] could not load custom node source from [${node.filepath}] to infer its input and output types. ${error instanceof Error ? error.message : "Unknown error."}`,
+      ],
+    };
+  }
 
-      return source;
-    });
+  const { availableFunctions, expectedFunctionName, signature } =
+    matchCustomNodeSignature(node, source);
 
-  return loadSource(node.filepath, node);
+  if (signature === null) {
+    return {
+      data: null,
+      errors: [
+        `node [${node.instanceName}] could not infer a custom node signature from [${node.filepath}]. Expected a function named [${expectedFunctionName}] or a file with exactly one supported GLSL function. Available functions: ${availableFunctions}.`,
+      ],
+    };
+  }
+
+  return {
+    data: {
+      signature,
+      source: source.trim(),
+    },
+    errors: [],
+  };
 };
+```

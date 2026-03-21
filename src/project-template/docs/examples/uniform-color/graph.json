@@ -1,0 +1,25 @@
+{
+  "nodes": [
+    {
+      "defaultValue": {
+        "x": 0.2,
+        "y": 0.55,
+        "z": 0.95,
+        "w": 1
+      },
+      "editor": {
+        "kind": "color"
+      },
+      "instanceName": "tint",
+      "kind": "uniform",
+      "uniformName": "u_tint",
+      "valueType": "vec4"
+    },
+    {
+      "inputs": {
+        "color": "tint"
+      },
+      "kind": "glFragColor"
+    }
+  ]
+}

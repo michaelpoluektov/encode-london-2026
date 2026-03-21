@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -12,8 +18,6 @@ import {
 } from "../../shared/contracts";
 import {
   createDefaultProjectContents,
-  DEFAULT_AGENTS_MD,
-  DEFAULT_NODE_GLSL_FILES,
   DEFAULT_PROJECT_FILE_PATHS,
   DEFAULT_VERTEX_SHADER,
 } from "../../shared/default-project";
@@ -44,6 +48,22 @@ const getEditablePaths = (manifest: ShadilyManifest): Set<string> =>
     toProjectPath(manifest.graph.source),
     DEFAULT_PROJECT_FILE_PATHS.vertex,
   ]);
+
+const getDefaultProjectTemplatePath = (): string => {
+  const candidates = [
+    join(__dirname, "../../project-template"),
+    join(process.cwd(), "out/project-template"),
+    join(process.cwd(), "src/project-template"),
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error("Default project template folder was not found.");
+};
 
 export const readGraphSource = (
   folderPath: string,
@@ -89,36 +109,21 @@ export const createProject = async (
   name: string,
 ): Promise<ProjectOpenResult> => {
   const folderPath = join(parentDir, name);
+  const templatePath = getDefaultProjectTemplatePath();
+  const { manifest } = createDefaultProjectContents(name);
+
   mkdirSync(folderPath, { recursive: true });
+  cpSync(templatePath, folderPath, { recursive: true, force: true });
   mkdirSync(join(folderPath, DEFAULT_PROJECT_FILE_PATHS.capturesDir), {
     recursive: true,
   });
-
-  const nodesDir = join(folderPath, DEFAULT_PROJECT_FILE_PATHS.nodesDir);
-  mkdirSync(nodesDir, { recursive: true });
-
-  const { manifest, graphSource } = createDefaultProjectContents(name);
 
   writeFileSync(
     join(folderPath, DEFAULT_PROJECT_FILE_PATHS.manifest),
     JSON.stringify(manifest, null, 2),
     "utf-8",
   );
-  writeFileSync(join(folderPath, manifest.graph.source), graphSource, "utf-8");
-  writeFileSync(
-    join(folderPath, DEFAULT_PROJECT_FILE_PATHS.agentInstructions),
-    DEFAULT_AGENTS_MD,
-    "utf-8",
-  );
-  writeFileSync(
-    join(folderPath, DEFAULT_PROJECT_FILE_PATHS.vertex),
-    DEFAULT_VERTEX_SHADER,
-    "utf-8",
-  );
-
-  for (const [filename, content] of Object.entries(DEFAULT_NODE_GLSL_FILES)) {
-    writeFileSync(join(nodesDir, filename), content, "utf-8");
-  }
+  const graphSource = readGraphSource(folderPath, manifest);
 
   return createProjectOpenResult(folderPath, manifest, graphSource);
 };
