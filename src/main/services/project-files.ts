@@ -12,6 +12,7 @@ import {
 } from "../../shared/contracts";
 import {
   createDefaultProjectContents,
+  DEFAULT_AGENTS_MD,
   DEFAULT_PROJECT_FILE_PATHS,
 } from "../../shared/default-project";
 import {
@@ -107,6 +108,11 @@ export const createProject = async (
   writeFileSync(
     join(folderPath, manifest.shaders.vertex),
     shaders.vertex,
+    "utf-8",
+  );
+  writeFileSync(
+    join(folderPath, DEFAULT_PROJECT_FILE_PATHS.agentInstructions),
+    DEFAULT_AGENTS_MD,
     "utf-8",
   );
 

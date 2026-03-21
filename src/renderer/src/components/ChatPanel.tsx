@@ -1,6 +1,10 @@
+import {
+  AssistantRuntimeProvider,
+  MessagePrimitive,
+  ThreadPrimitive,
+  type ToolCallMessagePartProps,
+} from "@assistant-ui/react";
 import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
-import { AuiProvider, useAui } from "@assistant-ui/store";
-import { resource, tapMemo } from "@assistant-ui/tap";
 import {
   type JSX,
   type KeyboardEvent,
@@ -10,12 +14,14 @@ import {
   useState,
 } from "react";
 import remarkGfm from "remark-gfm";
-import type { ChatMessage, ChatMessagePart } from "../../../shared/contracts";
+import type { FileChangeInfo } from "../../../shared/contracts";
 import { useChatStore } from "../store/chat-store";
 import { useProjectStore } from "../store/project-store";
 import {
   chatEmpty,
-  chatFileChange,
+  chatFileChangeRow,
+  chatFileChip,
+  chatFileChipKind,
   chatHeader,
   chatInputArea,
   chatMarkdown,
@@ -26,8 +32,6 @@ import {
   chatMessages,
   chatPanel,
   chatPartBlock,
-  chatPartImage,
-  chatPartLabel,
   chatPartPre,
   chatPartReasoning,
   chatStreamingBubble,
@@ -40,222 +44,161 @@ import {
   chatThreadSelectButton,
   chatThreadTab,
   chatThreadTitle,
+  chatToolCallBlock,
+  chatToolCallError,
+  chatToolCallHeader,
+  chatToolCallName,
+  chatToolCallPre,
+  chatToolCallSection,
+  chatToolCallSectionLabel,
   chatWarning,
 } from "./chat-panel.css";
+import { useChatRuntime } from "./chat-runtime-adapter";
 import { Button } from "./ui/Button";
 import { textareaField } from "./ui/field.css";
 import { Text } from "./ui/Text";
 
-const createUnsupportedOperation = (name: string): (() => never) => {
-  return () => {
-    throw new Error(`${name} is not supported in markdown preview scope.`);
-  };
+// ─── File change chip ────────────────────────────────────────────────────────
+
+const FILE_KIND_LABEL: Record<FileChangeInfo["kind"], string> = {
+  add: "+",
+  update: "~",
+  delete: "-",
 };
 
-const MarkdownMessageClient = resource(
-  ({ messageId }: { messageId: string }) => {
-    const state = tapMemo(() => ({ id: messageId }) as never, [messageId]);
-    const unsupported = createUnsupportedOperation("Message operation");
-    const noop = (): void => {};
+const getBasename = (path: string): string => {
+  const normalized = path.replaceAll("\\", "/");
+  return normalized.split("/").at(-1) ?? path;
+};
 
-    return {
-      getState: () => state,
-      composer: unsupported,
-      reload: unsupported,
-      speak: unsupported,
-      stopSpeaking: unsupported,
-      submitFeedback: unsupported,
-      switchToBranch: unsupported,
-      getCopyText: () => "",
-      part: unsupported,
-      attachment: unsupported,
-      setIsCopied: noop,
-      setIsHovering: noop,
-    };
-  },
+const FileChangeChip = ({
+  change,
+}: {
+  change: FileChangeInfo;
+}): JSX.Element => (
+  <span className={chatFileChip} title={change.path}>
+    <span className={chatFileChipKind}>{FILE_KIND_LABEL[change.kind]}</span>
+    {getBasename(change.path)}
+  </span>
 );
 
-const MarkdownPartClient = resource(
-  ({ text, isRunning }: { text: string; isRunning: boolean }) => {
-    const state = tapMemo(
-      () =>
-        ({
-          type: "text",
-          text,
-          status: isRunning ? { type: "running" } : { type: "complete" },
-        }) as const,
-      [isRunning, text],
-    );
-    const unsupported = createUnsupportedOperation("Part operation");
+// ─── Tool call block ─────────────────────────────────────────────────────────
 
-    return {
-      getState: () => state,
-      addToolResult: unsupported,
-      resumeToolCall: unsupported,
-    };
-  },
+const ToolCallBlock = (props: ToolCallMessagePartProps): JSX.Element => (
+  <div className={chatToolCallBlock}>
+    <div className={chatToolCallHeader}>
+      <span className={chatToolCallName}>{props.toolName}</span>
+      {props.isError === true && (
+        <Text as="span" tone="accent" variant="caption">
+          error
+        </Text>
+      )}
+    </div>
+    {props.argsText && props.argsText !== "{}" && (
+      <div className={chatToolCallSection}>
+        <span className={chatToolCallSectionLabel}>Args</span>
+        <pre className={chatToolCallPre}>{props.argsText}</pre>
+      </div>
+    )}
+    {props.result !== undefined && (
+      <div className={chatToolCallSection}>
+        <span
+          className={`${chatToolCallSectionLabel}${props.isError === true ? ` ${chatToolCallError}` : ""}`}
+        >
+          Result
+        </span>
+        <pre className={chatToolCallPre}>
+          {typeof props.result === "string"
+            ? props.result
+            : JSON.stringify(props.result, null, 2)}
+        </pre>
+      </div>
+    )}
+  </div>
 );
 
-const MarkdownTextScope = ({
-  className,
-  containerClassName,
-  isRunning = false,
-  messageId,
+// ─── Message content renderers ───────────────────────────────────────────────
+
+const AssistantText = (): JSX.Element => (
+  <MarkdownTextPrimitive
+    className={chatMarkdown}
+    containerProps={{ className: chatPartBlock }}
+    remarkPlugins={[remarkGfm]}
+  />
+);
+
+const AssistantReasoning = ({
   text,
 }: {
-  className: string;
-  containerClassName?: string;
-  isRunning?: boolean;
-  messageId: string;
   text: string;
-}): JSX.Element => {
-  const aui = useAui({
-    message: MarkdownMessageClient({ messageId }),
-    part: MarkdownPartClient({ isRunning, text }),
-  } as never);
+  status: { type: string };
+}): JSX.Element => (
+  <div className={chatPartReasoning}>
+    <Text as="div" tone="secondary" variant="label">
+      Reasoning
+    </Text>
+    <div className={chatPartPre}>{text}</div>
+  </div>
+);
 
-  return (
-    <AuiProvider value={aui}>
-      <MarkdownTextPrimitive
-        className={className}
-        containerProps={
-          containerClassName === undefined
-            ? undefined
-            : {
-                className: containerClassName,
-              }
-        }
-        remarkPlugins={[remarkGfm]}
-      />
-    </AuiProvider>
-  );
-};
+// ─── Message bubbles ─────────────────────────────────────────────────────────
 
-const renderMessagePart = (
-  messageId: string,
-  part: ChatMessagePart,
-  role: ChatMessage["role"],
-): JSX.Element => {
-  switch (part.type) {
-    case "text":
-      return role === "assistant" ? (
-        <MarkdownTextScope
-          key={part.id}
-          className={chatMarkdown}
-          containerClassName={chatPartBlock}
-          messageId={messageId}
-          text={part.text}
+const UserMessage = (): JSX.Element => (
+  <div className={chatMessageRow}>
+    <div className={chatMessageBubbleUser}>
+      <div className={chatMessageBody}>
+        <MessagePrimitive.Content
+          components={{
+            Text: ({ text }) => <div className={chatPartBlock}>{text}</div>,
+          }}
         />
-      ) : (
-        <div key={part.id} className={chatPartBlock}>
-          {part.text}
-        </div>
-      );
-    case "reasoning":
-      return (
-        <div key={part.id} className={chatPartReasoning}>
-          <Text as="div" tone="secondary" variant="label">
-            Reasoning
-          </Text>
-          <div className={chatPartPre}>{part.text}</div>
-        </div>
-      );
-    case "image":
-      return (
-        <div key={part.id} className={chatPartImage}>
-          <Text as="div" tone="secondary" variant="label">
-            Image
-          </Text>
-          <Text as="div" variant="code">
-            {part.filename ?? part.imagePath}
-          </Text>
-          <Text as="div" tone="muted" variant="caption">
-            {part.imagePath}
-          </Text>
-        </div>
-      );
-    case "file":
-      return (
-        <div key={part.id} className={chatPartImage}>
-          <Text as="div" tone="secondary" variant="label">
-            File
-          </Text>
-          <Text as="div" variant="code">
-            {part.filename ?? part.filePath}
-          </Text>
-          <Text as="div" tone="muted" variant="caption">
-            {part.filePath}
-          </Text>
-        </div>
-      );
-    case "data":
-      return (
-        <div key={part.id} className={chatPartImage}>
-          <Text as="div" tone="secondary" variant="label">
-            {part.name}
-          </Text>
-          <div className={chatPartPre}>{part.dataJson}</div>
-        </div>
-      );
-    case "tool-call":
-      return (
-        <div key={part.id} className={chatPartImage}>
-          <Text as="div" tone="secondary" variant="label">
-            Tool
-          </Text>
-          <Text as="div" variant="code">
-            {part.toolName}
-          </Text>
-          <Text
-            as="div"
-            className={chatPartLabel}
-            tone="muted"
-            variant="caption"
-          >
-            Arguments
-          </Text>
-          <div className={chatPartPre}>{part.argsText}</div>
-          {part.resultText !== null ? (
-            <>
-              <Text
-                as="div"
-                className={chatPartLabel}
-                tone={part.isError ? "accent" : "muted"}
-                variant="caption"
-              >
-                Result
-              </Text>
-              <div className={chatPartPre}>{part.resultText}</div>
-            </>
-          ) : null}
-        </div>
-      );
-  }
-};
-
-const MessageBubble = ({ message }: { message: ChatMessage }): JSX.Element => {
-  const bubbleClassName =
-    message.role === "assistant"
-      ? chatMessageBubbleAssistant
-      : message.role === "user"
-        ? chatMessageBubbleUser
-        : chatSystemMessage;
-
-  return (
-    <div className={chatMessageRow}>
-      <div className={bubbleClassName}>
-        <div className={chatMessageBody}>
-          {message.parts.map((part) =>
-            renderMessagePart(message.id, part, message.role),
-          )}
-        </div>
       </div>
     </div>
-  );
-};
+  </div>
+);
+
+const AssistantMessageBubble = ({
+  isStreaming,
+}: {
+  isStreaming: boolean;
+}): JSX.Element => (
+  <div className={chatMessageRow}>
+    <div
+      className={isStreaming ? chatStreamingBubble : chatMessageBubbleAssistant}
+    >
+      <div className={chatMessageBody}>
+        <MessagePrimitive.Content
+          components={{
+            Text: AssistantText,
+            Reasoning: AssistantReasoning,
+            tools: {
+              Fallback: ToolCallBlock,
+            },
+          }}
+        />
+      </div>
+    </div>
+  </div>
+);
+
+const SystemMessage = (): JSX.Element => (
+  <div className={chatMessageRow}>
+    <div className={chatSystemMessage}>
+      <MessagePrimitive.Content
+        components={{
+          Text: ({ text }) => <>{text}</>,
+        }}
+      />
+    </div>
+  </div>
+);
+
+// ─── Thread management header ─────────────────────────────────────────────────
 
 const getThreadLabel = (title: string | null, fallbackIndex: number): string =>
   title ?? `Thread ${fallbackIndex + 1}`;
+
+// ─── Main panel ──────────────────────────────────────────────────────────────
 
 export const ChatPanel = (): JSX.Element => {
   const {
@@ -264,7 +207,6 @@ export const ChatPanel = (): JSX.Element => {
     activeThread,
     messages,
     isGenerating,
-    streamingText,
     recentFileChanges,
     warningMessage,
     hydrateProject,
@@ -276,6 +218,7 @@ export const ChatPanel = (): JSX.Element => {
   } = useChatStore();
   const project = useProjectStore((s) => s.project);
   const projectId = project?.manifest.projectId ?? null;
+  const runtime = useChatRuntime();
 
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -284,21 +227,10 @@ export const ChatPanel = (): JSX.Element => {
     void hydrateProject(projectId);
   }, [hydrateProject, projectId]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are intentional trigger conditions for scroll, not values used inside the callback
   useEffect(() => {
-    if (
-      messages.length > 0 ||
-      streamingText.length > 0 ||
-      recentFileChanges.length > 0 ||
-      warningMessage !== null
-    ) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [
-    messages.length,
-    recentFileChanges.length,
-    streamingText.length,
-    warningMessage,
-  ]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length, recentFileChanges.length, warningMessage]);
 
   useEffect(() => {
     if (projectId === null) {
@@ -335,166 +267,172 @@ export const ChatPanel = (): JSX.Element => {
     messages.length > 0 || isGenerating || warningMessage !== null;
 
   return (
-    <section className={chatPanel}>
-      <div className={chatHeader}>
-        <div className={chatThreadHeader}>
-          {projectId === null ? (
-            <Text as="p" tone="muted" variant="caption">
-              Open a project to start a chat thread.
-            </Text>
-          ) : sortedThreads.length === 0 ? (
-            <Text as="p" tone="muted" variant="caption">
-              Loading threads...
-            </Text>
-          ) : (
-            <div className={chatThreadList}>
-              {sortedThreads.map((thread, index) => (
-                <div key={thread.id} className={chatThreadTab}>
-                  <div
-                    className={
-                      thread.id === activeThread?.id
-                        ? `${chatThreadButton} ${chatThreadButtonActive}`
-                        : chatThreadButton
-                    }
-                  >
-                    <button
-                      className={chatThreadSelectButton}
-                      disabled={isGenerating || currentProjectId !== projectId}
-                      onClick={() => {
-                        if (
-                          projectId === null ||
-                          thread.id === activeThread?.id
-                        ) {
-                          return;
-                        }
-
-                        void switchThread(projectId, thread.id);
-                      }}
-                      type="button"
-                    >
-                      <span className={chatThreadTitle}>
-                        {getThreadLabel(thread.title, index)}
-                      </span>
-                    </button>
-                    <button
-                      aria-label={`Delete ${getThreadLabel(thread.title, index)}`}
-                      className={chatThreadDeleteButton}
-                      disabled={
-                        isGenerating ||
-                        currentProjectId !== projectId ||
-                        !canDeleteThreads
+    <AssistantRuntimeProvider runtime={runtime}>
+      <section className={chatPanel}>
+        <div className={chatHeader}>
+          <div className={chatThreadHeader}>
+            {projectId === null ? (
+              <Text as="p" tone="muted" variant="caption">
+                Open a project to start a chat thread.
+              </Text>
+            ) : sortedThreads.length === 0 ? (
+              <Text as="p" tone="muted" variant="caption">
+                Loading threads...
+              </Text>
+            ) : (
+              <div className={chatThreadList}>
+                {sortedThreads.map((thread, index) => (
+                  <div key={thread.id} className={chatThreadTab}>
+                    <div
+                      className={
+                        thread.id === activeThread?.id
+                          ? `${chatThreadButton} ${chatThreadButtonActive}`
+                          : chatThreadButton
                       }
-                      onClick={(event) => {
-                        event.stopPropagation();
-
-                        if (projectId === null) {
-                          return;
-                        }
-
-                        void deleteThread(projectId, thread.id);
-                      }}
-                      type="button"
                     >
-                      ×
-                    </button>
+                      <button
+                        className={chatThreadSelectButton}
+                        disabled={
+                          isGenerating || currentProjectId !== projectId
+                        }
+                        onClick={() => {
+                          if (
+                            projectId === null ||
+                            thread.id === activeThread?.id
+                          ) {
+                            return;
+                          }
+
+                          void switchThread(projectId, thread.id);
+                        }}
+                        type="button"
+                      >
+                        <span className={chatThreadTitle}>
+                          {getThreadLabel(thread.title, index)}
+                        </span>
+                      </button>
+                      <button
+                        aria-label={`Delete ${getThreadLabel(thread.title, index)}`}
+                        className={chatThreadDeleteButton}
+                        disabled={
+                          isGenerating ||
+                          currentProjectId !== projectId ||
+                          !canDeleteThreads
+                        }
+                        onClick={(event) => {
+                          event.stopPropagation();
+
+                          if (projectId === null) {
+                            return;
+                          }
+
+                          void deleteThread(projectId, thread.id);
+                        }}
+                        type="button"
+                      >
+                        ×
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-          <Button
-            disabled={projectId === null || isGenerating}
-            onClick={() => {
-              if (projectId === null) {
-                return;
-              }
-
-              void createThread(projectId);
-            }}
-            size="xs"
-            square
-            variant="plain"
-          >
-            +
-          </Button>
-        </div>
-      </div>
-
-      {!hasContent ? (
-        <div className={chatEmpty}>
-          {project ? (
-            <Text as="p" tone="muted" variant="caption">
-              Ask Codex to edit your shaders. It can read and write files in the
-              project.
-            </Text>
-          ) : (
-            <Text as="p" tone="muted" variant="caption">
-              Open a project to start a chat session.
-            </Text>
-          )}
-        </div>
-      ) : (
-        <div className={chatMessages}>
-          {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
-          ))}
-
-          {isGenerating && streamingText && (
-            <div className={chatMessageRow}>
-              <div className={chatStreamingBubble}>
-                <MarkdownTextScope
-                  className={chatMarkdown}
-                  isRunning
-                  messageId="streaming-assistant-message"
-                  text={streamingText}
-                />
+                ))}
               </div>
-            </div>
-          )}
+            )}
+            <Button
+              disabled={projectId === null || isGenerating}
+              onClick={() => {
+                if (projectId === null) {
+                  return;
+                }
 
-          {recentFileChanges.length > 0 && (
-            <div className={chatFileChange}>
-              {recentFileChanges.map((c) => `${c.kind} ${c.path}`).join("\n")}
-            </div>
-          )}
-
-          {warningMessage !== null && (
-            <div className={chatWarning}>{warningMessage}</div>
-          )}
-
-          <div ref={messagesEndRef} />
+                void createThread(projectId);
+              }}
+              size="xs"
+              square
+              variant="plain"
+            >
+              +
+            </Button>
+          </div>
         </div>
-      )}
 
-      <div className={chatInputArea}>
-        <textarea
-          className={textareaField}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            project && activeThread !== null
-              ? "Message Codex..."
-              : "Open a project first"
-          }
-          disabled={!project || activeThread === null || isGenerating}
-          rows={1}
-        />
-        {isGenerating ? (
-          <Button size="sm" variant="outline" onClick={cancelGeneration}>
-            Stop
-          </Button>
+        {!hasContent ? (
+          <div className={chatEmpty}>
+            {project ? (
+              <Text as="p" tone="muted" variant="caption">
+                Ask Codex to edit your shaders. It can read and write files in
+                the project.
+              </Text>
+            ) : (
+              <Text as="p" tone="muted" variant="caption">
+                Open a project to start a chat session.
+              </Text>
+            )}
+          </div>
         ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleSend}
-            disabled={!project || activeThread === null || !input.trim()}
-          >
-            Send
-          </Button>
+          <div className={chatMessages}>
+            <ThreadPrimitive.Messages>
+              {({ message }) => {
+                if (message.role === "user") {
+                  return <UserMessage key={message.id} />;
+                }
+                if (message.role === "assistant") {
+                  return (
+                    <AssistantMessageBubble
+                      key={message.id}
+                      isStreaming={message.id === "$$streaming"}
+                    />
+                  );
+                }
+                return <SystemMessage key={message.id} />;
+              }}
+            </ThreadPrimitive.Messages>
+
+            {recentFileChanges.length > 0 && (
+              <div className={chatFileChangeRow}>
+                {recentFileChanges.map((change) => (
+                  <FileChangeChip key={change.path} change={change} />
+                ))}
+              </div>
+            )}
+
+            {warningMessage !== null && (
+              <div className={chatWarning}>{warningMessage}</div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
         )}
-      </div>
-    </section>
+
+        <div className={chatInputArea}>
+          <textarea
+            className={textareaField}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              project && activeThread !== null
+                ? "Message Codex..."
+                : "Open a project first"
+            }
+            disabled={!project || activeThread === null || isGenerating}
+            rows={1}
+          />
+          {isGenerating ? (
+            <Button size="sm" variant="outline" onClick={cancelGeneration}>
+              Stop
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSend}
+              disabled={!project || activeThread === null || !input.trim()}
+            >
+              Send
+            </Button>
+          )}
+        </div>
+      </section>
+    </AssistantRuntimeProvider>
   );
 };

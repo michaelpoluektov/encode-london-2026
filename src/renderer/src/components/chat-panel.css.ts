@@ -307,3 +307,85 @@ export const chatInputArea = style({
   gap: themeVars.space[2],
   alignItems: "flex-end",
 });
+
+// File change chips (live streaming events)
+export const chatFileChangeRow = style({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: themeVars.space[1],
+  alignSelf: "flex-start",
+});
+
+export const chatFileChip = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: themeVars.space[1],
+  padding: `2px ${themeVars.space[2]}`,
+  borderRadius: themeVars.radius.pill,
+  background: themeVars.color.surface.successMuted,
+  color: themeVars.color.text.secondary,
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+  lineHeight: themeVars.font.lineHeight.normal,
+  whiteSpace: "nowrap",
+  maxWidth: "16rem",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+});
+
+export const chatFileChipKind = style({
+  flexShrink: 0,
+  fontWeight: themeVars.font.weight.strong,
+  opacity: 0.7,
+});
+
+// Tool call block
+export const chatToolCallBlock = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: themeVars.space[1],
+  padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
+  background: themeVars.color.background.panelInset,
+  border: `1px solid ${themeVars.color.border.subtle}`,
+  borderRadius: themeVars.radius.sm,
+  fontSize: themeVars.font.size.xs,
+});
+
+export const chatToolCallHeader = style({
+  display: "flex",
+  alignItems: "center",
+  gap: themeVars.space[2],
+});
+
+export const chatToolCallName = style({
+  fontFamily: themeVars.font.family.mono,
+  fontWeight: themeVars.font.weight.strong,
+  color: themeVars.color.text.primary,
+});
+
+export const chatToolCallSection = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: themeVars.space[1],
+});
+
+export const chatToolCallSectionLabel = style({
+  color: themeVars.color.text.secondary,
+  fontFamily: themeVars.font.family.sans,
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  fontSize: "0.6rem",
+});
+
+export const chatToolCallPre = style({
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+  lineHeight: themeVars.font.lineHeight.relaxed,
+  color: themeVars.color.text.body,
+});
+
+export const chatToolCallError = style({
+  color: themeVars.color.text.accent,
+});

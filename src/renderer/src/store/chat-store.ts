@@ -269,8 +269,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     });
 
     try {
-      const detail = await window.shadily.chat.createThread(projectId);
-      const threads = await window.shadily.chat.listThreads(projectId);
+      const [detail, threads] = await Promise.all([
+        window.shadily.chat.createThread(projectId),
+        window.shadily.chat.listThreads(projectId),
+      ]);
 
       if (get().currentProjectId !== projectId) {
         return;
@@ -301,11 +303,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     });
 
     try {
-      const detail = await window.shadily.chat.switchThread({
-        projectId,
-        threadId,
-      });
-      const threads = await window.shadily.chat.listThreads(projectId);
+      const [detail, threads] = await Promise.all([
+        window.shadily.chat.switchThread({ projectId, threadId }),
+        window.shadily.chat.listThreads(projectId),
+      ]);
 
       if (get().currentProjectId !== projectId) {
         return;
@@ -339,11 +340,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     });
 
     try {
-      const detail = await window.shadily.chat.deleteThread({
-        projectId,
-        threadId,
-      });
-      const threads = await window.shadily.chat.listThreads(projectId);
+      const [detail, threads] = await Promise.all([
+        window.shadily.chat.deleteThread({ projectId, threadId }),
+        window.shadily.chat.listThreads(projectId),
+      ]);
 
       if (get().currentProjectId !== projectId) {
         return;

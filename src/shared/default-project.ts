@@ -1,11 +1,23 @@
 import type { ShadilyManifest } from "./contracts";
 
 export const DEFAULT_PROJECT_FILE_PATHS = {
+  agentInstructions: "AGENTS.md",
   capturesDir: "captures",
   fragmentShader: "material.frag",
   manifest: "shadily.json",
   vertexShader: "material.vert",
 } as const;
+
+export const DEFAULT_AGENTS_MD = `# Shadily Shader Project
+
+This is a Shadily project. You can read and edit GLSL shader files (\`.frag\`, \`.vert\`) to change the visual output.
+
+## Environment constraints
+
+- \`rg\` (ripgrep) is **not available**. Use \`grep\` for text search or read files directly.
+- Prefer reading and writing files directly over using search tools.
+- Do not attempt to install packages or run build commands — the app handles compilation.
+`;
 
 export const DEFAULT_FRAGMENT_SHADER = `uniform float u_time;
 varying vec2 vUv;
