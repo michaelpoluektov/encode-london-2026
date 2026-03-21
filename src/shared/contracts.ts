@@ -296,9 +296,36 @@ export const chatSendPayloadSchema = z.object({
   projectId: projectIdSchema,
   threadId: z.string().uuid(),
   prompt: chatPromptSchema,
+  previewPath: z.string().nullable().optional(),
+  fragmentShaderSource: z.string().nullable().optional(),
 });
 
 export type ChatSendPayload = z.infer<typeof chatSendPayloadSchema>;
+
+export const projectCheckpointSchema = z.object({
+  id: z.string().uuid(),
+  projectId: projectIdSchema,
+  threadId: z.string().uuid(),
+  messageId: z.string().uuid(),
+  previewPath: z.string().nullable(),
+  fragmentShaderSource: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+export type ProjectCheckpoint = z.infer<typeof projectCheckpointSchema>;
+
+export const historyListRequestSchema = z.object({
+  projectId: projectIdSchema,
+  threadId: z.string().uuid(),
+});
+
+export type HistoryListRequest = z.infer<typeof historyListRequestSchema>;
+
+export const historyRevertRequestSchema = z.object({
+  checkpointId: z.string().uuid(),
+});
+
+export type HistoryRevertRequest = z.infer<typeof historyRevertRequestSchema>;
 
 export type FileChangeInfo = {
   path: string;

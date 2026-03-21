@@ -6,6 +6,9 @@ import type {
   ChatThreadRequest,
   ChatThreadSummary,
   FileChangeInfo,
+  HistoryListRequest,
+  HistoryRevertRequest,
+  ProjectCheckpoint,
   ProjectEntryRequest,
   ProjectEntryResult,
   ProjectLayoutSavePayload,
@@ -23,7 +26,10 @@ import {
   chatThreadDetailSchema,
   chatThreadListSchema,
   chatThreadRequestSchema,
+  historyListRequestSchema,
+  historyRevertRequestSchema,
   pickFolderResultSchema,
+  projectCheckpointSchema,
   projectCreatePayloadSchema,
   projectEntryResultSchema,
   projectFolderPathSchema,
@@ -160,6 +166,61 @@ const shadilyDesktopApi = {
       ipcRenderer.on("chat:file-change", handler);
       return () => ipcRenderer.removeListener("chat:file-change", handler);
     },
+  },
+  preview: {
+    onCompileCheck: (
+      cb: (requestId: string) => void,
+    ): (() => void) => {
+      const handler = (_e: Electron.IpcRendererEvent, requestId: string) =>
+        cb(requestId);
+      ipcRenderer.on("preview:compile-check", handler);
+      return () =>
+        ipcRenderer.removeListener("preview:compile-check", handler);
+    },
+    respondCompile: (
+      requestId: string,
+      result: { success: boolean; error?: string },
+    ): Promise<void> =>
+      ipcRenderer.invoke("preview:compile-check-result", { requestId, result }),
+    onCaptureAt: (
+      cb: (requestId: string, uTime: number | null) => void,
+    ): (() => void) => {
+      const handler = (
+        _e: Electron.IpcRendererEvent,
+        requestId: string,
+        uTime: number | null,
+      ) => cb(requestId, uTime);
+      ipcRenderer.on("preview:capture-at", handler);
+      return () => ipcRenderer.removeListener("preview:capture-at", handler);
+    },
+    respondCapture: (
+      requestId: string,
+      dataUrl: string | null,
+      error?: string,
+    ): Promise<void> =>
+      ipcRenderer.invoke("preview:capture-at-result", {
+        requestId,
+        dataUrl,
+        error,
+      }),
+  },
+  history: {
+    listCheckpoints: async (
+      payload: HistoryListRequest,
+    ): Promise<ProjectCheckpoint[]> => {
+      const result = await ipcRenderer.invoke(
+        "history:listCheckpoints",
+        historyListRequestSchema.parse(payload),
+      );
+      return projectCheckpointSchema.array().parse(result);
+    },
+    revert: async (payload: HistoryRevertRequest): Promise<ChatThreadDetail> =>
+      chatThreadDetailSchema.parse(
+        await ipcRenderer.invoke(
+          "history:revert",
+          historyRevertRequestSchema.parse(payload),
+        ),
+      ),
   },
 };
 

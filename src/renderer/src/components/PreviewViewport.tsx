@@ -12,7 +12,10 @@ import {
 } from "../app-shell.css";
 import type { GraphUniformValues } from "../components/graph/graph-types";
 import { cx } from "../lib/cx";
-import { registerPreviewCaptureHandler } from "../preview-capture";
+import {
+  captureRegisteredPreview,
+  registerPreviewCaptureHandler,
+} from "../preview-capture";
 import {
   applyPreviewUniforms,
   compilePreviewMaterial,
@@ -97,6 +100,37 @@ export const PreviewViewport = (): JSX.Element => {
   useEffect(() => {
     activeUniformValuesRef.current = activeUniformValues;
   }, [activeUniformValues]);
+
+  // Handle MCP compile-check requests from the main process.
+  useEffect(() => {
+    const unsub = window.shadily.preview.onCompileCheck((requestId) => {
+      const compileDiag = usePreviewStore.getState().diagnostics.compile;
+      void window.shadily.preview.respondCompile(requestId, {
+        success: compileDiag === null,
+        error: compileDiag?.message,
+      });
+    });
+    return unsub;
+  }, []);
+
+  // Handle MCP capture-at requests from the main process.
+  useEffect(() => {
+    const unsub = window.shadily.preview.onCaptureAt(
+      async (requestId, _uTime) => {
+        const result = await captureRegisteredPreview();
+        if (result.kind === "success") {
+          void window.shadily.preview.respondCapture(requestId, result.dataUrl);
+        } else {
+          void window.shadily.preview.respondCapture(
+            requestId,
+            null,
+            result.message,
+          );
+        }
+      },
+    );
+    return unsub;
+  }, []);
 
   useEffect(
     () =>

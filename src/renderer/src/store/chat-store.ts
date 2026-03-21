@@ -5,7 +5,10 @@ import type {
   ChatThreadDetail,
   ChatThreadSummary,
   FileChangeInfo,
+  ProjectCheckpoint,
 } from "../../../shared/contracts";
+import { captureRegisteredPreview } from "../preview-capture";
+import { useGraphPreviewStore } from "./graph-preview-store";
 import { useProjectStore } from "./project-store";
 
 let chunkUnsubscribe: (() => void) | null = null;
@@ -15,6 +18,9 @@ let loadRequestVersion = 0;
 
 const isAbortError = (error: unknown): boolean =>
   error instanceof Error && error.message.toLowerCase().includes("abort");
+
+const isReconnectingError = (error: unknown): boolean =>
+  error instanceof Error && error.message.includes("Reconnecting");
 
 const resetPendingShaderReload = (): void => {
   pendingShaderReload = Promise.resolve();
@@ -93,10 +99,12 @@ type ChatStoreState = {
   readonly threads: readonly ChatThreadSummary[];
   readonly activeThread: ChatThreadSummary | null;
   readonly messages: ChatMessage[];
+  readonly checkpoints: readonly ProjectCheckpoint[];
   readonly isGenerating: boolean;
   readonly streamingText: string;
   readonly recentFileChanges: FileChangeInfo[];
   readonly warningMessage: string | null;
+  readonly isRetrying: boolean;
 };
 
 type ChatStoreSetter = (
@@ -147,6 +155,7 @@ const replaceThreadState = (
   setState: ChatStoreSetter,
   detail: ChatThreadDetail,
   threads: readonly ChatThreadSummary[] | null,
+  checkpoints: readonly ProjectCheckpoint[] | null,
 ): void => {
   setState((state) => ({
     activeThread: detail.thread,
@@ -155,6 +164,7 @@ const replaceThreadState = (
       threads === null
         ? upsertThreadSummary(state.threads, detail.thread)
         : threads,
+    checkpoints: checkpoints ?? state.checkpoints,
   }));
 };
 
@@ -163,14 +173,27 @@ const loadThreadCollection = async (
 ): Promise<{
   detail: ChatThreadDetail;
   threads: readonly ChatThreadSummary[];
+  checkpoints: readonly ProjectCheckpoint[];
 }> => {
   const [detail, threads] = await Promise.all([
     window.shadily.chat.getActiveThread(projectId),
     window.shadily.chat.listThreads(projectId),
   ]);
 
-  return { detail, threads };
+  const checkpoints = await window.shadily.history
+    .listCheckpoints({ projectId, threadId: detail.thread.id })
+    .catch(() => []);
+
+  return { detail, threads, checkpoints };
 };
+
+const loadCheckpoints = async (
+  projectId: string,
+  threadId: string,
+): Promise<readonly ProjectCheckpoint[]> =>
+  window.shadily.history
+    .listCheckpoints({ projectId, threadId })
+    .catch(() => []);
 
 const beginChatTurn = (setState: ChatStoreSetter): void => {
   resetPendingShaderReload();
@@ -197,6 +220,7 @@ type ChatStore = ChatStoreState & {
   readonly deleteThread: (projectId: string, threadId: string) => Promise<void>;
   readonly sendMessage: (prompt: string) => Promise<void>;
   readonly cancelGeneration: () => void;
+  readonly revertToCheckpoint: (checkpointId: string) => Promise<void>;
 };
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -204,10 +228,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   threads: [],
   activeThread: null,
   messages: [],
+  checkpoints: [],
   isGenerating: false,
   streamingText: "",
   recentFileChanges: [],
   warningMessage: null,
+  isRetrying: false,
 
   hydrateProject: async (projectId) => {
     loadRequestVersion += 1;
@@ -219,6 +245,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       threads: [],
       activeThread: null,
       messages: [],
+      checkpoints: [],
       isGenerating: false,
       streamingText: "",
       recentFileChanges: [],
@@ -230,7 +257,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
 
     try {
-      const { detail, threads } = await loadThreadCollection(projectId);
+      const { detail, threads, checkpoints } =
+        await loadThreadCollection(projectId);
 
       if (
         requestVersion !== loadRequestVersion ||
@@ -239,7 +267,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         return;
       }
 
-      replaceThreadState(set, detail, threads);
+      replaceThreadState(set, detail, threads, checkpoints);
     } catch (error) {
       if (
         requestVersion !== loadRequestVersion ||
@@ -278,7 +306,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         return;
       }
 
-      replaceThreadState(set, detail, threads);
+      const checkpoints = await loadCheckpoints(projectId, detail.thread.id);
+      replaceThreadState(set, detail, threads, checkpoints);
     } catch (error) {
       if (get().currentProjectId !== projectId) {
         return;
@@ -312,7 +341,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         return;
       }
 
-      replaceThreadState(set, detail, threads);
+      const checkpoints = await loadCheckpoints(projectId, threadId);
+      replaceThreadState(set, detail, threads, checkpoints);
     } catch (error) {
       if (get().currentProjectId !== projectId) {
         return;
@@ -349,7 +379,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         return;
       }
 
-      replaceThreadState(set, detail, threads);
+      const checkpoints = await loadCheckpoints(
+        projectId,
+        detail.thread.id,
+      );
+      replaceThreadState(set, detail, threads, checkpoints);
     } catch (error) {
       if (get().currentProjectId !== projectId) {
         return;
@@ -387,17 +421,61 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       warningMessage: null,
     }));
 
+    // Capture preview + fragment shader source before the turn starts (non-fatal).
+    let previewPath: string | null = null;
+    const fragmentShaderSource =
+      useGraphPreviewStore.getState().fragmentShaderSource;
+    const project = useProjectStore.getState().project;
+    if (project !== null) {
+      try {
+        const captureResult = await captureRegisteredPreview();
+        if (captureResult.kind === "success") {
+          const saved = await window.shadily.project
+            .saveCapture({
+              folderPath: project.folderPath,
+              dataUrl: captureResult.dataUrl,
+            })
+            .catch(() => null);
+          previewPath = saved?.imagePath ?? null;
+        }
+      } catch {
+        // Non-fatal
+      }
+    }
+
     beginChatTurn(set);
 
     try {
-      const detail = await window.shadily.chat.send({
-        projectId: currentProjectId,
-        threadId: activeThread.id,
-        prompt: trimmedPrompt,
-      });
-      const threadListResult = await window.shadily.chat
-        .listThreads(currentProjectId)
-        .catch(() => null);
+      let detail: Awaited<ReturnType<typeof window.shadily.chat.send>>;
+      // Retry on "Reconnecting" errors (high demand / transient failures)
+      while (true) {
+        try {
+          detail = await window.shadily.chat.send({
+            projectId: currentProjectId,
+            threadId: activeThread.id,
+            prompt: trimmedPrompt,
+            previewPath,
+            fragmentShaderSource,
+          });
+          set({ isRetrying: false });
+          break;
+        } catch (sendError) {
+          if (isReconnectingError(sendError)) {
+            set({ isRetrying: true });
+            await new Promise<void>((resolve) => setTimeout(resolve, 1000));
+            endChatTurn();
+            beginChatTurn(set);
+            set({ streamingText: "" });
+          } else {
+            set({ isRetrying: false });
+            throw sendError;
+          }
+        }
+      }
+      const [threadListResult, freshCheckpoints] = await Promise.all([
+        window.shadily.chat.listThreads(currentProjectId).catch(() => null),
+        loadCheckpoints(currentProjectId, activeThread.id),
+      ]);
       await waitForPendingShaderReload();
 
       if (get().currentProjectId !== currentProjectId) {
@@ -408,7 +486,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         isGenerating: false,
         streamingText: "",
       });
-      replaceThreadState(set, detail, threadListResult);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      replaceThreadState(set, detail!, threadListResult, freshCheckpoints);
     } catch (error) {
       const [detailResult, threadListResult] = await Promise.all([
         window.shadily.chat.getActiveThread(currentProjectId).catch(() => null),
@@ -420,7 +499,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       }
 
       if (detailResult !== null) {
-        replaceThreadState(set, detailResult, threadListResult);
+        replaceThreadState(set, detailResult, threadListResult, null);
       }
 
       set({
@@ -434,10 +513,40 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       });
     } finally {
       endChatTurn();
+      set({ isRetrying: false });
     }
   },
 
   cancelGeneration: () => {
     void window.shadily.chat.stop();
+  },
+
+  revertToCheckpoint: async (checkpointId) => {
+    const currentProjectId = get().currentProjectId;
+    if (currentProjectId === null) return;
+
+    // Revert files + truncate chat history; returns updated thread detail.
+    const detail = await window.shadily.history.revert({ checkpointId });
+
+    // Reload checkpoints for the rewound thread.
+    const freshCheckpoints = await loadCheckpoints(
+      currentProjectId,
+      detail.thread.id,
+    ).catch(() => [] as readonly import("../../../shared/contracts").ProjectCheckpoint[]);
+
+    replaceThreadState(set, detail, null, freshCheckpoints);
+
+    // Reload the project so file changes are reflected in the editor.
+    const project = useProjectStore.getState().project;
+    if (project !== null) {
+      try {
+        const freshProject = await window.shadily.project.reload(
+          project.folderPath,
+        );
+        useProjectStore.getState().refreshProject(freshProject);
+      } catch {
+        // non-fatal
+      }
+    }
   },
 }));

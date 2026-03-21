@@ -1,4 +1,6 @@
-import type { ThreadItem, Usage } from "@openai/codex-sdk";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { extname, join } from "node:path";
+import type { Thread, ThreadItem, Usage } from "@openai/codex-sdk";
 import { Codex } from "@openai/codex-sdk";
 import type {
   ChatMessagePartInput,
@@ -17,11 +19,40 @@ import {
   getChatThreadSession,
   updateChatRunStatus,
 } from "./chat-persistence";
-import { getProjectFolderPath } from "./project-metadata";
+import {
+  createCheckpoint,
+  getProjectFolderPath,
+  saveCheckpointPreview,
+} from "./project-metadata";
 
-const codex = new Codex();
+let _codex: Codex | null = null;
+let _mcpPort: number | null = null;
 
-type CodexThread = ReturnType<typeof codex.startThread>;
+const getCodex = (): Codex => {
+  if (_codex === null) {
+    _codex =
+      _mcpPort !== null
+        ? new Codex({
+            config: {
+              mcp_servers: {
+                "shadily-tools": {
+                  url: `http://127.0.0.1:${_mcpPort}/mcp`,
+                },
+              },
+            },
+          })
+        : new Codex();
+  }
+  return _codex;
+};
+
+export const setMcpPort = (port: number): void => {
+  console.log(`[codex-runtime] MCP port set to ${port}`);
+  _mcpPort = port;
+  _codex = null; // force recreation with MCP config
+};
+
+type CodexThread = Thread;
 type CodexInput = string;
 
 type ActiveTurn = {
@@ -49,9 +80,33 @@ const getThreadItemStatus = (item: ThreadItem): string | null => {
 const toRunItemType = (item: ThreadItem): ThreadItem["type"] | "error" =>
   item.type;
 
+const buildToolCallResultText = (
+  item: Extract<ThreadItem, { type: "mcp_tool_call" }>,
+): string | null => {
+  if (item.error) return item.error.message;
+  const blocks = item.result?.content;
+  if (!blocks?.length) return null;
+  const imageBlock = blocks.find((b) => b.type === "image");
+  if (
+    imageBlock !== undefined &&
+    "data" in imageBlock &&
+    typeof imageBlock.data === "string"
+  ) {
+    const mimeType =
+      "mimeType" in imageBlock ? imageBlock.mimeType : "image/png";
+    return `data:${mimeType ?? "image/png"};base64,${imageBlock.data}`;
+  }
+  const textBlocks = blocks.filter((b) => b.type === "text");
+  const joined = textBlocks
+    .map((b) => ("text" in b ? (b.text as string) : ""))
+    .join("\n");
+  return joined.length > 0 ? joined : null;
+};
+
 const toAssistantParts = (
   finalText: string,
   reasoningTexts: readonly string[],
+  toolCallParts: readonly ChatMessagePartInput[],
 ): readonly ChatMessagePartInput[] => {
   const parts: ChatMessagePartInput[] = [];
 
@@ -67,6 +122,8 @@ const toAssistantParts = (
     });
   }
 
+  parts.push(...toolCallParts);
+
   if (finalText.trim().length > 0) {
     parts.push({
       type: "text",
@@ -78,10 +135,64 @@ const toAssistantParts = (
   return parts;
 };
 
+const TEXT_EXTENSIONS = new Set([
+  ".glsl",
+  ".frag",
+  ".vert",
+  ".js",
+  ".ts",
+  ".json",
+  ".txt",
+  ".yaml",
+  ".yml",
+  ".toml",
+  ".md",
+]);
+
+const readProjectFiles = async (
+  folderPath: string,
+): Promise<Record<string, string>> => {
+  const result: Record<string, string> = {};
+
+  const walk = async (dir: string): Promise<void> => {
+    let entries: string[];
+    try {
+      entries = await readdir(dir);
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.startsWith(".") || entry === "node_modules") continue;
+      const fullPath = join(dir, entry);
+      const s = await stat(fullPath).catch(() => null);
+      if (s === null) continue;
+      if (s.isDirectory()) {
+        await walk(fullPath);
+      } else if (TEXT_EXTENSIONS.has(extname(entry).toLowerCase())) {
+        const content = await readFile(fullPath, "utf-8").catch(() => null);
+        if (content !== null) {
+          const relativePath = fullPath
+            .slice(folderPath.length)
+            .replace(/\\/g, "/")
+            .replace(/^\//, "");
+          result[relativePath] = content;
+        }
+      }
+    }
+  };
+
+  await walk(folderPath);
+  return result;
+};
+
 const getOrCreateThreadSession = async (
   projectId: string,
   threadId: string,
-): Promise<{ codexThreadId: string | null; thread: CodexThread }> => {
+): Promise<{
+  codexThreadId: string | null;
+  thread: CodexThread;
+  folderPath: string;
+}> => {
   const existingThread = threadSessions.get(threadId);
   const session = await getChatThreadSession(threadId);
   const folderPath = await getProjectFolderPath(projectId);
@@ -100,18 +211,20 @@ const getOrCreateThreadSession = async (
     return {
       codexThreadId: session.codexThreadId,
       thread: existingThread,
+      folderPath,
     };
   }
 
+  const codexInstance = getCodex();
   const thread =
     session.codexThreadId === null
-      ? codex.startThread({
+      ? codexInstance.startThread({
           workingDirectory: folderPath,
           skipGitRepoCheck: true,
           sandboxMode: "workspace-write",
           approvalPolicy: "never",
         })
-      : codex.resumeThread(session.codexThreadId, {
+      : codexInstance.resumeThread(session.codexThreadId, {
           workingDirectory: folderPath,
           skipGitRepoCheck: true,
           sandboxMode: "workspace-write",
@@ -123,6 +236,7 @@ const getOrCreateThreadSession = async (
   return {
     codexThreadId: session.codexThreadId,
     thread,
+    folderPath,
   };
 };
 
@@ -141,27 +255,28 @@ const runCodexTurn = async ({
   onChunk: ((text: string) => void) | null;
   onFileChange: (changes: FileChangeInfo[]) => void;
   kind: "prompt";
-  createTriggerMessage: () => Promise<string | null>;
+  createTriggerMessage: (folderPath: string) => Promise<string | null>;
 }): Promise<{
   codexThreadId: string | null;
   finalText: string;
   resultMessageId: string | null;
   usage: Usage | null;
 }> => {
-  const triggerMessage = await createTriggerMessage();
+  const { codexThreadId: initialThreadId, thread, folderPath } =
+    await getOrCreateThreadSession(projectId, threadId);
+  const triggerMessage = await createTriggerMessage(folderPath);
   const runId = await createChatRun({
     threadId,
     projectId,
     kind,
     triggerMessageId: triggerMessage,
   });
-  const { codexThreadId: initialThreadId, thread } =
-    await getOrCreateThreadSession(projectId, threadId);
   let codexThreadId = initialThreadId;
   let finalText = "";
   let usage: Usage | null = null;
   let itemOrdinal = 0;
   const reasoningTexts: string[] = [];
+  const mcpToolCallParts: ChatMessagePartInput[] = [];
   const abortController = new AbortController();
   activeTurn = {
     abortController,
@@ -207,6 +322,21 @@ const runCodexTurn = async ({
 
           if (
             event.type === "item.completed" &&
+            event.item.type === "mcp_tool_call"
+          ) {
+            mcpToolCallParts.push({
+              type: "tool-call",
+              toolCallId: event.item.id,
+              toolName: event.item.tool,
+              argsText: JSON.stringify(event.item.arguments ?? {}),
+              resultText: buildToolCallResultText(event.item),
+              isError: event.item.error !== undefined,
+              parentPartId: null,
+            });
+          }
+
+          if (
+            event.type === "item.completed" &&
             event.item.type === "file_change"
           ) {
             onFileChange(event.item.changes);
@@ -224,7 +354,7 @@ const runCodexTurn = async ({
       }
     }
 
-    const assistantParts = toAssistantParts(finalText, reasoningTexts);
+    const assistantParts = toAssistantParts(finalText, reasoningTexts, mcpToolCallParts);
     const assistantMessage =
       assistantParts.length === 0
         ? null
@@ -260,7 +390,7 @@ const runCodexTurn = async ({
       usage,
     };
   } catch (error) {
-    const incompleteParts = toAssistantParts(finalText, reasoningTexts);
+    const incompleteParts = toAssistantParts(finalText, reasoningTexts, mcpToolCallParts);
 
     if (incompleteParts.length > 0) {
       await appendAssistantMessage({
@@ -303,7 +433,13 @@ export const abortActiveTurn = (): void => {
 };
 
 export const sendMessage = async (
-  payload: { projectId: string; threadId: string; prompt: string },
+  payload: {
+    projectId: string;
+    threadId: string;
+    prompt: string;
+    previewPath?: string | null;
+    fragmentShaderSource?: string | null;
+  },
   onChunk: (text: string) => void,
   onFileChange: (changes: FileChangeInfo[]) => void,
 ): Promise<void> => {
@@ -314,11 +450,40 @@ export const sendMessage = async (
     onChunk,
     onFileChange,
     kind: "prompt",
-    createTriggerMessage: async () => {
+    createTriggerMessage: async (folderPath) => {
       const userMessage = await appendUserPrompt(
         payload.threadId,
         payload.prompt,
       );
+
+      // Snapshot files and create a checkpoint for this user message.
+      try {
+        const fileSnapshots = await readProjectFiles(folderPath);
+        let resolvedPreviewPath = payload.previewPath ?? null;
+
+        // If the renderer sent a data URL instead of a path, save it to disk.
+        if (
+          resolvedPreviewPath !== null &&
+          resolvedPreviewPath.startsWith("data:")
+        ) {
+          resolvedPreviewPath = saveCheckpointPreview(
+            folderPath,
+            resolvedPreviewPath,
+          );
+        }
+
+        await createCheckpoint({
+          projectId: payload.projectId,
+          threadId: payload.threadId,
+          messageId: userMessage.id,
+          fileSnapshotsJson: JSON.stringify(fileSnapshots),
+          previewPath: resolvedPreviewPath,
+          fragmentShaderSource: payload.fragmentShaderSource ?? null,
+        });
+      } catch {
+        // Non-fatal: proceed without checkpoint
+      }
+
       return userMessage.id;
     },
   });

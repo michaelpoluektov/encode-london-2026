@@ -1,4 +1,4 @@
-import { globalStyle, style } from "@vanilla-extract/css";
+import { globalStyle, keyframes, style } from "@vanilla-extract/css";
 import { themeVars } from "../theme";
 
 export const chatPanel = style({
@@ -278,6 +278,38 @@ export const chatWarning = style({
   fontSize: themeVars.font.size.xs,
 });
 
+export const chatError = style({
+  alignSelf: "stretch",
+  padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
+  borderRadius: themeVars.radius.sm,
+  background: "rgba(222, 125, 125, 0.12)",
+  color: themeVars.color.surface.danger,
+  fontFamily: themeVars.font.family.sans,
+  fontSize: themeVars.font.size.xs,
+});
+
+const dotBounce = keyframes({
+  "0%, 100%": { transform: "translateY(0)" },
+  "50%": { transform: "translateY(-4px)" },
+});
+
+export const chatLoadingSpinner = style({
+  display: "flex",
+  gap: themeVars.space[2],
+  alignItems: "center",
+  minHeight: 20,
+  padding: `${themeVars.space[2]} 0`,
+});
+
+export const chatLoadingDot = style({
+  display: "inline-block",
+  width: 4,
+  height: 4,
+  borderRadius: themeVars.radius.pill,
+  background: themeVars.color.text.muted,
+  animation: `${dotBounce} 900ms ease-in-out infinite`,
+});
+
 export const chatSystemMessage = style({
   alignSelf: "center",
   maxWidth: "100%",
@@ -388,4 +420,74 @@ export const chatToolCallPre = style({
 
 export const chatToolCallError = style({
   color: themeVars.color.text.accent,
+});
+
+// Checkpoint divider
+export const chatCheckpointDivider = style({
+  display: "flex",
+  alignItems: "center",
+  gap: themeVars.space[2],
+  padding: `${themeVars.space[1]} 0`,
+});
+
+export const chatCheckpointLine = style({
+  flex: 1,
+  height: "1px",
+  background: themeVars.color.border.subtle,
+  opacity: 0.5,
+});
+
+export const chatCheckpointActions = style({
+  display: "flex",
+  gap: themeVars.space[1],
+  flexShrink: 0,
+});
+
+export const chatCheckpointButton = style({
+  padding: `2px ${themeVars.space[1]}`,
+  background: "transparent",
+  border: `1px solid ${themeVars.color.border.subtle}`,
+  borderRadius: themeVars.radius.sm,
+  color: themeVars.color.text.secondary,
+  cursor: "pointer",
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+  lineHeight: themeVars.font.lineHeight.normal,
+  selectors: {
+    "&:hover:not(:disabled)": {
+      color: themeVars.color.text.primary,
+      borderColor: themeVars.color.border.accent,
+    },
+    "&:disabled": {
+      cursor: "not-allowed",
+      opacity: 0.4,
+    },
+  },
+});
+
+export const chatCheckpointPreviewModal = style({
+  position: "fixed",
+  inset: 0,
+  zIndex: 1000,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "rgba(0,0,0,0.7)",
+  cursor: "pointer",
+});
+
+export const chatCheckpointPreviewImage = style({
+  maxWidth: "min(80vw, 600px)",
+  maxHeight: "80vh",
+  borderRadius: themeVars.radius.md,
+  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+});
+
+// Inline image in tool call result
+export const chatToolCallImage = style({
+  maxWidth: "100%",
+  maxHeight: "200px",
+  borderRadius: themeVars.radius.sm,
+  display: "block",
+  marginTop: themeVars.space[1],
 });

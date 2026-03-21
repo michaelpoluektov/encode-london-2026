@@ -135,7 +135,7 @@ export const useChatRuntime = () => {
   } = useChatStore();
 
   const allMessages: readonly ChatMessage[] =
-    isGenerating && streamingText && activeThread !== null
+    isGenerating && activeThread !== null
       ? [...messages, buildStreamingMessage(activeThread.id, streamingText)]
       : messages;
 

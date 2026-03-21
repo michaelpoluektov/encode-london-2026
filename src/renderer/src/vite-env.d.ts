@@ -7,6 +7,9 @@ import type {
   ChatThreadSummary,
   ChatThreadRequest,
   FileChangeInfo,
+  HistoryListRequest,
+  HistoryRevertRequest,
+  ProjectCheckpoint,
   ProjectEntryRequest,
   ProjectEntryResult,
   ProjectLayoutSavePayload,
@@ -55,6 +58,27 @@ declare global {
         stop: () => Promise<void>;
         onChunk: (cb: (text: string) => void) => () => void;
         onFileChange: (cb: (changes: FileChangeInfo[]) => void) => () => void;
+      };
+      preview: {
+        onCompileCheck: (cb: (requestId: string) => void) => () => void;
+        respondCompile: (
+          requestId: string,
+          result: { success: boolean; error?: string },
+        ) => Promise<void>;
+        onCaptureAt: (
+          cb: (requestId: string, uTime: number | null) => void,
+        ) => () => void;
+        respondCapture: (
+          requestId: string,
+          dataUrl: string | null,
+          error?: string,
+        ) => Promise<void>;
+      };
+      history: {
+        listCheckpoints: (
+          payload: HistoryListRequest,
+        ) => Promise<ProjectCheckpoint[]>;
+        revert: (payload: HistoryRevertRequest) => Promise<ChatThreadDetail>;
       };
     };
   }

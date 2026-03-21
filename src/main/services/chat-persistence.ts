@@ -895,3 +895,92 @@ export const deleteChatThread = async (
       .execute();
   }
 };
+
+/**
+ * Delete all chat messages at and after `fromMessageId` (by sequence_no),
+ * along with their parts, attachments, runs, run items, and any checkpoints
+ * tied to those messages. Also clears `codex_thread_id` so the next turn
+ * starts a fresh Codex context.
+ */
+export const truncateChatThreadFrom = async (
+  threadId: string,
+  fromMessageId: string,
+): Promise<void> => {
+  const db = await getMetadataDatabase();
+
+  // 1. Find the sequence_no of the target message.
+  const pivotRow = await db
+    .selectFrom("chat_messages")
+    .select("sequence_no")
+    .where("id", "=", fromMessageId)
+    .where("thread_id", "=", threadId)
+    .executeTakeFirst();
+
+  if (pivotRow === undefined) return;
+  const pivotSeq = pivotRow.sequence_no;
+
+  // 2. Collect all affected message IDs.
+  const affectedMsgRows = await db
+    .selectFrom("chat_messages")
+    .select("id")
+    .where("thread_id", "=", threadId)
+    .where("sequence_no", ">=", pivotSeq)
+    .execute();
+  const affectedMsgIds = affectedMsgRows.map((r) => r.id);
+
+  if (affectedMsgIds.length > 0) {
+    // 3. Delete attachments and parts for affected messages.
+    await db
+      .deleteFrom("chat_attachments")
+      .where("message_id", "in", affectedMsgIds)
+      .execute();
+    await db
+      .deleteFrom("chat_message_parts")
+      .where("message_id", "in", affectedMsgIds)
+      .execute();
+
+    // 4. Collect runs triggered by or resulting in affected messages.
+    const affectedRunRows = await db
+      .selectFrom("chat_runs")
+      .select("id")
+      .where((eb) =>
+        eb.or([
+          eb("trigger_message_id", "in", affectedMsgIds),
+          eb("result_message_id", "in", affectedMsgIds),
+        ]),
+      )
+      .execute();
+    const affectedRunIds = affectedRunRows.map((r) => r.id);
+
+    if (affectedRunIds.length > 0) {
+      await db
+        .deleteFrom("chat_run_items")
+        .where("run_id", "in", affectedRunIds)
+        .execute();
+      await db
+        .deleteFrom("chat_runs")
+        .where("id", "in", affectedRunIds)
+        .execute();
+    }
+
+    // 5. Delete the checkpoints tied to these messages.
+    await db
+      .deleteFrom("project_checkpoints")
+      .where("message_id", "in", affectedMsgIds)
+      .execute();
+  }
+
+  // 6. Delete the affected messages.
+  await db
+    .deleteFrom("chat_messages")
+    .where("thread_id", "=", threadId)
+    .where("sequence_no", ">=", pivotSeq)
+    .execute();
+
+  // 7. Reset codex_thread_id so next turn starts fresh.
+  await db
+    .updateTable("chat_threads")
+    .set({ codex_thread_id: null })
+    .where("id", "=", threadId)
+    .execute();
+};

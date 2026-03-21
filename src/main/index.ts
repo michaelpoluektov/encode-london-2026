@@ -5,6 +5,8 @@ import {
   chatProjectRequestSchema,
   chatSendPayloadSchema,
   chatThreadRequestSchema,
+  historyListRequestSchema,
+  historyRevertRequestSchema,
   projectCreatePayloadSchema,
   projectEntryRequestSchema,
   projectFolderPathSchema,
@@ -15,7 +17,10 @@ import {
 } from "../shared/contracts";
 import * as chatService from "./services/chat-service";
 import * as codexRuntime from "./services/codex-runtime";
+import * as mcpServer from "./services/mcp-server";
 import * as projectService from "./services/project-service";
+
+let mainWindow: BrowserWindow | null = null;
 
 if (process.platform === "linux") {
   // Prefer Chromium's Ozone backend so Wayland sessions use the native path.
@@ -40,7 +45,7 @@ const isToggleDevToolsShortcut = (input: Electron.Input): boolean => {
 };
 
 const createMainWindow = async (): Promise<BrowserWindow> => {
-  const mainWindow = new BrowserWindow({
+  const win = new BrowserWindow({
     width: 1440,
     height: 960,
     minWidth: 1100,
@@ -53,25 +58,80 @@ const createMainWindow = async (): Promise<BrowserWindow> => {
       sandbox: false,
     },
   });
-  mainWindow.removeMenu();
-  mainWindow.webContents.on("before-input-event", (event, input) => {
+  win.removeMenu();
+  win.webContents.on("before-input-event", (event, input) => {
     if (!isToggleDevToolsShortcut(input)) {
       return;
     }
 
     event.preventDefault();
-    mainWindow.webContents.toggleDevTools();
+    win.webContents.toggleDevTools();
   });
 
-  await mainWindow.loadURL(
+  mainWindow = win;
+  mcpServer.setMainWindow(win);
+
+  win.on("closed", () => {
+    if (mainWindow === win) {
+      mainWindow = null;
+      mcpServer.setMainWindow(null);
+    }
+  });
+
+  await win.loadURL(
     process.env.ELECTRON_RENDERER_URL ??
       `file://${join(__dirname, "../renderer/index.html")}`,
   );
 
-  return mainWindow;
+  return win;
 };
 
 app.whenReady().then(async () => {
+  // Start MCP server so tools are ready before any Codex thread is created.
+  mcpServer
+    .startMcpServer()
+    .then((port) => codexRuntime.setMcpPort(port))
+    .catch((err: unknown) =>
+      console.error("[mcp-server] Failed to start:", err),
+    );
+
+  // Preview IPC: renderer responds to compile-check requests from MCP tools.
+  ipcMain.handle(
+    "preview:compile-check-result",
+    (_e, payload: { requestId: string; result: { success: boolean; error?: string } }) => {
+      mcpServer.resolveCompileCheck(payload.requestId, payload.result);
+    },
+  );
+
+  // Preview IPC: renderer responds to capture-at requests from MCP tools.
+  ipcMain.handle(
+    "preview:capture-at-result",
+    (
+      _e,
+      payload: { requestId: string; dataUrl: string | null; error?: string },
+    ) => {
+      if (payload.dataUrl !== null) {
+        mcpServer.resolveCapture(payload.requestId, { dataUrl: payload.dataUrl });
+      } else {
+        mcpServer.resolveCapture(payload.requestId, {
+          error: payload.error ?? "Capture failed.",
+        });
+      }
+    },
+  );
+
+  // History IPC: list checkpoints for a thread.
+  ipcMain.handle("history:listCheckpoints", async (_e, payload: unknown) => {
+    const parsed = historyListRequestSchema.parse(payload);
+    return chatService.listThreadCheckpoints(parsed);
+  });
+
+  // History IPC: revert project files to a checkpoint + truncate chat history.
+  ipcMain.handle("history:revert", async (_e, payload: unknown) => {
+    const parsed = historyRevertRequestSchema.parse(payload);
+    return chatService.revertToCheckpoint(parsed);
+  });
+
   ipcMain.handle("app:get-bootstrap-payload", async () => {
     const initialProject = await projectService.openMostRecentProject();
 

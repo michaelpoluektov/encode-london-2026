@@ -3,6 +3,7 @@ import {
   MessagePrimitive,
   ThreadPrimitive,
   type ToolCallMessagePartProps,
+  useMessage,
 } from "@assistant-ui/react";
 import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
 import {
@@ -47,12 +48,17 @@ import {
   chatToolCallBlock,
   chatToolCallError,
   chatToolCallHeader,
+  chatToolCallImage,
   chatToolCallName,
   chatToolCallPre,
   chatToolCallSection,
   chatToolCallSectionLabel,
+  chatError,
+  chatLoadingDot,
+  chatLoadingSpinner,
   chatWarning,
 } from "./chat-panel.css";
+import { CheckpointDivider } from "./CheckpointDivider";
 import { useChatRuntime } from "./chat-runtime-adapter";
 import { Button } from "./ui/Button";
 import { textareaField } from "./ui/field.css";
@@ -84,6 +90,61 @@ const FileChangeChip = ({
 
 // ─── Tool call block ─────────────────────────────────────────────────────────
 
+const isDataImageUrl = (value: unknown): value is string =>
+  typeof value === "string" && value.startsWith("data:image");
+
+const ToolCallResult = ({
+  toolName,
+  result,
+  isError,
+}: {
+  toolName: string;
+  result: unknown;
+  isError: boolean | undefined;
+}): JSX.Element | null => {
+  if (result === undefined) return null;
+
+  if (toolName === "render_preview" && isDataImageUrl(result)) {
+    return (
+      <div className={chatToolCallSection}>
+        <span className={chatToolCallSectionLabel}>Preview</span>
+        <img
+          alt="Shader preview"
+          className={chatToolCallImage}
+          src={result}
+        />
+      </div>
+    );
+  }
+
+  if (toolName === "check_compilation" && typeof result === "string") {
+    const ok = !isError;
+    return (
+      <div className={chatToolCallSection}>
+        <span className={chatToolCallSectionLabel}>Result</span>
+        <Text as="span" tone={ok ? "secondary" : "accent"} variant="caption">
+          {ok ? "✓" : "✗"} {result}
+        </Text>
+      </div>
+    );
+  }
+
+  return (
+    <div className={chatToolCallSection}>
+      <span
+        className={`${chatToolCallSectionLabel}${isError === true ? ` ${chatToolCallError}` : ""}`}
+      >
+        Result
+      </span>
+      <pre className={chatToolCallPre}>
+        {typeof result === "string"
+          ? result
+          : JSON.stringify(result, null, 2)}
+      </pre>
+    </div>
+  );
+};
+
 const ToolCallBlock = (props: ToolCallMessagePartProps): JSX.Element => (
   <div className={chatToolCallBlock}>
     <div className={chatToolCallHeader}>
@@ -100,20 +161,11 @@ const ToolCallBlock = (props: ToolCallMessagePartProps): JSX.Element => (
         <pre className={chatToolCallPre}>{props.argsText}</pre>
       </div>
     )}
-    {props.result !== undefined && (
-      <div className={chatToolCallSection}>
-        <span
-          className={`${chatToolCallSectionLabel}${props.isError === true ? ` ${chatToolCallError}` : ""}`}
-        >
-          Result
-        </span>
-        <pre className={chatToolCallPre}>
-          {typeof props.result === "string"
-            ? props.result
-            : JSON.stringify(props.result, null, 2)}
-        </pre>
-      </div>
-    )}
+    <ToolCallResult
+      toolName={props.toolName}
+      result={props.result}
+      isError={props.isError}
+    />
   </div>
 );
 
@@ -161,25 +213,44 @@ const AssistantMessageBubble = ({
   isStreaming,
 }: {
   isStreaming: boolean;
-}): JSX.Element => (
-  <div className={chatMessageRow}>
-    <div
-      className={isStreaming ? chatStreamingBubble : chatMessageBubbleAssistant}
-    >
-      <div className={chatMessageBody}>
-        <MessagePrimitive.Content
-          components={{
-            Text: AssistantText,
-            Reasoning: AssistantReasoning,
-            tools: {
-              Fallback: ToolCallBlock,
-            },
-          }}
-        />
+}): JSX.Element => {
+  const hasText = useMessage((m) =>
+    m.content.some((p) => "text" in p && Boolean(p.text)),
+  );
+  const showSpinner = isStreaming && !hasText;
+  return (
+    <div className={chatMessageRow}>
+      <div
+        className={isStreaming ? chatStreamingBubble : chatMessageBubbleAssistant}
+      >
+        <div className={chatMessageBody}>
+          {showSpinner && (
+            <div className={chatLoadingSpinner}>
+              {([0, 200, 400] as const).map((delay) => (
+                <span
+                  key={delay}
+                  className={chatLoadingDot}
+                  style={{ animationDelay: `${delay}ms` }}
+                />
+              ))}
+            </div>
+          )}
+          {!showSpinner && (
+            <MessagePrimitive.Content
+              components={{
+                Text: AssistantText,
+                Reasoning: AssistantReasoning,
+                tools: {
+                  Fallback: ToolCallBlock,
+                },
+              }}
+            />
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const SystemMessage = (): JSX.Element => (
   <div className={chatMessageRow}>
@@ -206,7 +277,9 @@ export const ChatPanel = (): JSX.Element => {
     threads,
     activeThread,
     messages,
+    checkpoints,
     isGenerating,
+    isRetrying,
     recentFileChanges,
     warningMessage,
     hydrateProject,
@@ -221,6 +294,7 @@ export const ChatPanel = (): JSX.Element => {
   const runtime = useChatRuntime();
 
   const [input, setInput] = useState("");
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -229,7 +303,8 @@ export const ChatPanel = (): JSX.Element => {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: these are intentional trigger conditions for scroll, not values used inside the callback
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length, recentFileChanges.length, warningMessage]);
 
   useEffect(() => {
@@ -369,11 +444,24 @@ export const ChatPanel = (): JSX.Element => {
             )}
           </div>
         ) : (
-          <div className={chatMessages}>
+          <div className={chatMessages} ref={messagesContainerRef}>
             <ThreadPrimitive.Messages>
               {({ message }) => {
                 if (message.role === "user") {
-                  return <UserMessage key={message.id} />;
+                  const checkpoint = checkpoints.find(
+                    (cp) => cp.messageId === message.id,
+                  );
+                  return (
+                    <>
+                      {checkpoint !== undefined && (
+                        <CheckpointDivider
+                          key={`cp-${checkpoint.id}`}
+                          checkpoint={checkpoint}
+                        />
+                      )}
+                      <UserMessage key={message.id} />
+                    </>
+                  );
                 }
                 if (message.role === "assistant") {
                   return (
@@ -395,6 +483,9 @@ export const ChatPanel = (): JSX.Element => {
               </div>
             )}
 
+            {isRetrying && (
+              <div className={chatError}>Error, retrying</div>
+            )}
             {warningMessage !== null && (
               <div className={chatWarning}>{warningMessage}</div>
             )}

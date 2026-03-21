@@ -20,6 +20,17 @@ You are developing an LLM enabled shader editor. Details in `REQUIREMENTS.md` an
 - All state should have a single source of truth
 - Invalid state should not be representable if possible
 
+## Shader editing workflow
+
+When editing shaders, always follow this workflow:
+
+1. **Before making changes**: Call `render_preview` to see the current state of the shader output. This gives you a baseline to compare against.
+2. **Make your code changes** to the shader files.
+3. **Check compilation**: Call `check_compilation` to verify the shaders compile without errors. Fix any compilation errors before proceeding.
+4. **After changes compile**: Call `render_preview` again to verify the visual output matches what was requested. Compare against the baseline from step 1.
+
+If the preview doesn't look right, iterate on the changes and repeat steps 2–4.
+
 ## Review guidelines
 
 - Verify that code quality guidelines above are met
