@@ -14,26 +14,6 @@ export const projectSection = style({
   padding: themeVars.space[2],
 });
 
-export const pendingInput = style({
-  width: "100%",
-  minWidth: 0,
-  border: `1px solid ${themeVars.color.border.strong}`,
-  borderRadius: themeVars.radius.md,
-  background: themeVars.color.background.panelInset,
-  color: themeVars.color.text.primary,
-  fontFamily: themeVars.font.family.sans,
-  fontSize: themeVars.font.size.sm,
-  lineHeight: themeVars.font.lineHeight.normal,
-  outline: "none",
-  padding: `${themeVars.space[3]} ${themeVars.space[4]}`,
-  selectors: {
-    "&:focus": {
-      borderColor: themeVars.color.border.accent,
-      boxShadow: themeVars.shadow.focus,
-    },
-  },
-});
-
 export const treeShell = style({
   flex: 1,
   height: "100%",

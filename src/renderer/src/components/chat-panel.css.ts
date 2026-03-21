@@ -158,29 +158,3 @@ export const chatInputArea = style({
   gap: themeVars.space[2],
   alignItems: "flex-end",
 });
-
-export const chatTextarea = style({
-  flex: 1,
-  resize: "none",
-  background: themeVars.color.background.panelInset,
-  border: `1px solid ${themeVars.color.border.subtle}`,
-  borderRadius: themeVars.radius.md,
-  color: themeVars.color.text.primary,
-  fontFamily: themeVars.font.family.sans,
-  fontSize: themeVars.font.size.sm,
-  lineHeight: themeVars.font.lineHeight.normal,
-  padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
-  outline: "none",
-  minHeight: "2.5rem",
-  maxHeight: "8rem",
-  overflowY: "auto",
-  selectors: {
-    "&:focus": {
-      borderColor: themeVars.color.border.accent,
-    },
-    "&:disabled": {
-      opacity: 0.5,
-      cursor: "not-allowed",
-    },
-  },
-});

@@ -16,7 +16,6 @@ import {
   emptyState,
   folderGlyph,
   imageGlyph,
-  pendingInput,
   projectSection,
   projectSidebar,
   readOnlyGlyph,
@@ -32,6 +31,7 @@ import {
   treeViewport,
 } from "./project-sidebar.css";
 import { Button } from "./ui/Button";
+import { textInputField } from "./ui/field.css";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
 
@@ -180,7 +180,7 @@ export const ProjectSidebar = (): JSX.Element => {
             <input
               // biome-ignore lint/a11y/noAutofocus: intentional focus for inline input
               autoFocus
-              className={pendingInput}
+              className={textInputField}
               type="text"
               value={pendingName}
               onChange={(event) => setPendingName(event.target.value)}
