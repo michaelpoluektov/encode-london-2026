@@ -75,6 +75,7 @@ const refreshTouchedProject = async (
 };
 
 const queueShaderReload = (changes: FileChangeInfo[]): void => {
+  useProjectStore.getState().markTabsAiModified(changes.map((c) => c.path));
   pendingShaderReload = pendingShaderReload
     .catch(() => undefined)
     .then(async () => refreshTouchedProject(changes));

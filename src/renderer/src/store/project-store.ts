@@ -21,6 +21,8 @@ export type ProjectState = {
   readonly manifest: ShadilyManifest;
   readonly tree: ProjectTreeNode[];
   readonly selectedEntryPath: string | null;
+  readonly openTabPaths: string[];
+  readonly aiNotifiedTabs: string[];
   readonly savedFiles: ProjectSavedFiles;
   readonly draftFiles: ProjectDraftFiles;
 };
@@ -32,6 +34,9 @@ type ProjectStore = {
   readonly refreshProject: (result: ProjectOpenResult) => void;
   readonly commitSavedProject: (result: ProjectOpenResult) => void;
   readonly selectEntry: (path: string) => void;
+  readonly openTab: (path: string) => void;
+  readonly closeTab: (path: string) => void;
+  readonly markTabsAiModified: (paths: string[]) => void;
   readonly setSavedDocument: (document: ProjectEntryResult) => void;
   readonly updateDraft: (path: string, content: string) => void;
 };
@@ -156,6 +161,11 @@ const filterDraftFiles = (
     }),
   );
 
+const filterTabPaths = (
+  paths: string[],
+  tree: readonly ProjectTreeNode[],
+): string[] => paths.filter((p) => hasFilePath(tree, p));
+
 const createProjectState = (
   result: ProjectOpenResult,
   previousProject: ProjectState | null,
@@ -180,12 +190,39 @@ const createProjectState = (
     delete draftFiles[getShaderDocumentPath(result.manifest, "vertex")];
   }
 
+  const selectedEntryPath =
+    preferredSelection ?? getDefaultSelectedEntryPath(tree, result.manifest);
+
+  let openTabPaths: string[];
+  let aiNotifiedTabs: string[];
+
+  if (mode === "open") {
+    openTabPaths = selectedEntryPath !== null ? [selectedEntryPath] : [];
+    aiNotifiedTabs = [];
+  } else {
+    const prevOpenTabs = filterTabPaths(
+      previousProject?.openTabPaths ?? [],
+      tree,
+    );
+    const prevAiNotified = filterTabPaths(
+      previousProject?.aiNotifiedTabs ?? [],
+      tree,
+    );
+    // ensure selected tab is in the list
+    openTabPaths =
+      selectedEntryPath !== null && !prevOpenTabs.includes(selectedEntryPath)
+        ? [...prevOpenTabs, selectedEntryPath]
+        : prevOpenTabs;
+    aiNotifiedTabs = prevAiNotified;
+  }
+
   return {
     folderPath: result.folderPath,
     manifest: result.manifest,
     tree,
-    selectedEntryPath:
-      preferredSelection ?? getDefaultSelectedEntryPath(tree, result.manifest),
+    selectedEntryPath,
+    openTabPaths,
+    aiNotifiedTabs,
     savedFiles,
     draftFiles,
   };
@@ -283,10 +320,124 @@ export const useProjectStore = create<ProjectStore>((set) => ({
         return state;
       }
 
+      const openTabPaths = state.project.openTabPaths.includes(projectPath)
+        ? state.project.openTabPaths
+        : [...state.project.openTabPaths, projectPath];
+
+      const aiNotifiedTabs = state.project.aiNotifiedTabs.filter(
+        (p) => p !== projectPath,
+      );
+
       return {
         project: {
           ...state.project,
           selectedEntryPath: projectPath,
+          openTabPaths,
+          aiNotifiedTabs,
+        },
+      };
+    }),
+
+  openTab: (path) =>
+    set((state) => {
+      if (state.project === null) {
+        return state;
+      }
+
+      const projectPath = normalizeProjectPath(path);
+
+      if (!hasFilePath(state.project.tree, projectPath)) {
+        return state;
+      }
+
+      const openTabPaths = state.project.openTabPaths.includes(projectPath)
+        ? state.project.openTabPaths
+        : [...state.project.openTabPaths, projectPath];
+
+      const aiNotifiedTabs = state.project.aiNotifiedTabs.filter(
+        (p) => p !== projectPath,
+      );
+
+      return {
+        project: {
+          ...state.project,
+          selectedEntryPath: projectPath,
+          openTabPaths,
+          aiNotifiedTabs,
+        },
+      };
+    }),
+
+  closeTab: (path) =>
+    set((state) => {
+      if (state.project === null) {
+        return state;
+      }
+
+      const projectPath = normalizeProjectPath(path);
+      const { openTabPaths, selectedEntryPath, aiNotifiedTabs } = state.project;
+      const tabIndex = openTabPaths.indexOf(projectPath);
+
+      if (tabIndex === -1) {
+        return state;
+      }
+
+      const nextOpenTabPaths = openTabPaths.filter((p) => p !== projectPath);
+      const nextAiNotifiedTabs = aiNotifiedTabs.filter(
+        (p) => p !== projectPath,
+      );
+
+      let nextSelectedEntryPath = selectedEntryPath;
+
+      if (selectedEntryPath === projectPath) {
+        // pick adjacent tab
+        if (nextOpenTabPaths.length === 0) {
+          nextSelectedEntryPath = null;
+        } else {
+          const preferredIndex = Math.min(tabIndex, nextOpenTabPaths.length - 1);
+          nextSelectedEntryPath = nextOpenTabPaths[preferredIndex] ?? null;
+        }
+      }
+
+      return {
+        project: {
+          ...state.project,
+          selectedEntryPath: nextSelectedEntryPath,
+          openTabPaths: nextOpenTabPaths,
+          aiNotifiedTabs: nextAiNotifiedTabs,
+        },
+      };
+    }),
+
+  markTabsAiModified: (paths) =>
+    set((state) => {
+      if (state.project === null) {
+        return state;
+      }
+
+      const { openTabPaths, selectedEntryPath, aiNotifiedTabs } = state.project;
+      const nextAiNotifiedTabs = [...aiNotifiedTabs];
+
+      for (const rawPath of paths) {
+        const projectPath = normalizeProjectPath(rawPath);
+
+        if (
+          openTabPaths.includes(projectPath) &&
+          projectPath !== selectedEntryPath &&
+          !nextAiNotifiedTabs.includes(projectPath)
+        ) {
+          nextAiNotifiedTabs.push(projectPath);
+        }
+      }
+
+      if (nextAiNotifiedTabs.length === aiNotifiedTabs.length) {
+        return state;
+      }
+
+      return {
+        project: {
+          ...state.project,
+          aiNotifiedTabs: nextAiNotifiedTabs,
         },
       };
     }),
