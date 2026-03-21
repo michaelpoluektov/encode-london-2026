@@ -1,6 +1,7 @@
 import dagre from "@dagrejs/dagre";
 import { type Edge, MarkerType, type NodeTypes } from "@xyflow/react";
-import type { DagNode } from "../dag-schema";
+import type { ValidatedGraph, ValidatedGraphNode } from "../graph-types";
+import type { GraphNodeDefinition } from "./json-schema";
 import {
   type ClampedFloatGraphFlowNode,
   ClampedFloatGraphNode,
@@ -14,7 +15,6 @@ import {
   GlFragColorGraphNode,
   GRAPH_NODE_OUTPUT_HANDLE_ID,
 } from "./nodes";
-import type { ParsedDagGraph, ParsedDagNode } from "./parse-graph";
 
 const NODE_WIDTH = 240;
 const BASE_NODE_HEIGHT = 88;
@@ -22,14 +22,14 @@ const INPUT_ROW_HEIGHT = 40;
 const DETAIL_ROW_HEIGHT = 28;
 const SECTION_GAP_HEIGHT = 20;
 
-type DagFlowNode =
+type FlowGraphNode =
   | ClampedFloatGraphFlowNode
   | ColorGraphFlowNode
   | CustomGraphFlowNode
   | FloatGraphFlowNode
   | GlFragColorGraphFlowNode;
 
-export const dagNodeTypes = {
+export const graphNodeTypes = {
   clampedFloat: ClampedFloatGraphNode,
   color: ColorGraphNode,
   custom: CustomGraphNode,
@@ -37,7 +37,9 @@ export const dagNodeTypes = {
   glFragColor: GlFragColorGraphNode,
 } satisfies NodeTypes;
 
-const getRenderedInputs = (node: DagNode): Readonly<Record<string, string>> => {
+const getRenderedInputs = (
+  node: GraphNodeDefinition,
+): Readonly<Record<string, string>> => {
   switch (node.kind) {
     case "custom":
       return node.inputs;
@@ -52,8 +54,8 @@ const getRenderedInputs = (node: DagNode): Readonly<Record<string, string>> => {
   }
 };
 
-const getEstimatedNodeHeight = (node: ParsedDagNode): number => {
-  const inputCount = Object.keys(getRenderedInputs(node.graphNode)).length;
+const getEstimatedNodeHeight = (node: ValidatedGraphNode): number => {
+  const inputCount = Object.keys(getRenderedInputs(node.definition)).length;
   const detailCount = 1;
 
   let height =
@@ -69,7 +71,7 @@ const getEstimatedNodeHeight = (node: ParsedDagNode): number => {
 };
 
 const createDagreGraph = (
-  parsedGraph: ParsedDagGraph,
+  validatedGraph: ValidatedGraph,
   edges: readonly Edge[],
 ) => {
   const dagreGraph = new dagre.graphlib.Graph();
@@ -83,7 +85,7 @@ const createDagreGraph = (
     ranksep: 120,
   });
 
-  for (const node of parsedGraph.nodes) {
+  for (const node of validatedGraph.nodes) {
     dagreGraph.setNode(node.flowId, {
       height: getEstimatedNodeHeight(node),
       width: NODE_WIDTH,
@@ -100,9 +102,9 @@ const createDagreGraph = (
 };
 
 const createFlowNode = (
-  node: ParsedDagNode,
+  node: ValidatedGraphNode,
   position: { x: number; y: number },
-): DagFlowNode => {
+): FlowGraphNode => {
   const baseNode = {
     connectable: false,
     draggable: false,
@@ -115,42 +117,42 @@ const createFlowNode = (
     },
   };
 
-  switch (node.graphNode.kind) {
+  switch (node.definition.kind) {
     case "clampedFloat":
       return {
         ...baseNode,
-        data: node.graphNode,
+        data: node.definition,
         type: "clampedFloat",
       };
     case "color":
       return {
         ...baseNode,
-        data: node.graphNode,
+        data: node.definition,
         type: "color",
       };
     case "custom":
       return {
         ...baseNode,
-        data: node.graphNode,
+        data: node.definition,
         type: "custom",
       };
     case "float":
       return {
         ...baseNode,
-        data: node.graphNode,
+        data: node.definition,
         type: "float",
       };
     case "glFragColor":
       return {
         ...baseNode,
-        data: node.graphNode,
+        data: node.definition,
         type: "glFragColor",
       };
   }
 };
 
-const createFlowEdges = (parsedGraph: ParsedDagGraph): Edge[] =>
-  parsedGraph.edges.map((edge, index) => ({
+const createFlowEdges = (validatedGraph: ValidatedGraph): Edge[] =>
+  validatedGraph.edges.map((edge, index) => ({
     id: `${edge.sourceNode.flowId}->${edge.targetNode.flowId}:${edge.targetInputName}:${index}`,
     interactionWidth: 28,
     markerEnd: { type: MarkerType.ArrowClosed },
@@ -163,12 +165,12 @@ const createFlowEdges = (parsedGraph: ParsedDagGraph): Edge[] =>
   }));
 
 const createFlowNodes = (
-  parsedGraph: ParsedDagGraph,
+  validatedGraph: ValidatedGraph,
   edges: readonly Edge[],
-): DagFlowNode[] => {
-  const dagreGraph = createDagreGraph(parsedGraph, edges);
+): FlowGraphNode[] => {
+  const dagreGraph = createDagreGraph(validatedGraph, edges);
 
-  return parsedGraph.nodes.map((node) => {
+  return validatedGraph.nodes.map((node) => {
     const dagreNode = dagreGraph.node(node.flowId);
     const height = getEstimatedNodeHeight(node);
 
@@ -180,10 +182,10 @@ const createFlowNodes = (
 };
 
 export const createFlowElements = (
-  parsedGraph: ParsedDagGraph,
-): { edges: Edge[]; nodes: DagFlowNode[] } => {
-  const edges = createFlowEdges(parsedGraph);
-  const nodes = createFlowNodes(parsedGraph, edges);
+  validatedGraph: ValidatedGraph,
+): { edges: Edge[]; nodes: FlowGraphNode[] } => {
+  const edges = createFlowEdges(validatedGraph);
+  const nodes = createFlowNodes(validatedGraph, edges);
 
   return { edges, nodes };
 };

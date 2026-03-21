@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import type { CustomNode } from "../../dag-schema";
+import type { CustomNode } from "../json-schema";
 import {
   createGraphNodeInputs,
   type GraphFlowNode,
