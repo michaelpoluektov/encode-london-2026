@@ -1,6 +1,7 @@
 import {
   type ComponentProps,
   type JSX,
+  useCallback,
   useEffect,
   useEffectEvent,
   useRef,
@@ -25,6 +26,7 @@ import {
 import { ChatPanel } from "./components/ChatPanel";
 import { GraphEditor } from "./components/GraphEditor";
 import { Panel } from "./components/Panel";
+import type { PanelHeaderAction } from "./components/Panel";
 import { PaneRestoreControl } from "./components/PaneRestoreControl";
 import { PreviewViewport } from "./components/PreviewViewport";
 import { ProjectSidebar } from "./components/ProjectSidebar";
@@ -33,6 +35,7 @@ import { SplitLayout } from "./components/SplitLayout";
 import { Button } from "./components/ui/Button";
 import { Text } from "./components/ui/Text";
 import { cx } from "./lib/cx";
+import { captureRegisteredPreview } from "./preview-capture";
 import {
   type CollapsiblePaneId,
   createProjectLayoutSnapshot,
@@ -66,6 +69,7 @@ type WorkspacePaneConfig = {
   readonly content: JSX.Element;
   readonly minSize: number;
   readonly restorePlacement: RestorePlacement;
+  readonly headerActions?: readonly PanelHeaderAction[];
 };
 
 type WorkspaceColumnLayoutProps = {
@@ -213,6 +217,7 @@ const WorkspaceColumnLayout = ({
                   topPane.paneId,
                   bottomPane.paneId,
                 )}
+                headerActions={topPane.headerActions}
                 label={topPane.label}
                 onToggleCollapsed={() => {
                   togglePaneCollapsed(topPane.paneId);
@@ -234,6 +239,7 @@ const WorkspaceColumnLayout = ({
                   bottomPane.paneId,
                   topPane.paneId,
                 )}
+                headerActions={bottomPane.headerActions}
                 label={bottomPane.label}
                 onToggleCollapsed={() => {
                   togglePaneCollapsed(bottomPane.paneId);
@@ -425,6 +431,63 @@ export const App = (): JSX.Element => {
     });
   };
 
+  const project = useProjectStore((state) => state.project);
+  const openTab = useProjectStore((state) => state.openTab);
+  const refreshProject = useProjectStore((state) => state.refreshProject);
+  const setSavedDocument = useProjectStore((state) => state.setSavedDocument);
+
+  const handleCapture = useCallback(async () => {
+    const currentProject = useProjectStore.getState().project;
+
+    if (currentProject === null) {
+      return;
+    }
+
+    const captureResult = await captureRegisteredPreview();
+
+    if (captureResult.kind === "error") {
+      return;
+    }
+
+    const { imagePath } = await window.shadily.project.saveCapture({
+      folderPath: currentProject.folderPath,
+      dataUrl: captureResult.dataUrl,
+    });
+
+    const freshProject = await window.shadily.project.reload(
+      currentProject.folderPath,
+    );
+
+    refreshProject(freshProject);
+
+    const separator = currentProject.folderPath.endsWith("/") ? "" : "/";
+    const relativePath = imagePath
+      .replaceAll("\\", "/")
+      .replace(
+        `${currentProject.folderPath.replaceAll("\\", "/")}${separator}`,
+        "",
+      );
+
+    const imageDocument = await window.shadily.project.readEntry({
+      folderPath: currentProject.folderPath,
+      manifest: freshProject.manifest,
+      path: relativePath,
+    });
+
+    setSavedDocument(imageDocument);
+    openTab(relativePath);
+  }, [openTab, refreshProject, setSavedDocument]);
+
+  const captureAction: PanelHeaderAction = {
+    ariaLabel: "Capture preview",
+    content: "\u2299",
+    disabled: project === null,
+    key: "capture",
+    onClick: () => {
+      void handleCapture();
+    },
+  };
+
   const workspaceColumns = [
     {
       id: "workspace-left-column",
@@ -465,6 +528,7 @@ export const App = (): JSX.Element => {
         },
         {
           content: <PreviewViewport />,
+          headerActions: [captureAction],
           id: "render-panel",
           label: "Render",
           minSize: 220,

@@ -50,8 +50,16 @@ export const shellFrame = style({
 });
 
 export const editorFrame = style({
-  display: "grid",
+  display: "flex",
+  flexDirection: "column",
   height: "100%",
+  minHeight: 0,
+  minWidth: 0,
+});
+
+export const editorContent = style({
+  display: "grid",
+  flex: "1 1 0",
   minHeight: 0,
   minWidth: 0,
 });
@@ -74,11 +82,20 @@ export const editorImageFrame = style({
   placeItems: "center",
   alignContent: "center",
   gap: themeVars.space[4],
-  height: "100%",
+  flex: "1 1 0",
   minHeight: 0,
   minWidth: 0,
   padding: themeVars.space[7],
   background: `linear-gradient(180deg, ${themeVars.color.background.panel} 0%, ${themeVars.color.background.panelInset} 100%)`,
+});
+
+export const editorImageCaption = style({
+  color: themeVars.color.text.muted,
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+  textAlign: "center",
+  marginTop: themeVars.space[3],
+  lineHeight: themeVars.font.lineHeight.normal,
 });
 
 export const editorImagePreview = style({
