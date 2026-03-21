@@ -9,7 +9,6 @@ type GraphPreviewState = {
     fragmentShaderSource: string,
     uniformValues: GraphUniformValues,
   ) => void;
-  readonly setUniformValues: (uniformValues: GraphUniformValues) => void;
 };
 
 const EMPTY_UNIFORM_VALUES: GraphUniformValues = Object.freeze({});
@@ -27,12 +26,4 @@ export const useGraphPreviewStore = create<GraphPreviewState>((set) => ({
       fragmentShaderSource,
       uniformValues: { ...uniformValues },
     }),
-  setUniformValues: (uniformValues) =>
-    set((state) =>
-      state.fragmentShaderSource === null
-        ? state
-        : {
-            uniformValues: { ...uniformValues },
-          },
-    ),
 }));

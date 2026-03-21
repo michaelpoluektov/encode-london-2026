@@ -1,4 +1,5 @@
-import type { GlslValueType, GraphSourceLoader } from "../graph-types";
+import type { GraphSourceLoader } from "../graph-types";
+import { type GlslValueType, SUPPORTED_GLSL_TYPES } from "./glsl-type-registry";
 import type { CustomNode } from "./json-schema";
 
 export type ParsedGlslFunctionSignature = {
@@ -7,14 +8,7 @@ export type ParsedGlslFunctionSignature = {
   readonly outputType: GlslValueType;
 };
 
-const SUPPORTED_GLSL_TYPES = new Set<GlslValueType>([
-  "bool",
-  "float",
-  "int",
-  "vec2",
-  "vec3",
-  "vec4",
-]);
+const supportedGlslTypeSet = new Set<GlslValueType>(SUPPORTED_GLSL_TYPES);
 
 const glslFunctionPattern =
   /\b(?<returnType>[A-Za-z_]\w*)\s+(?<name>[A-Za-z_]\w*)\s*\((?<parameters>[^)]*)\)\s*\{/g;
@@ -79,7 +73,7 @@ const parseParameter = (
     return null;
   }
 
-  if (!SUPPORTED_GLSL_TYPES.has(parameterMatch.groups.type as GlslValueType)) {
+  if (!supportedGlslTypeSet.has(parameterMatch.groups.type as GlslValueType)) {
     return null;
   }
 
@@ -113,7 +107,7 @@ export const parseFunctionSignatures = (
       returnType === undefined ||
       name === undefined ||
       parameters === undefined ||
-      !SUPPORTED_GLSL_TYPES.has(returnType as GlslValueType)
+      !supportedGlslTypeSet.has(returnType as GlslValueType)
     ) {
       continue;
     }

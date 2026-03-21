@@ -1,25 +1,18 @@
 import type {
   GlslValueType,
-  GraphSourceLoader,
+  ValidatedCustomNode,
   ValidatedGraph,
   ValidatedGraphEdge,
   ValidatedGraphNode,
+  ValidatedValueNode,
 } from "../graph-types";
-import {
-  loadResolvedCustomNodeSource,
-  matchCustomNodeSignature,
-} from "./custom-node-glsl";
-
-type CompileFragmentShaderOptions = {
-  readonly loadCustomNodeSource?: GraphSourceLoader;
-};
 
 export type CompiledFragmentShaderUniform = {
   readonly name: string;
   readonly type: GlslValueType;
 };
 
-type CompileFragmentShaderResult =
+export type CompileFragmentShaderResult =
   | {
       readonly errors: readonly [];
       readonly ok: true;
@@ -86,9 +79,7 @@ const createIncomingEdgeMapByTargetInput = (
 const createOutputEdge = (
   graph: ValidatedGraph,
 ): { edge: ValidatedGraphEdge | null; errors: string[] } => {
-  const outputNodes = graph.nodes.filter(
-    (node) => node.definition.kind === "glFragColor",
-  );
+  const outputNodes = graph.nodes.filter((node) => node.kind === "glFragColor");
 
   if (outputNodes.length === 0) {
     return {
@@ -174,11 +165,10 @@ const collectReachableNodeIds = (
 const topologicallySortReachableNodes = (
   graph: ValidatedGraph,
   reachableNodeIds: ReadonlySet<string>,
-): { errors: string[]; nodes: ValidatedGraphNode[] } => {
+): { errors: string[]; nodes: ValidatedValueNode[] } => {
   const relevantNodes = graph.nodes.filter(
-    (node) =>
-      reachableNodeIds.has(node.flowId) &&
-      node.definition.kind !== "glFragColor",
+    (node): node is ValidatedValueNode =>
+      reachableNodeIds.has(node.flowId) && node.kind !== "glFragColor",
   );
   const relevantNodeIdSet = new Set(relevantNodes.map((node) => node.flowId));
   const orderIndexByFlowId = new Map(
@@ -215,7 +205,7 @@ const topologicallySortReachableNodes = (
         (orderIndexByFlowId.get(left.flowId) ?? 0) -
         (orderIndexByFlowId.get(right.flowId) ?? 0),
     );
-  const orderedNodes: ValidatedGraphNode[] = [];
+  const orderedNodes: ValidatedValueNode[] = [];
 
   while (pendingNodes.length > 0) {
     const currentNode = pendingNodes.shift();
@@ -228,6 +218,10 @@ const topologicallySortReachableNodes = (
 
     for (const edge of outgoingEdgesBySourceNodeId.get(currentNode.flowId) ??
       []) {
+      if (edge.targetNode.kind === "glFragColor") {
+        continue;
+      }
+
       const nextIndegree =
         (indegreeByNodeId.get(edge.targetNode.flowId) ?? 0) - 1;
 
@@ -290,43 +284,30 @@ const collectUniforms = (
   graph: ValidatedGraph,
 ): { errors: string[]; uniforms: CompiledFragmentShaderUniform[] } => {
   const uniforms: CompiledFragmentShaderUniform[] = [];
-  const uniformByName = new Map<string, CompiledFragmentShaderUniform>();
   const errors: string[] = [];
 
-  for (const node of graph.nodes) {
-    if (
-      !("uniformName" in node.definition) ||
-      node.outputType === null ||
-      node.uniformBindingKey === null
-    ) {
+  for (const uniform of graph.uniforms) {
+    if (!GLSL_IDENTIFIER_PATTERN.test(uniform.key)) {
+      errors.push(`uniform [${uniform.key}] is not a valid GLSL identifier.`);
       continue;
     }
 
-    if (!GLSL_IDENTIFIER_PATTERN.test(node.definition.uniformName)) {
-      errors.push(
-        `node [${node.displayName}] uses uniform name [${node.definition.uniformName}], but that is not a valid GLSL identifier.`,
-      );
-      continue;
-    }
-
-    if (!uniformByName.has(node.uniformBindingKey)) {
-      const uniform = {
-        name: node.uniformBindingKey,
-        type: node.outputType,
-      } satisfies CompiledFragmentShaderUniform;
-
-      uniformByName.set(node.uniformBindingKey, uniform);
-      uniforms.push(uniform);
-    }
+    uniforms.push({
+      name: uniform.key,
+      type: uniform.valueType,
+    });
   }
 
   return { errors, uniforms };
 };
 
-export const compileFragmentShader = async (
+const isReachableCustomNode = (
+  node: ValidatedValueNode,
+): node is ValidatedCustomNode => node.kind === "custom";
+
+export const compileFragmentShader = (
   graph: ValidatedGraph,
-  options: CompileFragmentShaderOptions = {},
-): Promise<CompileFragmentShaderResult> => {
+): CompileFragmentShaderResult => {
   const errors: string[] = [];
   const { edge: outputEdge, errors: outputErrors } = createOutputEdge(graph);
 
@@ -367,48 +348,25 @@ export const compileFragmentShader = async (
   const mainStatements: string[] = [];
 
   for (const [index, node] of orderedNodes.entries()) {
-    if ("uniformName" in node.definition) {
-      expressionByNodeId.set(node.flowId, node.definition.uniformName);
+    if (node.kind === "uniform") {
+      expressionByNodeId.set(node.flowId, node.uniformBindingKey);
       continue;
     }
 
-    if (node.definition.kind !== "custom" || node.outputType === null) {
+    if (!isReachableCustomNode(node)) {
       continue;
     }
 
-    let source: string;
-
-    try {
-      source = await loadResolvedCustomNodeSource(
-        node.definition,
-        options.loadCustomNodeSource,
-      );
-    } catch (error) {
-      errors.push(
-        `node [${node.displayName}] could not load custom node source from [${node.definition.filepath}] during fragment shader compilation. ${error instanceof Error ? error.message : "Unknown error."}`,
-      );
-      continue;
-    }
-
-    const { availableFunctions, expectedFunctionName, signature } =
-      matchCustomNodeSignature(node.definition, source);
-
-    if (signature === null) {
-      errors.push(
-        `node [${node.displayName}] could not resolve a callable GLSL function from [${node.definition.filepath}] during fragment shader compilation. Expected a function named [${expectedFunctionName}] or a file with exactly one supported GLSL function. Available functions: ${availableFunctions}.`,
-      );
-      continue;
-    }
-
-    if (!customNodeSourceByFilepath.has(node.definition.filepath)) {
-      customNodeSourceByFilepath.set(node.definition.filepath, source.trim());
-    }
+    customNodeSourceByFilepath.set(
+      node.definition.filepath,
+      node.source.trim(),
+    );
 
     const incomingEdgesByInputName =
       incomingEdgeMapByTargetInput.get(node.flowId) ?? new Map();
     const callArguments: string[] = [];
 
-    for (const [inputName] of signature.inputTypes.entries()) {
+    for (const [inputName] of node.signature.inputTypes.entries()) {
       const inputEdge = incomingEdgesByInputName.get(inputName);
 
       if (inputEdge === undefined) {
@@ -439,7 +397,7 @@ export const compileFragmentShader = async (
     const outputVariableName = createCompiledNodeVariableName(node, index);
 
     mainStatements.push(
-      `${node.outputType} ${outputVariableName} = ${signature.name}(${callArguments.join(", ")});`,
+      `${node.outputType} ${outputVariableName} = ${node.signature.name}(${callArguments.join(", ")});`,
     );
     expressionByNodeId.set(node.flowId, outputVariableName);
   }
