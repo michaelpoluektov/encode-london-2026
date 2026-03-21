@@ -53,10 +53,7 @@ const parseCaptureTimestamp = (filename: string): string | null => {
     return null;
   }
 
-  const isoString = match[1].replace(
-    /T(\d{2})-(\d{2})-(\d{2})/,
-    "T$1:$2:$3",
-  );
+  const isoString = match[1].replace(/T(\d{2})-(\d{2})-(\d{2})/, "T$1:$2:$3");
 
   try {
     return new Date(isoString).toLocaleString(undefined, {

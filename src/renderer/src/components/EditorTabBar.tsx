@@ -42,6 +42,7 @@ export const EditorTabBar = ({
             aria-selected={isActive}
             className={cx(tab, isActive && tabActive)}
             role="tab"
+            tabIndex={isActive ? 0 : -1}
           >
             <button
               className={tabLabel}
@@ -54,7 +55,11 @@ export const EditorTabBar = ({
               {name}
             </button>
             {hasNotification ? (
-              <span aria-label="AI modified" className={tabBell} title="Modified by AI">
+              <span
+                aria-hidden="true"
+                className={tabBell}
+                title="Modified by AI"
+              >
                 &#x1F514;
               </span>
             ) : null}
