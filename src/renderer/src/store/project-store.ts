@@ -5,11 +5,13 @@ import type {
   ProjectTreeNode,
   ShadilyManifest,
 } from "../../../shared/contracts";
+import type { PreviewModelId } from "../../../shared/default-project";
 import {
   closeProjectTab,
   createProjectState,
   markProjectTabsAiModified,
   selectProjectEntry,
+  setProjectPreviewMesh,
   setProjectSavedDocument,
   updateProjectDraft,
 } from "./project-store-helpers";
@@ -49,6 +51,7 @@ type ProjectStore = {
   readonly setSavedDocument: (document: ProjectEntryResult) => void;
   readonly setExternallySavedDocument: (document: ProjectEntryResult) => void;
   readonly updateDraft: (path: string, content: string) => void;
+  readonly updatePreviewMesh: (mesh: PreviewModelId) => void;
 };
 
 export const useProjectStore = create<ProjectStore>((set) => ({
@@ -145,6 +148,17 @@ export const useProjectStore = create<ProjectStore>((set) => ({
 
       return {
         project: updateProjectDraft(state.project, path, content),
+      };
+    }),
+
+  updatePreviewMesh: (mesh) =>
+    set((state) => {
+      if (state.project === null) {
+        return state;
+      }
+
+      return {
+        project: setProjectPreviewMesh(state.project, mesh),
       };
     }),
 }));

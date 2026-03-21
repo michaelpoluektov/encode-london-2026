@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+import { style, styleVariants } from "@vanilla-extract/css";
 import { themeVars } from "../theme";
 
 export const floatingPanel = style({
@@ -75,4 +75,40 @@ export const previewBody = style({
   flex: "1 1 0",
   minHeight: 0,
   position: "relative",
+});
+
+export const modelSelector = style({
+  display: "inline-flex",
+  gap: themeVars.space[1],
+  marginLeft: themeVars.space[2],
+});
+
+export const modelButton = styleVariants({
+  active: {
+    color: themeVars.color.text.primary,
+    opacity: 1,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    fontSize: themeVars.font.size.xs,
+    fontFamily: themeVars.font.family.mono,
+    padding: `0 ${themeVars.space[1]}`,
+    lineHeight: "1",
+  },
+  inactive: {
+    color: themeVars.color.text.muted,
+    opacity: 0.55,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    fontSize: themeVars.font.size.xs,
+    fontFamily: themeVars.font.family.mono,
+    padding: `0 ${themeVars.space[1]}`,
+    lineHeight: "1",
+    selectors: {
+      "&:hover": {
+        opacity: 0.85,
+      },
+    },
+  },
 });

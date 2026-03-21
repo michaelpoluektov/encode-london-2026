@@ -58,3 +58,38 @@ globalStyle("::selection", {
   background: themeVars.color.editor.selection,
   color: themeVars.color.text.primary,
 });
+
+// Pre-seed Monaco's CSS variables so they resolve even if theme injection fails
+globalStyle(":root", {
+  vars: {
+    "--vscode-scrollbarSlider-background": "rgba(199, 153, 255, 0.18)",
+    "--vscode-scrollbarSlider-hoverBackground": "rgba(199, 153, 255, 0.28)",
+    "--vscode-scrollbarSlider-activeBackground": "rgba(199, 153, 255, 0.36)",
+    "--vscode-scrollbar-shadow": "#131313",
+    "--vscode-editorOverviewRuler-background": "#131313",
+    "--vscode-editorOverviewRuler-border": "#00000000",
+    "--vscode-editor-selectionBackground": "rgba(199, 153, 255, 0.2)",
+    "--vscode-editor-inactiveSelectionBackground": "rgba(199, 153, 255, 0.1)",
+  },
+});
+
+globalStyle(".monaco-editor .selected-text", {
+  background: "rgba(199, 153, 255, 0.2) !important" as string,
+});
+
+globalStyle(".monaco-scrollable-element > .scrollbar", {
+  background: "transparent !important" as string,
+});
+
+globalStyle(".monaco-scrollable-element > .scrollbar > .slider", {
+  background: "rgba(199, 153, 255, 0.18) !important" as string,
+  borderRadius: "3px",
+});
+
+globalStyle(".monaco-scrollable-element > .scrollbar > .slider:hover", {
+  background: "rgba(199, 153, 255, 0.28) !important" as string,
+});
+
+globalStyle(".monaco-scrollable-element > .scrollbar > .slider.active", {
+  background: "rgba(199, 153, 255, 0.36) !important" as string,
+});

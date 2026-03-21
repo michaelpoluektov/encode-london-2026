@@ -10,6 +10,7 @@ import {
   DEFAULT_GRAPH_SOURCE,
   DEFAULT_PROJECT_FILE_PATHS,
   DEFAULT_VERTEX_SHADER,
+  type PreviewModelId,
 } from "../../../shared/default-project";
 import { normalizeProjectPath } from "../../../shared/path-utils";
 import type { ProjectState } from "./project-store";
@@ -424,3 +425,14 @@ export const updateProjectDraft = (
     draftFiles: nextDraftFiles,
   };
 };
+
+export const setProjectPreviewMesh = (
+  project: ProjectState,
+  mesh: PreviewModelId,
+): ProjectState => ({
+  ...project,
+  manifest: {
+    ...project.manifest,
+    preview: { ...project.manifest.preview, mesh },
+  },
+});

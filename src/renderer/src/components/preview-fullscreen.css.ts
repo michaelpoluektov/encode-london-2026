@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+import { style, styleVariants } from "@vanilla-extract/css";
 import { themeVars } from "../theme";
 
 export const overlay = style({
@@ -24,8 +24,48 @@ export const topBar = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "flex-end",
+  gap: themeVars.space[3],
   padding: themeVars.space[4],
   pointerEvents: "none",
+});
+
+export const modelSelector = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: themeVars.space[1],
+  pointerEvents: "all",
+  background: "rgba(38, 38, 38, 0.7)",
+  backdropFilter: "blur(20px)",
+  padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
+});
+
+export const modelButton = styleVariants({
+  active: {
+    color: themeVars.color.text.primary,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    fontFamily: themeVars.font.family.mono,
+    fontSize: themeVars.font.size.xs,
+    lineHeight: "1",
+    padding: `0 ${themeVars.space[1]}`,
+  },
+  inactive: {
+    color: themeVars.color.text.muted,
+    opacity: 0.6,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    fontFamily: themeVars.font.family.mono,
+    fontSize: themeVars.font.size.xs,
+    lineHeight: "1",
+    padding: `0 ${themeVars.space[1]}`,
+    selectors: {
+      "&:hover": {
+        opacity: 1,
+      },
+    },
+  },
 });
 
 export const closeButton = style({

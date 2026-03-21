@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { GraphUniformValues, ValidatedGraph } from "../graph-types";
 import { compileSubgraphFragmentShader } from "./compile-fragment-shader";
 import { renderSubgraphToDataUrl } from "./render-subgraph";
+import { useProjectStore } from "../../../store/project-store";
 
 const SUBGRAPH_PREVIEW_WIDTH = 240;
 const SUBGRAPH_PREVIEW_HEIGHT = 120;
@@ -12,6 +13,9 @@ export const useSubgraphPreviews = (
 ): ReadonlyMap<string, string> => {
   const [previews, setPreviews] = useState<ReadonlyMap<string, string>>(
     new Map(),
+  );
+  const previewMesh = useProjectStore(
+    (s) => s.project?.manifest.preview.mesh ?? "sphere",
   );
 
   useEffect(() => {
@@ -48,6 +52,7 @@ export const useSubgraphPreviews = (
           uniformValues,
           SUBGRAPH_PREVIEW_WIDTH,
           SUBGRAPH_PREVIEW_HEIGHT,
+          previewMesh,
         );
 
         if (cancelled) {
@@ -70,7 +75,7 @@ export const useSubgraphPreviews = (
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [validatedGraph]);
+  }, [validatedGraph, previewMesh]);
 
   return previews;
 };

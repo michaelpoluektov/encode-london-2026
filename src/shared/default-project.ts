@@ -3,6 +3,14 @@ import defaultPulseNodeSource from "../project-template/nodes/pulse.glsl?raw";
 import defaultVertexShaderSource from "../project-template/vertex.vert?raw";
 import type { ShadilyManifest } from "./contracts";
 
+export const PREVIEW_MODEL_IDS = ["sphere", "plane"] as const;
+export type PreviewModelId = (typeof PREVIEW_MODEL_IDS)[number];
+
+export const PREVIEW_MODELS: Array<{ id: PreviewModelId; label: string }> = [
+  { id: "sphere", label: "Sphere" },
+  { id: "plane", label: "Plane" },
+];
+
 const normalizeTemplateText = (text: string): string =>
   text.replaceAll("\r\n", "\n").trimEnd();
 
@@ -44,7 +52,7 @@ export const createDefaultProjectContents = (
     name,
     version: "2",
     graph: { source: DEFAULT_PROJECT_FILE_PATHS.graph },
-    preview: { mesh: "torusKnot" },
+    preview: { mesh: "sphere" },
     created: timestamp,
     modified: timestamp,
   },

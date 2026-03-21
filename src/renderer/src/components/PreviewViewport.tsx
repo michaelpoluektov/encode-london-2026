@@ -1,6 +1,7 @@
 import { type JSX, useDeferredValue, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { DEFAULT_VERTEX_SHADER } from "../../../shared/default-project";
+import { createPreviewGeometry } from "../preview-geometry";
 
 import {
   previewFrame,
@@ -20,6 +21,7 @@ import {
   createPreviewMaterial,
 } from "../preview-compile";
 import { createPreviewRevision, usePreviewStore } from "../store/preview-store";
+import { useProjectStore } from "../store/project-store";
 import { darkThemeValues } from "../theme";
 
 const PREVIEW_CAPTURE_SIZE = 200;
@@ -64,6 +66,9 @@ const EMPTY_GRAPH_UNIFORM_VALUES: GraphUniformValues = Object.freeze({});
 export const PreviewViewport = (): JSX.Element => {
   const isPreviewStale = usePreviewStore((state) => state.isStale);
   const previewGraphShader = usePreviewGraphShader();
+  const previewMesh = useProjectStore(
+    (s) => s.project?.manifest.preview.mesh ?? "sphere",
+  );
 
   const fragmentSource = previewGraphShader.fragmentSource;
   const vertexSource = DEFAULT_VERTEX_SHADER;
@@ -84,7 +89,7 @@ export const PreviewViewport = (): JSX.Element => {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const meshRef = useRef<THREE.Mesh<
-    THREE.PlaneGeometry,
+    THREE.BufferGeometry,
     THREE.Material
   > | null>(null);
   const activeUniformValuesRef =
@@ -260,8 +265,8 @@ export const PreviewViewport = (): JSX.Element => {
     let scene: THREE.Scene | null = null;
     let renderer: THREE.WebGLRenderer | null = null;
     let camera: THREE.PerspectiveCamera | null = null;
-    let geometry: THREE.PlaneGeometry | null = null;
-    let mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.Material> | null = null;
+    let geometry: THREE.BufferGeometry | null = null;
+    let mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material> | null = null;
     let resizeObserver: ResizeObserver | null = null;
     let frameId = 0;
 
@@ -288,7 +293,7 @@ export const PreviewViewport = (): JSX.Element => {
       );
       host.append(renderer.domElement);
 
-      geometry = new THREE.PlaneGeometry(2.4, 2.4, 1, 1);
+      geometry = createPreviewGeometry(previewMesh);
       const material = createPreviewMaterial(
         fragmentSource,
         DEFAULT_VERTEX_SHADER,
@@ -447,6 +452,14 @@ export const PreviewViewport = (): JSX.Element => {
 
     applyPreviewUniforms(material, activeUniformValues);
   }, [activeUniformValues]);
+
+  useEffect(() => {
+    const mesh = meshRef.current;
+    if (mesh === null) return;
+    const old = mesh.geometry;
+    mesh.geometry = createPreviewGeometry(previewMesh);
+    old.dispose();
+  }, [previewMesh]);
 
   return (
     <div className={cx(previewFrame, isPreviewStale && previewFrameStale)}>

@@ -12,7 +12,9 @@ export const shadilyManifestSchema = z.object({
   name: z.string(),
   version: z.literal("2"),
   graph: z.object({ source: z.string() }),
-  preview: z.object({ mesh: z.string() }),
+  preview: z.object({
+    mesh: z.enum(["sphere", "plane"] as const).catch("sphere"),
+  }),
   created: z.string(),
   modified: z.string(),
 });

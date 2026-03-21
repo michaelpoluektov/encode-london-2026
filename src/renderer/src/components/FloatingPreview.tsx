@@ -8,10 +8,20 @@ import {
   useState,
 } from "react";
 import {
+  PREVIEW_MODELS,
+  type PreviewModelId,
+} from "../../../shared/default-project";
+import {
+  createProjectSavePayload,
+  useProjectStore,
+} from "../store/project-store";
+import {
   dragHandle,
   expandButton,
   floatingPanel,
   gripIcon,
+  modelButton,
+  modelSelector,
   previewBody,
 } from "./floating-preview.css";
 import { PreviewFullscreen } from "./PreviewFullscreen";
@@ -66,6 +76,26 @@ type FloatingPreviewProps = {
 export const FloatingPreview = ({
   containerRef,
 }: FloatingPreviewProps): JSX.Element => {
+  const project = useProjectStore((s) => s.project);
+  const previewMesh = project?.manifest.preview.mesh ?? "sphere";
+  const updatePreviewMesh = useProjectStore((s) => s.updatePreviewMesh);
+
+  const handleSelectMesh = useCallback(
+    (mesh: PreviewModelId) => {
+      updatePreviewMesh(mesh);
+      setTimeout(() => {
+        const p = useProjectStore.getState().project;
+        if (!p) return;
+        void window.shadily.project
+          .save(createProjectSavePayload(p))
+          .then((saved) =>
+            useProjectStore.getState().commitSavedProject(saved),
+          );
+      }, 0);
+    },
+    [updatePreviewMesh],
+  );
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [corner, setCorner] = useState<Corner>("bottomRight");
   const [dragging, setDragging] = useState(false);
@@ -191,6 +221,25 @@ export const FloatingPreview = ({
             <GripIcon />
           </span>
           Preview
+          {project !== null && (
+            <span className={modelSelector}>
+              {PREVIEW_MODELS.map((m) => (
+                <button
+                  key={m.id}
+                  className={modelButton[previewMesh === m.id ? "active" : "inactive"]}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onClick={() => {
+                    handleSelectMesh(m.id);
+                  }}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </span>
+          )}
           <button
             aria-label="Open fullscreen preview"
             className={expandButton}

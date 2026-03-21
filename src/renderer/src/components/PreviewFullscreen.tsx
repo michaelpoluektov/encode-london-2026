@@ -1,8 +1,13 @@
-import { type JSX, useDeferredValue, useEffect, useRef } from "react";
+import { type JSX, useCallback, useDeferredValue, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { DEFAULT_VERTEX_SHADER } from "../../../shared/default-project";
+import {
+  DEFAULT_VERTEX_SHADER,
+  PREVIEW_MODELS,
+  type PreviewModelId,
+} from "../../../shared/default-project";
+import { createPreviewGeometry } from "../preview-geometry";
 import {
   applyPreviewUniforms,
   compilePreviewMaterial,
@@ -14,10 +19,16 @@ import { usePreviewGraphShader } from "./graph/internal/use-preview-graph-shader
 import {
   closeButton,
   hint,
+  modelButton,
+  modelSelector,
   overlay,
   sceneHost,
   topBar,
 } from "./preview-fullscreen.css";
+import {
+  createProjectSavePayload,
+  useProjectStore,
+} from "../store/project-store";
 import { CloseIcon } from "./ui/icons";
 
 const EMPTY_UNIFORM_VALUES: GraphUniformValues = Object.freeze({});
@@ -37,13 +48,33 @@ export const PreviewFullscreen = ({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const meshRef = useRef<THREE.Mesh<
-    THREE.PlaneGeometry,
+    THREE.BufferGeometry,
     THREE.Material
   > | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const hasInitializedSceneRef = useRef(false);
 
   const previewGraphShader = usePreviewGraphShader();
+  const previewMesh = useProjectStore(
+    (s) => s.project?.manifest.preview.mesh ?? "sphere",
+  );
+  const updatePreviewMesh = useProjectStore((s) => s.updatePreviewMesh);
+
+  const handleSelectMesh = useCallback(
+    (mesh: PreviewModelId) => {
+      updatePreviewMesh(mesh);
+      setTimeout(() => {
+        const p = useProjectStore.getState().project;
+        if (!p) return;
+        void window.shadily.project
+          .save(createProjectSavePayload(p))
+          .then((saved) =>
+            useProjectStore.getState().commitSavedProject(saved),
+          );
+      }, 0);
+    },
+    [updatePreviewMesh],
+  );
 
   const fragmentSource = previewGraphShader.fragmentSource;
   const vertexSource = DEFAULT_VERTEX_SHADER;
@@ -71,8 +102,8 @@ export const PreviewFullscreen = ({
     let scene: THREE.Scene | null = null;
     let renderer: THREE.WebGLRenderer | null = null;
     let camera: THREE.PerspectiveCamera | null = null;
-    let geometry: THREE.PlaneGeometry | null = null;
-    let mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.Material> | null = null;
+    let geometry: THREE.BufferGeometry | null = null;
+    let mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material> | null = null;
     let controls: OrbitControls | null = null;
     let resizeObserver: ResizeObserver | null = null;
     let frameId = 0;
@@ -106,7 +137,7 @@ export const PreviewFullscreen = ({
     controls.maxDistance = 10;
     controls.saveState();
 
-    geometry = new THREE.PlaneGeometry(2.4, 2.4, 1, 1);
+    geometry = createPreviewGeometry(previewMesh);
     const material = createPreviewMaterial(
       fragmentSource,
       DEFAULT_VERTEX_SHADER,
@@ -230,6 +261,15 @@ export const PreviewFullscreen = ({
     applyPreviewUniforms(material, activeUniformValues);
   }, [activeUniformValues]);
 
+  // Geometry swap when model changes
+  useEffect(() => {
+    const mesh = meshRef.current;
+    if (mesh === null) return;
+    const old = mesh.geometry;
+    mesh.geometry = createPreviewGeometry(previewMesh);
+    old.dispose();
+  }, [previewMesh]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -250,6 +290,20 @@ export const PreviewFullscreen = ({
     <div className={overlay}>
       <div className={sceneHost} ref={hostRef} />
       <div className={topBar}>
+        <span className={modelSelector}>
+          {PREVIEW_MODELS.map((m) => (
+            <button
+              key={m.id}
+              className={modelButton[previewMesh === m.id ? "active" : "inactive"]}
+              type="button"
+              onClick={() => {
+                handleSelectMesh(m.id);
+              }}
+            >
+              {m.label}
+            </button>
+          ))}
+        </span>
         <button
           aria-label="Close fullscreen preview"
           className={closeButton}
