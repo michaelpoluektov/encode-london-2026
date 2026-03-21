@@ -1,20 +1,23 @@
 import type { JSX } from "react";
-import type { GlFragColorNode } from "../json-schema";
 import {
   createGraphNodeInputs,
   type GraphFlowNode,
   type GraphFlowNodeProps,
   GraphNodeFrame,
 } from "./GraphNode";
+import type { GlFragColorGraphNodeData } from "./node-data";
 
 export type GlFragColorGraphFlowNode = GraphFlowNode<
-  GlFragColorNode,
+  GlFragColorGraphNodeData,
   "glFragColor"
 >;
 
 export const GlFragColorGraphNode = ({
   data,
-}: GraphFlowNodeProps<GlFragColorNode, "glFragColor">): JSX.Element => (
+}: GraphFlowNodeProps<
+  GlFragColorGraphNodeData,
+  "glFragColor"
+>): JSX.Element => (
   <GraphNodeFrame
     details={[
       {
@@ -23,7 +26,7 @@ export const GlFragColorGraphNode = ({
       },
     ]}
     hasOutput={false}
-    inputs={createGraphNodeInputs(Object.keys(data.inputs))}
+    inputs={createGraphNodeInputs(Object.keys(data.definition.inputs))}
     title="gl_FragColor"
   />
 );

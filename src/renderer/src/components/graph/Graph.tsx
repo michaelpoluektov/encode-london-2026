@@ -1,12 +1,13 @@
 import { Background, ReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { type JSX, useEffect, useMemo, useState } from "react";
+import { type JSX, useCallback, useEffect, useState } from "react";
 import { cx } from "../../lib/cx";
 import { graphCanvas } from "./graph.css";
-import type { GraphSourceLoader, ValidatedGraph } from "./graph-types";
+import type { GraphInputValue, GraphSourceLoader } from "./graph-types";
 import {
   createFlowElements,
   graphNodeTypes,
+  updateFlowNodeValue,
 } from "./internal/create-react-flow-graph";
 import { readValidatedGraph } from "./internal/load-and-validate-graph";
 
@@ -28,10 +29,19 @@ export const Graph = ({
   graphSource,
   loadCustomNodeSource,
 }: GraphProps): JSX.Element => {
-  const [validatedGraph, setValidatedGraph] = useState<ValidatedGraph | null>(
-    null,
-  );
   const [errors, setErrors] = useState<readonly string[]>([]);
+  const [flowElements, setFlowElements] =
+    useState<FlowElements>(EMPTY_FLOW_ELEMENTS);
+
+  const handleInputValueChange = useCallback(
+    (flowId: string, value: GraphInputValue) => {
+      setFlowElements((previousFlowElements) => ({
+        ...previousFlowElements,
+        nodes: updateFlowNodeValue(previousFlowElements.nodes, flowId, value),
+      }));
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -43,12 +53,16 @@ export const Graph = ({
         }
 
         if (result.ok) {
-          setValidatedGraph(result.graph);
+          setFlowElements(
+            createFlowElements(result.graph, {
+              onInputValueChange: handleInputValueChange,
+            }),
+          );
           setErrors([]);
           return;
         }
 
-        setValidatedGraph(null);
+        setFlowElements(EMPTY_FLOW_ELEMENTS);
         setErrors(result.errors);
       },
     );
@@ -56,15 +70,7 @@ export const Graph = ({
     return () => {
       cancelled = true;
     };
-  }, [graphSource, loadCustomNodeSource]);
-
-  const flowElements = useMemo(
-    () =>
-      validatedGraph === null
-        ? EMPTY_FLOW_ELEMENTS
-        : createFlowElements(validatedGraph),
-    [validatedGraph],
-  );
+  }, [graphSource, handleInputValueChange, loadCustomNodeSource]);
 
   if (errors.length > 0) {
     return (
@@ -87,13 +93,19 @@ export const Graph = ({
     <div className={cx(graphCanvas, className)}>
       <ReactFlow
         edges={flowElements.edges}
+        edgesFocusable={false}
         elementsSelectable={false}
         fitView
         nodes={flowElements.nodes}
+        nodesFocusable={false}
         nodeTypes={graphNodeTypes}
         nodesConnectable={false}
         nodesDraggable={false}
+        panOnDrag
+        selectionOnDrag={false}
+        zoomOnScroll
         zoomOnDoubleClick={false}
+        zoomOnPinch
         proOptions={{ hideAttribution: true }}
       >
         <Background gap={24} size={1} />
