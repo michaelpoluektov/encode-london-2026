@@ -128,6 +128,25 @@ app.whenReady().then(async () => {
     },
   );
 
+  // Preview IPC: renderer responds to render-subgraph requests from MCP tools.
+  ipcMain.handle(
+    "preview:render-subgraph-result",
+    (
+      _e,
+      payload: { requestId: string; dataUrl: string | null; error?: string },
+    ) => {
+      if (payload.dataUrl !== null) {
+        mcpServer.resolveSubgraphCapture(payload.requestId, {
+          dataUrl: payload.dataUrl,
+        });
+      } else {
+        mcpServer.resolveSubgraphCapture(payload.requestId, {
+          error: payload.error ?? "Subgraph render failed.",
+        });
+      }
+    },
+  );
+
   // History IPC: list checkpoints for a thread.
   ipcMain.handle("history:listCheckpoints", async (_e, payload: unknown) => {
     const parsed = historyListRequestSchema.parse(payload);

@@ -18,16 +18,13 @@ export const buttonBase = style({
     `background ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
     `color ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
     `box-shadow ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
-    `transform ${themeVars.motion.duration.fast} ${themeVars.motion.easing.standard}`,
   ].join(", "),
   selectors: {
     "&:focus-visible": {
       boxShadow: themeVars.shadow.focus,
       outline: "none",
     },
-    "&:hover:not(:disabled)": {
-      transform: "translateY(-1px)",
-    },
+    "&:hover:not(:disabled)": {},
     "&:disabled": {
       cursor: "default",
       opacity: 0.5,

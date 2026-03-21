@@ -200,6 +200,28 @@ const shadilyDesktopApi = {
         dataUrl,
         error,
       }),
+    onRenderSubgraph: (
+      cb: (requestId: string, nodeInstanceName: string) => void,
+    ): (() => void) => {
+      const handler = (
+        _e: Electron.IpcRendererEvent,
+        requestId: string,
+        nodeInstanceName: string,
+      ) => cb(requestId, nodeInstanceName);
+      ipcRenderer.on("preview:render-subgraph", handler);
+      return () =>
+        ipcRenderer.removeListener("preview:render-subgraph", handler);
+    },
+    respondRenderSubgraph: (
+      requestId: string,
+      dataUrl: string | null,
+      error?: string,
+    ): Promise<void> =>
+      ipcRenderer.invoke("preview:render-subgraph-result", {
+        requestId,
+        dataUrl,
+        error,
+      }),
   },
   history: {
     listCheckpoints: async (

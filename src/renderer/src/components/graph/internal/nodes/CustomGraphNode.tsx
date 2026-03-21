@@ -9,6 +9,7 @@ import {
 
 export type CustomGraphNodeData = {
   readonly node: ValidatedCustomNode;
+  readonly previewDataUrl?: string;
 };
 
 export type CustomGraphFlowNode = GraphFlowNode<CustomGraphNodeData, "custom">;
@@ -26,6 +27,15 @@ export const CustomGraphNode = ({
     inputs={createGraphNodeInputs(
       Array.from(data.node.signature.inputTypes.keys()),
     )}
+    preview={
+      data.previewDataUrl !== undefined ? (
+        <img
+          alt="subgraph preview"
+          src={data.previewDataUrl}
+          style={{ borderRadius: 6, display: "block", width: "100%" }}
+        />
+      ) : undefined
+    }
     title={`${data.node.displayName} (custom)`}
   />
 );

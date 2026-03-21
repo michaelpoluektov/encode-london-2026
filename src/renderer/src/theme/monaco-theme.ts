@@ -46,6 +46,15 @@ export const defineShadilyMonacoTheme = (monaco: typeof Monaco): void => {
       "dropdown.background": darkThemeValues.color.background.panelRaised,
       "dropdown.border": darkThemeValues.color.border.standard,
       "minimap.background": darkThemeValues.color.editor.background,
+      "editorOverviewRuler.border": "transparent",
+      "editorOverviewRuler.errorForeground": "rgba(199, 153, 255, 0.8)",
+      "editorOverviewRuler.warningForeground": "rgba(199, 153, 255, 0.5)",
+      "editorOverviewRuler.infoForeground": "rgba(199, 153, 255, 0.4)",
+      "editorOverviewRuler.addedForeground": "rgba(105, 200, 235, 0.5)",
+      "editorOverviewRuler.modifiedForeground": "rgba(199, 153, 255, 0.5)",
+      "editorOverviewRuler.deletedForeground": "rgba(199, 153, 255, 0.5)",
+      "editorOverviewRuler.findMatchForeground": "rgba(199, 153, 255, 0.5)",
+      "editorOverviewRuler.selectionHighlightForeground": "rgba(199, 153, 255, 0.3)",
     },
   });
 };

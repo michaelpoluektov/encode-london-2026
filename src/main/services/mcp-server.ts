@@ -7,9 +7,14 @@ import { z } from "zod";
 
 type CompileResult = { success: boolean; error?: string };
 type CaptureResult = { dataUrl: string } | { error: string };
+type SubgraphCaptureResult = { dataUrl: string } | { error: string };
 
 const pendingCompileChecks = new Map<string, (result: CompileResult) => void>();
 const pendingCaptures = new Map<string, (result: CaptureResult) => void>();
+const pendingSubgraphCaptures = new Map<
+  string,
+  (result: SubgraphCaptureResult) => void
+>();
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -27,6 +32,14 @@ export const resolveCapture = (
 ): void => {
   pendingCaptures.get(requestId)?.(result);
   pendingCaptures.delete(requestId);
+};
+
+export const resolveSubgraphCapture = (
+  requestId: string,
+  result: SubgraphCaptureResult,
+): void => {
+  pendingSubgraphCaptures.get(requestId)?.(result);
+  pendingSubgraphCaptures.delete(requestId);
 };
 
 let mainWindow: BrowserWindow | null = null;
@@ -79,6 +92,35 @@ const requestCaptureAt = (uTime: number | null): Promise<CaptureResult> =>
     }
 
     mainWindow.webContents.send("preview:capture-at", requestId, uTime);
+  });
+
+const requestSubgraphCapture = (
+  nodeInstanceName: string,
+): Promise<SubgraphCaptureResult> =>
+  new Promise((resolve) => {
+    const requestId = randomUUID();
+    const timer = setTimeout(() => {
+      pendingSubgraphCaptures.delete(requestId);
+      resolve({ error: "Subgraph render timed out." });
+    }, REQUEST_TIMEOUT_MS);
+
+    pendingSubgraphCaptures.set(requestId, (result) => {
+      clearTimeout(timer);
+      resolve(result);
+    });
+
+    if (mainWindow === null || mainWindow.isDestroyed()) {
+      clearTimeout(timer);
+      pendingSubgraphCaptures.delete(requestId);
+      resolve({ error: "Preview window unavailable." });
+      return;
+    }
+
+    mainWindow.webContents.send(
+      "preview:render-subgraph",
+      requestId,
+      nodeInstanceName,
+    );
   });
 
 /** Create a fresh McpServer with tools registered — needed because each
@@ -140,6 +182,46 @@ const createMcpServerInstance = (): McpServer => {
         };
       }
       const base64Data = result.dataUrl.replace(/^data:image\/png;base64,/, "");
+      return {
+        content: [
+          {
+            type: "image" as const,
+            data: base64Data,
+            mimeType: "image/png",
+          },
+        ],
+      };
+    },
+  );
+
+  server.registerTool(
+    "render_subgraph",
+    {
+      description:
+        "Render the shader output for a specific node's subgraph (everything from inputs up to that node) and return it as an image. Use the node's instance name (displayName).",
+      inputSchema: {
+        node_instance_name: z
+          .string()
+          .describe("The instance name of the node to render the subgraph for."),
+      },
+    },
+    async (args) => {
+      const result = await requestSubgraphCapture(args.node_instance_name);
+      if ("error" in result) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Subgraph render failed: ${result.error}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+      const base64Data = result.dataUrl.replace(
+        /^data:image\/png;base64,/,
+        "",
+      );
       return {
         content: [
           {

@@ -73,6 +73,14 @@ declare global {
           dataUrl: string | null,
           error?: string,
         ) => Promise<void>;
+        onRenderSubgraph: (
+          cb: (requestId: string, nodeInstanceName: string) => void,
+        ) => () => void;
+        respondRenderSubgraph: (
+          requestId: string,
+          dataUrl: string | null,
+          error?: string,
+        ) => Promise<void>;
       };
       history: {
         listCheckpoints: (

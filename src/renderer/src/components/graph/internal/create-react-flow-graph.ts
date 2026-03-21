@@ -300,3 +300,21 @@ export const syncReactFlowGraphUniformValues = (
       },
     };
   });
+
+export const syncReactFlowGraphSubgraphPreviews = (
+  nodes: readonly FlowGraphNode[],
+  subgraphPreviews: ReadonlyMap<string, string>,
+): FlowGraphNode[] =>
+  nodes.map((node): FlowGraphNode => {
+    if (node.type !== "custom") {
+      return node;
+    }
+
+    const nextPreviewDataUrl = subgraphPreviews.get(node.id);
+
+    if (nextPreviewDataUrl === node.data.previewDataUrl) {
+      return node;
+    }
+
+    return { ...node, data: { ...node.data, previewDataUrl: nextPreviewDataUrl } };
+  });

@@ -11,8 +11,10 @@ import type {
 import {
   createReactFlowGraph,
   graphNodeTypes,
+  syncReactFlowGraphSubgraphPreviews,
   syncReactFlowGraphUniformValues,
 } from "./create-react-flow-graph";
+import { useSubgraphPreviews } from "./use-subgraph-previews";
 
 type GraphCanvasProps = {
   readonly className?: string;
@@ -37,6 +39,8 @@ export const GraphCanvas = ({
   uniformValues,
   validatedGraph,
 }: GraphCanvasProps): JSX.Element => {
+  const subgraphPreviews = useSubgraphPreviews(validatedGraph, uniformValues);
+
   const baseFlowGraph = useMemo(() => {
     if (validatedGraph === null) {
       return EMPTY_FLOW_GRAPH;
@@ -50,12 +54,12 @@ export const GraphCanvas = ({
   const flowGraph = useMemo(
     () => ({
       edges: baseFlowGraph.edges,
-      nodes: syncReactFlowGraphUniformValues(
-        baseFlowGraph.nodes,
-        uniformValues,
+      nodes: syncReactFlowGraphSubgraphPreviews(
+        syncReactFlowGraphUniformValues(baseFlowGraph.nodes, uniformValues),
+        subgraphPreviews,
       ),
     }),
-    [baseFlowGraph.edges, baseFlowGraph.nodes, uniformValues],
+    [baseFlowGraph.edges, baseFlowGraph.nodes, uniformValues, subgraphPreviews],
   );
 
   if (errors.length > 0 && validatedGraph === null) {

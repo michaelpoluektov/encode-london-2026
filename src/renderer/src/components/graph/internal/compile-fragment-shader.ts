@@ -357,6 +357,213 @@ const isReachableCustomNode = (
   node: ValidatedValueNode,
 ): node is ValidatedCustomNode => node.kind === "custom";
 
+const collectSubgraphReachableNodeIds = (
+  graph: ValidatedGraph,
+  targetNodeFlowId: string,
+): ReadonlySet<string> => {
+  const incomingEdgesByTargetNodeId = createIncomingEdgesByTargetNodeId(graph);
+  const reachableNodeIds = new Set<string>([targetNodeFlowId]);
+  const pendingNodeIds = [targetNodeFlowId];
+
+  while (pendingNodeIds.length > 0) {
+    const currentNodeId = pendingNodeIds.pop();
+
+    if (currentNodeId === undefined) {
+      continue;
+    }
+
+    for (const incomingEdge of incomingEdgesByTargetNodeId.get(currentNodeId) ??
+      []) {
+      if (reachableNodeIds.has(incomingEdge.sourceNode.flowId)) {
+        continue;
+      }
+
+      reachableNodeIds.add(incomingEdge.sourceNode.flowId);
+      pendingNodeIds.push(incomingEdge.sourceNode.flowId);
+    }
+  }
+
+  return reachableNodeIds;
+};
+
+export const compileSubgraphFragmentShader = (
+  graph: ValidatedGraph,
+  targetNodeFlowId: string,
+): CompileFragmentShaderResult => {
+  const targetNode = graph.nodes.find(
+    (node): node is ValidatedValueNode =>
+      node.flowId === targetNodeFlowId && node.kind !== "glFragColor",
+  );
+
+  if (targetNode === undefined) {
+    return {
+      errors: [
+        `node with id [${targetNodeFlowId}] not found or is not a value node.`,
+      ],
+      ok: false,
+      shaderSource: null,
+      uniforms: [],
+    };
+  }
+
+  const errors: string[] = [];
+
+  const { uniforms, errors: uniformErrors } = collectUniforms(graph);
+  const { uniforms: timeUniforms, errors: timeUniformErrors } =
+    collectTimeUniforms(graph);
+  const { varyings, errors: varyingErrors } = collectVaryings(graph);
+
+  errors.push(...uniformErrors);
+  errors.push(...timeUniformErrors);
+  errors.push(...varyingErrors);
+
+  if (errors.length > 0) {
+    return {
+      errors,
+      ok: false,
+      shaderSource: null,
+      uniforms: [],
+    };
+  }
+
+  const reachableNodeIds = collectSubgraphReachableNodeIds(
+    graph,
+    targetNodeFlowId,
+  );
+  const { errors: topologicalErrors, nodes: orderedNodes } =
+    topologicallySortReachableNodes(graph, reachableNodeIds);
+
+  errors.push(...topologicalErrors);
+
+  if (errors.length > 0) {
+    return {
+      errors,
+      ok: false,
+      shaderSource: null,
+      uniforms: [],
+    };
+  }
+
+  const incomingEdgeMapByTargetInput =
+    createIncomingEdgeMapByTargetInput(graph);
+  const expressionByNodeId = new Map<string, string>();
+  const customNodeSourceByFilepath = new Map<string, string>();
+  const mainStatements: string[] = [];
+
+  for (const [index, node] of orderedNodes.entries()) {
+    if (node.kind === "time") {
+      expressionByNodeId.set(node.flowId, node.timeBindingKey);
+      continue;
+    }
+
+    if (node.kind === "uniform") {
+      expressionByNodeId.set(node.flowId, node.uniformBindingKey);
+      continue;
+    }
+
+    if (node.kind === "varying") {
+      expressionByNodeId.set(node.flowId, node.varyingBindingKey);
+      continue;
+    }
+
+    if (!isReachableCustomNode(node)) {
+      continue;
+    }
+
+    customNodeSourceByFilepath.set(
+      node.definition.filepath,
+      node.source.trim(),
+    );
+
+    const incomingEdgesByInputName =
+      incomingEdgeMapByTargetInput.get(node.flowId) ?? new Map();
+    const callArguments: string[] = [];
+
+    for (const [inputName] of node.signature.inputTypes.entries()) {
+      const inputEdge = incomingEdgesByInputName.get(inputName);
+
+      if (inputEdge === undefined) {
+        errors.push(
+          `node [${node.displayName}] is missing a compiled source for input [${inputName}]. The validated graph should have provided this connection.`,
+        );
+        continue;
+      }
+
+      const sourceExpression = expressionByNodeId.get(
+        inputEdge.sourceNode.flowId,
+      );
+
+      if (sourceExpression === undefined) {
+        errors.push(
+          `node [${node.displayName}] depends on node [${inputEdge.sourceNode.displayName}], but that value was not available when fragment shader compilation reached [${node.displayName}].`,
+        );
+        continue;
+      }
+
+      callArguments.push(sourceExpression);
+    }
+
+    if (errors.length > 0) {
+      continue;
+    }
+
+    const outputVariableName = createCompiledNodeVariableName(node, index);
+
+    mainStatements.push(
+      `${node.outputType} ${outputVariableName} = ${node.signature.name}(${callArguments.join(", ")});`,
+    );
+    expressionByNodeId.set(node.flowId, outputVariableName);
+  }
+
+  if (errors.length > 0) {
+    return {
+      errors,
+      ok: false,
+      shaderSource: null,
+      uniforms: [],
+    };
+  }
+
+  const finalExpression = expressionByNodeId.get(targetNodeFlowId);
+
+  if (finalExpression === undefined) {
+    return {
+      errors: [
+        `no compiled expression was produced for node [${targetNode.displayName}].`,
+      ],
+      ok: false,
+      shaderSource: null,
+      uniforms: [],
+    };
+  }
+
+  const functionBlocks = Array.from(customNodeSourceByFilepath.values());
+  const shaderSections = [
+    ...timeUniforms.map(
+      (uniform) => `uniform ${uniform.type} ${uniform.name};`,
+    ),
+    ...uniforms.map((uniform) => `uniform ${uniform.type} ${uniform.name};`),
+    ...varyings.map((varying) => `varying ${varying.type} ${varying.name};`),
+    varyings.length > 0 ? "" : null,
+    functionBlocks.length > 0 ? "" : null,
+    ...functionBlocks.flatMap((source, index) =>
+      index === functionBlocks.length - 1 ? [source] : [source, ""],
+    ),
+    functionBlocks.length > 0 ? "" : null,
+    "void main() {",
+    ...mainStatements.map((statement) => `  ${statement}`),
+    `  gl_FragColor = ${coerceExpressionToFragmentColor(finalExpression, targetNode.outputType)};`,
+    "}",
+  ].filter((section): section is string => section !== null);
+
+  return {
+    errors: [],
+    ok: true,
+    shaderSource: shaderSections.join("\n"),
+    uniforms: [...timeUniforms, ...uniforms],
+  };
+};
+
 export const compileFragmentShader = (
   graph: ValidatedGraph,
 ): CompileFragmentShaderResult => {

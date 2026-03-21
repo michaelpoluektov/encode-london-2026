@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import type { GraphSourceLoader } from "./graph-types";
 import { GraphCanvas } from "./internal/GraphCanvas";
 import { GraphPreviewBridge } from "./internal/GraphPreviewBridge";
+import { SubgraphMcpBridge } from "./internal/SubgraphMcpBridge";
 import { useGraphRuntime } from "./internal/use-graph-runtime";
 
 type GraphProps = {
@@ -26,6 +27,10 @@ export const Graph = ({
         compiledShader={runtime.compiledShader}
         errors={runtime.errors}
         uniformValues={runtime.uniformValues}
+      />
+      <SubgraphMcpBridge
+        uniformValues={runtime.uniformValues}
+        validatedGraph={runtime.validatedGraph}
       />
       <GraphCanvas
         className={className}
