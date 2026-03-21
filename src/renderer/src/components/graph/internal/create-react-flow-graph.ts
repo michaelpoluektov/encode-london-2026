@@ -2,6 +2,8 @@ import dagre from "@dagrejs/dagre";
 import { type Edge, MarkerType, type NodeTypes } from "@xyflow/react";
 import type {
   GraphInputValue,
+  GraphUniformValue,
+  GraphUniformValues,
   ValidatedGraph,
   ValidatedGraphNode,
 } from "../graph-types";
@@ -61,8 +63,6 @@ type FlowGraphNode =
   | Vec2GraphFlowNode
   | Vec3GraphFlowNode
   | Vec4GraphFlowNode;
-
-type UniformBindingValue = boolean | number | Vec2Value | Vec3Value | Vec4Value;
 
 type CreateFlowElementsOptions = {
   readonly onInputValueChange: (flowId: string, value: GraphInputValue) => void;
@@ -307,7 +307,7 @@ const isInteractiveFlowNode = (
 const toUniformBindingValue = (
   node: Exclude<FlowGraphNode, CustomGraphFlowNode | GlFragColorGraphFlowNode>,
   value: GraphInputValue,
-): UniformBindingValue | null => {
+): GraphUniformValue | null => {
   switch (node.type) {
     case "bool":
       return typeof value === "boolean" ? value : null;
@@ -327,7 +327,7 @@ const toUniformBindingValue = (
 
 const applyUniformBindingValue = (
   node: Exclude<FlowGraphNode, CustomGraphFlowNode | GlFragColorGraphFlowNode>,
-  value: UniformBindingValue,
+  value: GraphUniformValue,
 ): FlowGraphNode => {
   switch (node.type) {
     case "bool":
@@ -603,3 +603,49 @@ export const updateFlowNodeValue = (
       return applyUniformBindingValue(node, bindingValue);
     });
   })();
+
+export const collectFlowGraphUniformValues = (
+  nodes: readonly FlowGraphNode[],
+): GraphUniformValues => {
+  const uniformValues: Record<string, GraphUniformValue> = {};
+
+  for (const node of nodes) {
+    if (!isInteractiveFlowNode(node)) {
+      continue;
+    }
+
+    if (uniformValues[node.data.uniformBindingKey] !== undefined) {
+      continue;
+    }
+
+    switch (node.type) {
+      case "bool":
+      case "float":
+      case "int":
+        uniformValues[node.data.uniformBindingKey] = node.data.value;
+        break;
+      case "color":
+        uniformValues[node.data.uniformBindingKey] = colorValueToVec4Value(
+          node.data.value,
+        );
+        break;
+      case "vec2":
+        uniformValues[node.data.uniformBindingKey] = cloneVec2Value(
+          node.data.value,
+        );
+        break;
+      case "vec3":
+        uniformValues[node.data.uniformBindingKey] = cloneVec3Value(
+          node.data.value,
+        );
+        break;
+      case "vec4":
+        uniformValues[node.data.uniformBindingKey] = cloneVec4Value(
+          node.data.value,
+        );
+        break;
+    }
+  }
+
+  return uniformValues;
+};

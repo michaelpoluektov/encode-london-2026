@@ -9,12 +9,15 @@ import {
   previewFrameStale,
   viewportHost,
 } from "../app-shell.css";
+import type { GraphUniformValues } from "../components/graph/graph-types";
 import { cx } from "../lib/cx";
 import { registerPreviewCaptureHandler } from "../preview-capture";
 import {
+  applyPreviewUniforms,
   compilePreviewMaterial,
   createPreviewMaterial,
 } from "../preview-compile";
+import { useGraphPreviewStore } from "../store/graph-preview-store";
 import { createPreviewRevision, usePreviewStore } from "../store/preview-store";
 import {
   getProjectShaderSource,
@@ -59,14 +62,30 @@ const encodeCaptureDataUrl = (
 const getErrorMessage = (error: unknown, fallbackMessage: string): string =>
   error instanceof Error ? error.message : fallbackMessage;
 
+const EMPTY_GRAPH_UNIFORM_VALUES: GraphUniformValues = Object.freeze({});
+
 export const PreviewViewport = (): JSX.Element => {
-  const fragmentSource = useProjectStore((state) =>
+  const projectFragmentSource = useProjectStore((state) =>
     getProjectShaderSource(state.project, "fragment"),
   );
-  const vertexSource = useProjectStore((state) =>
+  const projectVertexSource = useProjectStore((state) =>
     getProjectShaderSource(state.project, "vertex"),
   );
+  const graphFragmentSource = useGraphPreviewStore(
+    (state) => state.fragmentShaderSource,
+  );
+  const graphUniformValues = useGraphPreviewStore(
+    (state) => state.uniformValues,
+  );
   const isPreviewStale = usePreviewStore((state) => state.isStale);
+
+  const fragmentSource = graphFragmentSource ?? projectFragmentSource;
+  const vertexSource =
+    graphFragmentSource === null ? projectVertexSource : DEFAULT_VERTEX_SHADER;
+  const activeUniformValues =
+    graphFragmentSource === null
+      ? EMPTY_GRAPH_UNIFORM_VALUES
+      : graphUniformValues;
 
   const deferredFragment = useDeferredValue(fragmentSource);
   const deferredVertex = useDeferredValue(vertexSource);
@@ -83,6 +102,12 @@ export const PreviewViewport = (): JSX.Element => {
     THREE.SphereGeometry,
     THREE.Material
   > | null>(null);
+  const activeUniformValuesRef =
+    useRef<GraphUniformValues>(activeUniformValues);
+
+  useEffect(() => {
+    activeUniformValuesRef.current = activeUniformValues;
+  }, [activeUniformValues]);
 
   useEffect(
     () =>
@@ -232,6 +257,7 @@ export const PreviewViewport = (): JSX.Element => {
       const material = createPreviewMaterial(
         DEFAULT_FRAGMENT_SHADER,
         DEFAULT_VERTEX_SHADER,
+        EMPTY_GRAPH_UNIFORM_VALUES,
       );
       mesh = new THREE.Mesh(geometry, material);
       scene.add(mesh);
@@ -346,6 +372,7 @@ export const PreviewViewport = (): JSX.Element => {
       mesh.geometry,
       deferredFragment,
       deferredVertex,
+      activeUniformValuesRef.current,
     );
 
     if (compileResult.kind === "error") {
@@ -362,6 +389,22 @@ export const PreviewViewport = (): JSX.Element => {
     previousMaterial.dispose();
     usePreviewStore.getState().markReady(deferredRevision);
   }, [deferredFragment, deferredRevision, deferredVertex]);
+
+  useEffect(() => {
+    const mesh = meshRef.current;
+
+    if (mesh === null) {
+      return;
+    }
+
+    const material = mesh.material;
+
+    if (!(material instanceof THREE.ShaderMaterial)) {
+      return;
+    }
+
+    applyPreviewUniforms(material, activeUniformValues);
+  }, [activeUniformValues]);
 
   return (
     <div className={cx(previewFrame, isPreviewStale && previewFrameStale)}>
