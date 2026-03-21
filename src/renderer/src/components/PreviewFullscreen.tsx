@@ -2,18 +2,15 @@ import { type JSX, useDeferredValue, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import {
-  DEFAULT_FRAGMENT_SHADER,
-  DEFAULT_VERTEX_SHADER,
-} from "../../../shared/default-project";
+import { DEFAULT_VERTEX_SHADER } from "../../../shared/default-project";
 import {
   applyPreviewUniforms,
   compilePreviewMaterial,
   createPreviewMaterial,
 } from "../preview-compile";
-import { useGraphPreviewStore } from "../store/graph-preview-store";
 import { darkThemeValues } from "../theme";
 import type { GraphUniformValues } from "./graph/graph-types";
+import { usePreviewGraphShader } from "./graph/internal/use-preview-graph-shader";
 import {
   closeButton,
   hint,
@@ -44,18 +41,16 @@ export const PreviewFullscreen = ({
     THREE.Material
   > | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
+  const hasInitializedSceneRef = useRef(false);
 
-  const graphFragmentSource = useGraphPreviewStore(
-    (state) => state.fragmentShaderSource,
-  );
-  const graphUniformValues = useGraphPreviewStore(
-    (state) => state.uniformValues,
-  );
+  const previewGraphShader = usePreviewGraphShader();
 
-  const fragmentSource = graphFragmentSource ?? DEFAULT_FRAGMENT_SHADER;
+  const fragmentSource = previewGraphShader.fragmentSource;
   const vertexSource = DEFAULT_VERTEX_SHADER;
   const activeUniformValues =
-    graphFragmentSource === null ? EMPTY_UNIFORM_VALUES : graphUniformValues;
+    fragmentSource === null
+      ? EMPTY_UNIFORM_VALUES
+      : previewGraphShader.uniformValues;
   const activeUniformValuesRef =
     useRef<GraphUniformValues>(activeUniformValues);
 
@@ -68,6 +63,8 @@ export const PreviewFullscreen = ({
 
   // Scene setup
   useEffect(() => {
+    if (hasInitializedSceneRef.current || fragmentSource === null) return;
+
     const host = hostRef.current;
     if (host === null) return;
 
@@ -79,6 +76,8 @@ export const PreviewFullscreen = ({
     let controls: OrbitControls | null = null;
     let resizeObserver: ResizeObserver | null = null;
     let frameId = 0;
+
+    hasInitializedSceneRef.current = true;
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(darkThemeValues.color.preview.scene);
@@ -109,7 +108,7 @@ export const PreviewFullscreen = ({
 
     geometry = new THREE.SphereGeometry(1, 256, 128);
     const material = createPreviewMaterial(
-      DEFAULT_FRAGMENT_SHADER,
+      fragmentSource,
       DEFAULT_VERTEX_SHADER,
       activeUniformValuesRef.current,
     );
@@ -188,15 +187,23 @@ export const PreviewFullscreen = ({
       cameraRef.current = null;
       meshRef.current = null;
       controlsRef.current = null;
+      hasInitializedSceneRef.current = false;
     };
-  }, []);
+  }, [fragmentSource]);
 
   // Shader recompilation
   useEffect(() => {
     const renderer = rendererRef.current;
     const camera = cameraRef.current;
     const mesh = meshRef.current;
-    if (renderer === null || camera === null || mesh === null) return;
+    if (
+      renderer === null ||
+      camera === null ||
+      mesh === null ||
+      deferredFragment === null
+    ) {
+      return;
+    }
 
     const compileResult = compilePreviewMaterial(
       renderer,

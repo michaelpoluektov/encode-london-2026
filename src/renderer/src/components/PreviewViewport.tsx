@@ -1,8 +1,6 @@
 import { type JSX, useDeferredValue, useEffect, useRef } from "react";
 import * as THREE from "three";
-import {
-  DEFAULT_FRAGMENT_SHADER,
-} from "../../../shared/default-project";
+import { DEFAULT_VERTEX_SHADER } from "../../../shared/default-project";
 
 import {
   previewFrame,
@@ -10,6 +8,7 @@ import {
   viewportHost,
 } from "../app-shell.css";
 import type { GraphUniformValues } from "../components/graph/graph-types";
+import { usePreviewGraphShader } from "../components/graph/internal/use-preview-graph-shader";
 import { cx } from "../lib/cx";
 import {
   captureRegisteredPreview,
@@ -20,7 +19,6 @@ import {
   compilePreviewMaterial,
   createPreviewMaterial,
 } from "../preview-compile";
-import { useGraphPreviewStore } from "../store/graph-preview-store";
 import { createPreviewRevision, usePreviewStore } from "../store/preview-store";
 import { getProjectVertexSource, useProjectStore } from "../store/project-store";
 import { darkThemeValues } from "../theme";
@@ -65,28 +63,22 @@ const getErrorMessage = (error: unknown, fallbackMessage: string): string =>
 const EMPTY_GRAPH_UNIFORM_VALUES: GraphUniformValues = Object.freeze({});
 
 export const PreviewViewport = (): JSX.Element => {
-  const graphFragmentSource = useGraphPreviewStore(
-    (state) => state.fragmentShaderSource,
-  );
-  const graphUniformValues = useGraphPreviewStore(
-    (state) => state.uniformValues,
-  );
   const isPreviewStale = usePreviewStore((state) => state.isStale);
+  const previewGraphShader = usePreviewGraphShader();
 
-  const project = useProjectStore((s) => s.project);
-  const fragmentSource = graphFragmentSource ?? DEFAULT_FRAGMENT_SHADER;
-  const vertexSource = getProjectVertexSource(project);
+  const fragmentSource = previewGraphShader.fragmentSource;
+  const vertexSource = DEFAULT_VERTEX_SHADER;
   const activeUniformValues =
-    graphFragmentSource === null
+    fragmentSource === null
       ? EMPTY_GRAPH_UNIFORM_VALUES
-      : graphUniformValues;
+      : previewGraphShader.uniformValues;
 
   const deferredFragment = useDeferredValue(fragmentSource);
   const deferredVertex = useDeferredValue(vertexSource);
-  const deferredRevision = createPreviewRevision(
-    deferredFragment,
-    deferredVertex,
-  );
+  const deferredRevision =
+    deferredFragment === null
+      ? null
+      : createPreviewRevision(deferredFragment, deferredVertex);
 
   const hostRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -98,10 +90,23 @@ export const PreviewViewport = (): JSX.Element => {
   > | null>(null);
   const activeUniformValuesRef =
     useRef<GraphUniformValues>(activeUniformValues);
+  const hasInitializedSceneRef = useRef(false);
 
   useEffect(() => {
     activeUniformValuesRef.current = activeUniformValues;
   }, [activeUniformValues]);
+
+  useEffect(() => {
+    if (fragmentSource !== null || previewGraphShader.errors.length === 0) {
+      return;
+    }
+
+    usePreviewStore.getState().markFailure({
+      stage: "compile",
+      message: previewGraphShader.errors.join("\n\n"),
+      revision: null,
+    });
+  }, [fragmentSource, previewGraphShader.errors]);
 
   // Handle MCP compile-check requests from the main process.
   useEffect(() => {
@@ -243,6 +248,10 @@ export const PreviewViewport = (): JSX.Element => {
   );
 
   useEffect(() => {
+    if (hasInitializedSceneRef.current || fragmentSource === null) {
+      return;
+    }
+
     const host = hostRef.current;
 
     if (host === null) {
@@ -256,6 +265,8 @@ export const PreviewViewport = (): JSX.Element => {
     let mesh: THREE.Mesh<THREE.SphereGeometry, THREE.Material> | null = null;
     let resizeObserver: ResizeObserver | null = null;
     let frameId = 0;
+
+    hasInitializedSceneRef.current = true;
 
     try {
       scene = new THREE.Scene();
@@ -280,9 +291,9 @@ export const PreviewViewport = (): JSX.Element => {
 
       geometry = new THREE.SphereGeometry(1, 256, 128);
       const material = createPreviewMaterial(
-        DEFAULT_FRAGMENT_SHADER,
-        getProjectVertexSource(useProjectStore.getState().project),
-        EMPTY_GRAPH_UNIFORM_VALUES,
+        fragmentSource,
+        DEFAULT_VERTEX_SHADER,
+        activeUniformValuesRef.current,
       );
       mesh = new THREE.Mesh(geometry, material);
       scene.add(mesh);
@@ -360,6 +371,7 @@ export const PreviewViewport = (): JSX.Element => {
 
       renderFrame();
     } catch (error) {
+      hasInitializedSceneRef.current = false;
       usePreviewStore.getState().markFailure({
         stage: "render",
         message: getErrorMessage(error, "Preview rendering failed."),
@@ -377,15 +389,22 @@ export const PreviewViewport = (): JSX.Element => {
       rendererRef.current = null;
       cameraRef.current = null;
       meshRef.current = null;
+      hasInitializedSceneRef.current = false;
     };
-  }, []);
+  }, [fragmentSource]);
 
   useEffect(() => {
     const renderer = rendererRef.current;
     const camera = cameraRef.current;
     const mesh = meshRef.current;
 
-    if (renderer === null || camera === null || mesh === null) {
+    if (
+      renderer === null ||
+      camera === null ||
+      mesh === null ||
+      deferredFragment === null ||
+      deferredRevision === null
+    ) {
       return;
     }
 
