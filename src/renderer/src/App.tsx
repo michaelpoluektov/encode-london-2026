@@ -2,30 +2,24 @@ import { type JSX, useEffect, useRef } from "react";
 import {
   appShell,
   footerBar,
-  headerActions,
   headerBar,
   layoutViewport,
-  panelToggleGroup,
   shellFrame,
   shellTitle,
+  workspaceColumn,
+  workspaceGrid,
   workspaceShell,
 } from "./app-shell.css";
 import { ChatPanel } from "./components/ChatPanel";
 import { GraphPanel } from "./components/GraphPanel";
+import { Panel } from "./components/Panel";
 import { PreviewViewport } from "./components/PreviewViewport";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { ShaderEditor } from "./components/ShaderEditor";
 import { SplitLayout } from "./components/SplitLayout";
 import { Button } from "./components/ui/Button";
 import { Text } from "./components/ui/Text";
-import { WorkspaceRegion } from "./components/WorkspaceRegion";
-import {
-  useAppStore,
-  WORKSPACE_PANEL_IDS,
-  type WorkspacePanelId,
-  type WorkspaceRegionId,
-  workspacePanelDefinitions,
-} from "./store/app-store";
+import { useAppStore } from "./store/app-store";
 import { useProjectStore } from "./store/project-store";
 
 const normalizePaneSizes = (sizes: readonly number[]): number[] => {
@@ -38,19 +32,15 @@ const normalizePaneSizes = (sizes: readonly number[]): number[] => {
   return sizes.map((size) => (size / total) * 100);
 };
 
-const getRegionPanelIds = (
-  workspacePanels: ReturnType<typeof useAppStore.getState>["workspacePanels"],
-  region: WorkspaceRegionId,
-): WorkspacePanelId[] =>
-  WORKSPACE_PANEL_IDS.filter((panelId) => {
-    const panel = workspacePanels[panelId];
-    return panel.isOpen && panel.region === region;
-  });
-
 export const App = (): JSX.Element => {
   const hasBootstrappedRef = useRef(false);
-  const setBootstrap = useAppStore((state) => state.setBootstrap);
   const openProject = useProjectStore((state) => state.openProject);
+  const isProjectSidebarOpen = useAppStore(
+    (state) => state.isProjectSidebarOpen,
+  );
+  const setProjectSidebarOpen = useAppStore(
+    (state) => state.setProjectSidebarOpen,
+  );
   const shellPaneSizes = useAppStore((state) => state.shellPaneSizes);
   const setShellPaneSizes = useAppStore((state) => state.setShellPaneSizes);
   const workspaceColumnSizes = useAppStore(
@@ -59,20 +49,17 @@ export const App = (): JSX.Element => {
   const setWorkspaceColumnSizes = useAppStore(
     (state) => state.setWorkspaceColumnSizes,
   );
-  const workspaceRowSizes = useAppStore((state) => state.workspaceRowSizes);
-  const setWorkspaceRowSizes = useAppStore(
-    (state) => state.setWorkspaceRowSizes,
+  const workspaceLeftRowSizes = useAppStore(
+    (state) => state.workspaceLeftRowSizes,
   );
-  const workspacePanels = useAppStore((state) => state.workspacePanels);
-  const activeWorkspacePanels = useAppStore(
-    (state) => state.activeWorkspacePanels,
+  const setWorkspaceLeftRowSizes = useAppStore(
+    (state) => state.setWorkspaceLeftRowSizes,
   );
-  const toggleWorkspacePanel = useAppStore(
-    (state) => state.toggleWorkspacePanel,
+  const workspaceRightRowSizes = useAppStore(
+    (state) => state.workspaceRightRowSizes,
   );
-  const moveWorkspacePanel = useAppStore((state) => state.moveWorkspacePanel);
-  const setActiveWorkspacePanel = useAppStore(
-    (state) => state.setActiveWorkspacePanel,
+  const setWorkspaceRightRowSizes = useAppStore(
+    (state) => state.setWorkspaceRightRowSizes,
   );
 
   useEffect(() => {
@@ -83,76 +70,94 @@ export const App = (): JSX.Element => {
     hasBootstrappedRef.current = true;
 
     void window.shadily.getBootstrapPayload().then((payload) => {
-      setBootstrap(payload);
-
       if (payload.initialProject !== null) {
         openProject(payload.initialProject);
       }
     });
-  }, [openProject, setBootstrap]);
+  }, [openProject]);
 
-  const sidePanelIds = getRegionPanelIds(workspacePanels, "side");
-  const bottomPanelIds = getRegionPanelIds(workspacePanels, "bottom");
-
-  const renderWorkspacePanel = (panelId: WorkspacePanelId): JSX.Element => {
-    switch (panelId) {
-      case "chat":
-        return <ChatPanel />;
-      case "preview":
-        return <PreviewViewport />;
-      case "graph":
-        return <GraphPanel />;
-      case "source":
-        return <ShaderEditor />;
-    }
-  };
-
-  const renderWorkspaceRegion = (region: WorkspaceRegionId): JSX.Element => {
-    const panelIds = getRegionPanelIds(workspacePanels, region);
-    const activePanelId = activeWorkspacePanels[region];
-
-    return (
-      <WorkspaceRegion
-        activePanelId={activePanelId}
-        panelIds={panelIds}
-        region={region}
-        renderPanelTitle={(panelId) => workspacePanelDefinitions[panelId].title}
-        onClosePanel={toggleWorkspacePanel}
-        onMovePanel={moveWorkspacePanel}
-        onSelectPanel={(panelId) => {
-          setActiveWorkspacePanel(region, panelId);
-        }}
-      >
-        {activePanelId === null ? null : renderWorkspacePanel(activePanelId)}
-      </WorkspaceRegion>
-    );
-  };
-
-  const workspacePrimaryPane =
-    bottomPanelIds.length === 0 ? (
-      renderWorkspaceRegion("main")
-    ) : (
+  const workspaceGridShell = (
+    <div className={workspaceGrid}>
       <SplitLayout
-        key={`workspace-rows-${bottomPanelIds.join("-")}`}
-        defaultSizes={normalizePaneSizes(workspaceRowSizes)}
-        onChange={setWorkspaceRowSizes}
-        orientation="vertical"
+        defaultSizes={normalizePaneSizes(workspaceColumnSizes)}
+        onChange={setWorkspaceColumnSizes}
         panes={[
           {
-            content: renderWorkspaceRegion("main"),
-            id: "workspace-main-region",
-            minSize: 220,
-            preferredSize: `${workspaceRowSizes[0]}%`,
+            content: (
+              <div className={workspaceColumn}>
+                <SplitLayout
+                  defaultSizes={normalizePaneSizes(workspaceLeftRowSizes)}
+                  onChange={setWorkspaceLeftRowSizes}
+                  orientation="vertical"
+                  panes={[
+                    {
+                      content: (
+                        <Panel title="Source">
+                          <ShaderEditor />
+                        </Panel>
+                      ),
+                      id: "source-panel",
+                      minSize: 220,
+                      preferredSize: `${workspaceLeftRowSizes[0]}%`,
+                    },
+                    {
+                      content: (
+                        <Panel title="Graph">
+                          <GraphPanel />
+                        </Panel>
+                      ),
+                      id: "graph-panel",
+                      minSize: 180,
+                      preferredSize: `${workspaceLeftRowSizes[1]}%`,
+                    },
+                  ]}
+                />
+              </div>
+            ),
+            id: "workspace-left-column",
+            minSize: 360,
+            preferredSize: `${workspaceColumnSizes[0]}%`,
           },
           {
-            content: renderWorkspaceRegion("bottom"),
-            id: "workspace-bottom-region",
-            minSize: 180,
-            preferredSize: `${workspaceRowSizes[1]}%`,
+            content: (
+              <div className={workspaceColumn}>
+                <SplitLayout
+                  defaultSizes={normalizePaneSizes(workspaceRightRowSizes)}
+                  onChange={setWorkspaceRightRowSizes}
+                  orientation="vertical"
+                  panes={[
+                    {
+                      content: (
+                        <Panel title="Chat">
+                          <ChatPanel />
+                        </Panel>
+                      ),
+                      id: "chat-panel",
+                      minSize: 220,
+                      preferredSize: `${workspaceRightRowSizes[0]}%`,
+                    },
+                    {
+                      content: (
+                        <Panel title="Render">
+                          <PreviewViewport />
+                        </Panel>
+                      ),
+                      id: "render-panel",
+                      minSize: 220,
+                      preferredSize: `${workspaceRightRowSizes[1]}%`,
+                    },
+                  ]}
+                />
+              </div>
+            ),
+            id: "workspace-right-column",
+            minSize: 360,
+            preferredSize: `${workspaceColumnSizes[1]}%`,
           },
         ]}
       />
-    );
+    </div>
+  );
 
   return (
     <main className={appShell}>
@@ -160,79 +165,46 @@ export const App = (): JSX.Element => {
         <Text as="h1" className={shellTitle} variant="title">
           Shadily
         </Text>
-        <div className={headerActions}>
-          <div className={panelToggleGroup}>
-            {(Object.keys(workspacePanelDefinitions) as WorkspacePanelId[]).map(
-              (panelId) => {
-                const panel = workspacePanels[panelId];
-
-                return (
-                  <Button
-                    key={panelId}
-                    active={panel.isOpen}
-                    onClick={() => {
-                      toggleWorkspacePanel(panelId);
-                    }}
-                    variant="outline"
-                  >
-                    {workspacePanelDefinitions[panelId].title}
-                  </Button>
-                );
-              },
-            )}
-          </div>
-        </div>
+        <Button
+          onClick={() => {
+            setProjectSidebarOpen(!isProjectSidebarOpen);
+          }}
+          variant="outline"
+        >
+          {isProjectSidebarOpen ? "Hide Project" : "Show Project"}
+        </Button>
       </header>
       <section className={layoutViewport}>
-        <SplitLayout
-          defaultSizes={normalizePaneSizes(shellPaneSizes)}
-          onChange={setShellPaneSizes}
-          panes={[
-            {
-              content: <ProjectSidebar />,
-              id: "project-sidebar",
-              minSize: 220,
-              preferredSize: `${shellPaneSizes[0]}%`,
-            },
-            {
-              content: (
-                <div className={workspaceShell}>
-                  {sidePanelIds.length === 0 ? (
-                    workspacePrimaryPane
-                  ) : (
-                    <SplitLayout
-                      key={`workspace-columns-${sidePanelIds.join("-")}`}
-                      defaultSizes={normalizePaneSizes(workspaceColumnSizes)}
-                      onChange={setWorkspaceColumnSizes}
-                      panes={[
-                        {
-                          content: workspacePrimaryPane,
-                          id: "workspace-primary-pane",
-                          minSize: 320,
-                          preferredSize: `${workspaceColumnSizes[0]}%`,
-                        },
-                        {
-                          content: renderWorkspaceRegion("side"),
-                          id: "workspace-side-region",
-                          minSize: 280,
-                          preferredSize: `${workspaceColumnSizes[1]}%`,
-                        },
-                      ]}
-                    />
-                  )}
-                </div>
-              ),
-              id: "workspace-shell",
-              minSize: 720,
-            },
-          ]}
-        />
+        {isProjectSidebarOpen ? (
+          <SplitLayout
+            defaultSizes={normalizePaneSizes(shellPaneSizes)}
+            onChange={setShellPaneSizes}
+            panes={[
+              {
+                content: <ProjectSidebar />,
+                id: "project-sidebar",
+                minSize: 220,
+                preferredSize: `${shellPaneSizes[0]}%`,
+                snap: true,
+              },
+              {
+                content: (
+                  <div className={workspaceShell}>{workspaceGridShell}</div>
+                ),
+                id: "workspace-shell",
+                minSize: 720,
+                preferredSize: `${shellPaneSizes[1]}%`,
+              },
+            ]}
+          />
+        ) : (
+          <div className={workspaceShell}>{workspaceGridShell}</div>
+        )}
       </section>
       <footer className={footerBar}>
         <div className={shellFrame}>
           <Text as="span" tone="muted" variant="caption">
-            Panels can be resized and moved between regions via the header
-            controls.
+            Resizable 2x2 workspace with a collapsible project sidebar.
           </Text>
         </div>
       </footer>

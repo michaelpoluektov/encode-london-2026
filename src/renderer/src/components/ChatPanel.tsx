@@ -21,10 +21,10 @@ import {
   chatPanel,
   chatStreamingBubble,
   chatSystemMessage,
-  chatTextarea,
   chatWarning,
 } from "./chat-panel.css";
 import { Button } from "./ui/Button";
+import { textareaField } from "./ui/field.css";
 import { Text } from "./ui/Text";
 
 const AssistantBubble = ({
@@ -150,7 +150,7 @@ export const ChatPanel = (): JSX.Element => {
 
       <div className={chatInputArea}>
         <textarea
-          className={chatTextarea}
+          className={textareaField}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

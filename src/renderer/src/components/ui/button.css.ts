@@ -6,7 +6,7 @@ export const buttonBase = style({
   alignItems: "center",
   justifyContent: "center",
   minWidth: 0,
-  borderRadius: themeVars.radius.sm,
+  borderRadius: 0,
   border: `1px solid transparent`,
   background: "transparent",
   color: themeVars.color.text.secondary,
@@ -43,14 +43,6 @@ export const buttonSize = styleVariants({
 });
 
 export const buttonVariant = styleVariants({
-  ghost: {
-    selectors: {
-      "&:hover:not(:disabled)": {
-        background: themeVars.color.background.panel,
-        color: themeVars.color.text.primary,
-      },
-    },
-  },
   icon: {
     borderColor: themeVars.color.border.standard,
     background: themeVars.color.surface.interactive,
@@ -72,27 +64,6 @@ export const buttonVariant = styleVariants({
         background: themeVars.color.surface.interactiveHover,
         color: themeVars.color.text.primary,
       },
-    },
-  },
-  tab: {
-    borderRadius: 0,
-    selectors: {
-      "&:hover:not(:disabled)": {
-        background: themeVars.color.background.panel,
-        color: themeVars.color.text.primary,
-      },
-    },
-  },
-});
-
-export const buttonActive = style({
-  borderColor: themeVars.color.border.accent,
-  background: themeVars.color.surface.accentMuted,
-  color: themeVars.color.text.primary,
-  selectors: {
-    [`&${buttonVariant.tab}`]: {
-      background: themeVars.color.background.panel,
-      boxShadow: `inset 0 1px 0 ${themeVars.color.border.accent}`,
     },
   },
 });

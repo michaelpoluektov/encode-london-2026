@@ -31,19 +31,7 @@ export const footerBar = style({
 
 export const shellTitle = style({
   margin: 0,
-});
-
-export const headerActions = style({
-  display: "flex",
-  alignItems: "center",
-  gap: themeVars.space[3],
-  minWidth: 0,
-});
-
-export const panelToggleGroup = style({
-  display: "flex",
-  flexWrap: "wrap",
-  gap: themeVars.space[2],
+  flex: 1,
 });
 
 export const layoutViewport = style({
@@ -52,6 +40,16 @@ export const layoutViewport = style({
 });
 
 export const workspaceShell = style({
+  height: "100%",
+  minHeight: 0,
+});
+
+export const workspaceGrid = style({
+  height: "100%",
+  minHeight: 0,
+});
+
+export const workspaceColumn = style({
   height: "100%",
   minHeight: 0,
 });

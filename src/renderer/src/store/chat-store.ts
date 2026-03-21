@@ -9,11 +9,6 @@ let pendingShaderReload: Promise<void> = Promise.resolve();
 
 const MAX_PREVIEW_FOLLOW_UPS = 3;
 
-const PREFLIGHT_PROMPT =
-  "Read every file in this project directory and understand what is here. " +
-  "Then give a concise summary: what the shaders do, what visual effect they produce, " +
-  "and anything else worth knowing about this project.";
-
 const waitForAnimationFrame = async (): Promise<void> =>
   new Promise((resolve) => {
     window.requestAnimationFrame(() => resolve());
@@ -96,23 +91,29 @@ const clearChatSubscriptions = (): void => {
 const getImageLabel = (imagePath: string): string =>
   imagePath.split("/").pop() ?? imagePath;
 
+type ChatStoreState = {
+  readonly messages: ChatMessage[];
+  readonly isGenerating: boolean;
+  readonly streamingText: string;
+  readonly recentFileChanges: FileChangeInfo[];
+  readonly warningMessage: string | null;
+};
+
+type ChatStoreSetter = (
+  partial:
+    | Partial<ChatStoreState>
+    | ((state: ChatStoreState) => Partial<ChatStoreState> | ChatStoreState),
+) => void;
+
 const appendChatMessage = (
-  setState: (
-    partial:
-      | Partial<ChatStore>
-      | ((state: ChatStore) => Partial<ChatStore> | ChatStore),
-  ) => void,
+  setState: ChatStoreSetter,
   message: ChatMessage,
 ): void => {
   setState((state) => ({ messages: [...state.messages, message] }));
 };
 
 const updateChatMessage = (
-  setState: (
-    partial:
-      | Partial<ChatStore>
-      | ((state: ChatStore) => Partial<ChatStore> | ChatStore),
-  ) => void,
+  setState: ChatStoreSetter,
   messageId: string,
   content: string,
 ): void => {
@@ -123,12 +124,45 @@ const updateChatMessage = (
   }));
 };
 
+const beginChatTurn = (setState: ChatStoreSetter): void => {
+  resetPendingShaderReload();
+  clearChatSubscriptions();
+  chunkUnsubscribe = window.shadily.chat.onChunk((text) => {
+    setState({ streamingText: text });
+  });
+
+  fileChangeUnsubscribe = window.shadily.chat.onFileChange((changes) => {
+    setState({ recentFileChanges: changes });
+    queueShaderReload(changes);
+  });
+};
+
+const endChatTurn = (): void => {
+  clearChatSubscriptions();
+  resetPendingShaderReload();
+};
+
+const flushStreamingMessage = (
+  setState: ChatStoreSetter,
+  getState: () => Pick<ChatStoreState, "streamingText">,
+): void => {
+  const finalText = getState().streamingText;
+
+  if (!finalText) {
+    setState({ streamingText: "" });
+    return;
+  }
+
+  appendChatMessage(setState, {
+    id: crypto.randomUUID(),
+    role: "assistant",
+    content: finalText,
+  });
+  setState({ streamingText: "" });
+};
+
 const runPreviewFollowUps = async (
-  setState: (
-    partial:
-      | Partial<ChatStore>
-      | ((state: ChatStore) => Partial<ChatStore> | ChatStore),
-  ) => void,
+  setState: ChatStoreSetter,
 ): Promise<void> => {
   for (let iteration = 1; iteration <= MAX_PREVIEW_FOLLOW_UPS; iteration += 1) {
     const project = useProjectStore.getState().project;
@@ -217,24 +251,14 @@ const runPreviewFollowUps = async (
   }
 };
 
-type ChatStore = {
-  readonly messages: ChatMessage[];
-  readonly isGenerating: boolean;
-  readonly isPreflighting: boolean;
-  readonly streamingText: string;
-  readonly recentFileChanges: FileChangeInfo[];
-  readonly warningMessage: string | null;
-
+type ChatStore = ChatStoreState & {
   readonly sendMessage: (prompt: string) => Promise<void>;
-  readonly runPreflight: () => Promise<void>;
   readonly cancelGeneration: () => void;
-  readonly clearHistory: () => void;
 };
 
 export const useChatStore = create<ChatStore>((set, get) => ({
   messages: [],
   isGenerating: false,
-  isPreflighting: false,
   streamingText: "",
   recentFileChanges: [],
   warningMessage: null,
@@ -256,33 +280,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       warningMessage: null,
     }));
 
-    resetPendingShaderReload();
-    clearChatSubscriptions();
-    chunkUnsubscribe = window.shadily.chat.onChunk((text) => {
-      set({ streamingText: text });
-    });
-
-    fileChangeUnsubscribe = window.shadily.chat.onFileChange((changes) => {
-      set({ recentFileChanges: changes });
-      queueShaderReload(changes);
-    });
+    beginChatTurn(set);
 
     try {
       await window.shadily.chat.send(prompt);
-
-      const finalText = get().streamingText;
-      if (finalText) {
-        const assistantMessage: ChatMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: finalText,
-        };
-
-        appendChatMessage(set, assistantMessage);
-        set({ streamingText: "" });
-      } else {
-        set({ streamingText: "" });
-      }
+      flushStreamingMessage(set, get);
 
       await waitForPendingShaderReload();
       await waitForAnimationFrame();
@@ -298,53 +300,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       }
       set({ isGenerating: false, streamingText: "" });
     } finally {
-      clearChatSubscriptions();
-      resetPendingShaderReload();
-    }
-  },
-
-  runPreflight: async () => {
-    // Clear history from any previous project and run a silent preflight turn.
-    // We don't add a user bubble — this is an automatic background scan.
-    set({
-      messages: [],
-      isGenerating: true,
-      isPreflighting: true,
-      streamingText: "",
-      recentFileChanges: [],
-      warningMessage: null,
-    });
-
-    resetPendingShaderReload();
-    clearChatSubscriptions();
-    chunkUnsubscribe = window.shadily.chat.onChunk((text) => {
-      set({ streamingText: text });
-    });
-
-    fileChangeUnsubscribe = window.shadily.chat.onFileChange((changes) => {
-      set({ recentFileChanges: changes });
-      queueShaderReload(changes);
-    });
-
-    try {
-      await window.shadily.chat.send(PREFLIGHT_PROMPT);
-      await waitForPendingShaderReload();
-
-      const summary = get().streamingText;
-      if (summary) {
-        const msg: ChatMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: summary,
-        };
-        appendChatMessage(set, msg);
-      }
-    } catch {
-      // non-fatal — user can still chat
-    } finally {
-      clearChatSubscriptions();
-      resetPendingShaderReload();
-      set({ isGenerating: false, isPreflighting: false, streamingText: "" });
+      endChatTurn();
     }
   },
 
@@ -361,12 +317,4 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
     set({ isGenerating: false, streamingText: "" });
   },
-
-  clearHistory: () =>
-    set({
-      messages: [],
-      streamingText: "",
-      recentFileChanges: [],
-      warningMessage: null,
-    }),
 }));
