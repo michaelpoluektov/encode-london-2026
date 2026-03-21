@@ -27,7 +27,7 @@ import { Button } from "./components/ui/Button";
 import { Text } from "./components/ui/Text";
 import { cx } from "./lib/cx";
 import { type CollapsiblePaneId, useAppStore } from "./store/app-store";
-import { usePreviewStore } from "./store/preview-store";
+import { getPreviewDiagnostic, usePreviewStore } from "./store/preview-store";
 import { useProjectStore } from "./store/project-store";
 
 const normalizePaneSizes = (sizes: readonly number[]): number[] => {
@@ -63,10 +63,23 @@ type WorkspaceColumnLayoutProps = {
 type FooterStatusProps = {
   readonly isPreviewDiagnosticOpen: boolean;
   readonly isPreviewStale: boolean;
-  readonly previewDiagnostic: ReturnType<
-    typeof usePreviewStore.getState
-  >["diagnostic"];
+  readonly previewDiagnostic: ReturnType<typeof getPreviewDiagnostic>;
   readonly togglePreviewDiagnosticOpen: () => void;
+};
+
+const getPreviewStatusLabel = (
+  isPreviewStale: boolean,
+  hasDiagnostic: boolean,
+): string => {
+  if (isPreviewStale) {
+    return "Render stale";
+  }
+
+  if (hasDiagnostic) {
+    return "Preview issue";
+  }
+
+  return "Render clean";
 };
 
 const isPaneCollapseDisabled = (
@@ -80,49 +93,60 @@ const FooterStatus = ({
   isPreviewStale,
   previewDiagnostic,
   togglePreviewDiagnosticOpen,
-}: FooterStatusProps): JSX.Element => (
-  <div className={shellFrame}>
-    <Button
-      aria-controls="preview-diagnostic"
-      aria-expanded={isPreviewStale && isPreviewDiagnosticOpen}
-      className={cx(
-        footerStatusButton,
-        isPreviewStale && footerStatusButtonDirty,
-      )}
-      disabled={!isPreviewStale}
-      onClick={() => {
-        if (!isPreviewStale) {
-          return;
-        }
+}: FooterStatusProps): JSX.Element => {
+  const hasPreviewDiagnostic = previewDiagnostic !== null;
+  const hasPreviewIssue = hasPreviewDiagnostic || isPreviewStale;
 
-        togglePreviewDiagnosticOpen();
-      }}
-      variant="plain"
-    >
-      <span
-        aria-hidden="true"
-        className={cx(footerStatusDot, isPreviewStale && footerStatusDotDirty)}
-      />
-      {isPreviewStale ? "Render stale" : "Render clean"}
-    </Button>
-    {isPreviewStale && isPreviewDiagnosticOpen && previewDiagnostic !== null ? (
-      <div id="preview-diagnostic" className={footerDiagnosticPopover}>
-        <Text as="p" tone="default" variant="label">
-          Preview Diagnostic
-        </Text>
-        <div className={footerDiagnosticMeta}>
-          <span>Revision {previewDiagnostic.revision}</span>
-          <span>
-            {new Date(previewDiagnostic.timestamp).toLocaleTimeString()}
-          </span>
+  return (
+    <div className={shellFrame}>
+      <Button
+        aria-controls="preview-diagnostic"
+        aria-expanded={hasPreviewDiagnostic && isPreviewDiagnosticOpen}
+        className={cx(
+          footerStatusButton,
+          hasPreviewIssue && footerStatusButtonDirty,
+        )}
+        disabled={!hasPreviewDiagnostic}
+        onClick={() => {
+          if (!hasPreviewDiagnostic) {
+            return;
+          }
+
+          togglePreviewDiagnosticOpen();
+        }}
+        variant="plain"
+      >
+        <span
+          aria-hidden="true"
+          className={cx(
+            footerStatusDot,
+            hasPreviewIssue && footerStatusDotDirty,
+          )}
+        />
+        {getPreviewStatusLabel(isPreviewStale, hasPreviewDiagnostic)}
+      </Button>
+      {hasPreviewDiagnostic && isPreviewDiagnosticOpen ? (
+        <div id="preview-diagnostic" className={footerDiagnosticPopover}>
+          <Text as="p" tone="default" variant="label">
+            Preview Diagnostic
+          </Text>
+          <div className={footerDiagnosticMeta}>
+            <span>{previewDiagnostic.stage}</span>
+            {previewDiagnostic.revision !== null ? (
+              <span>Revision {previewDiagnostic.revision}</span>
+            ) : null}
+            <span>
+              {new Date(previewDiagnostic.timestamp).toLocaleTimeString()}
+            </span>
+          </div>
+          <pre className={footerDiagnosticMessage}>
+            {previewDiagnostic.message}
+          </pre>
         </div>
-        <pre className={footerDiagnosticMessage}>
-          {previewDiagnostic.message}
-        </pre>
-      </div>
-    ) : null}
-  </div>
-);
+      ) : null}
+    </div>
+  );
+};
 
 const WorkspaceColumnLayout = ({
   panes,
@@ -238,7 +262,7 @@ export const App = (): JSX.Element => {
   const setWorkspaceRightRowSizes = useAppStore(
     (state) => state.setWorkspaceRightRowSizes,
   );
-  const previewDiagnostic = usePreviewStore((state) => state.diagnostic);
+  const previewDiagnostic = usePreviewStore(getPreviewDiagnostic);
   const isPreviewStale = usePreviewStore((state) => state.isStale);
 
   useEffect(() => {

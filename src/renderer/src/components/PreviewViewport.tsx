@@ -56,6 +56,9 @@ const encodeCaptureDataUrl = (
   return canvas.toDataURL("image/png");
 };
 
+const getErrorMessage = (error: unknown, fallbackMessage: string): string =>
+  error instanceof Error ? error.message : fallbackMessage;
+
 export const PreviewViewport = (): JSX.Element => {
   const fragmentSource = useProjectStore((state) =>
     getProjectShaderSource(state.project, "fragment"),
@@ -87,9 +90,22 @@ export const PreviewViewport = (): JSX.Element => {
         const scene = sceneRef.current;
         const renderer = rendererRef.current;
         const camera = cameraRef.current;
+        const previewState = usePreviewStore.getState();
+        const captureRevision =
+          previewState.activeRevision ?? previewState.lastSuccessfulRevision;
 
         if (scene === null || renderer === null || camera === null) {
-          return null;
+          const message = "Preview capture is unavailable.";
+          previewState.markFailure({
+            stage: "capture",
+            message,
+            revision: captureRevision,
+          });
+
+          return {
+            kind: "error",
+            message,
+          };
         }
 
         const renderTarget = new THREE.WebGLRenderTarget(
@@ -116,22 +132,62 @@ export const PreviewViewport = (): JSX.Element => {
             PREVIEW_CAPTURE_SIZE,
             pixels,
           );
-
-          return encodeCaptureDataUrl(
-            pixels,
-            PREVIEW_CAPTURE_SIZE,
-            PREVIEW_CAPTURE_SIZE,
-          );
         } catch (error) {
-          console.error("Failed to capture the preview viewport.", error);
-          return null;
+          const message = getErrorMessage(
+            error,
+            "Failed to capture the preview viewport.",
+          );
+          usePreviewStore.getState().markFailure({
+            stage: "capture",
+            message,
+            revision: captureRevision,
+          });
+
+          return {
+            kind: "error",
+            message,
+          };
         } finally {
           camera.aspect = previousAspect;
           camera.updateProjectionMatrix();
           renderer.setRenderTarget(previousRenderTarget);
           renderTarget.dispose();
-          renderer.render(scene, camera);
+          try {
+            renderer.render(scene, camera);
+          } catch (error) {
+            usePreviewStore.getState().markFailure({
+              stage: "render",
+              message: getErrorMessage(error, "Preview rendering failed."),
+            });
+          }
         }
+
+        const dataUrl = encodeCaptureDataUrl(
+          pixels,
+          PREVIEW_CAPTURE_SIZE,
+          PREVIEW_CAPTURE_SIZE,
+        );
+
+        if (dataUrl === null) {
+          const message = "Preview capture could not be encoded as PNG.";
+          usePreviewStore.getState().markFailure({
+            stage: "capture",
+            message,
+            revision: captureRevision,
+          });
+
+          return {
+            kind: "error",
+            message,
+          };
+        }
+
+        usePreviewStore.getState().clearFailureStage("capture");
+
+        return {
+          kind: "success",
+          dataUrl,
+        };
       }),
     [],
   );
@@ -143,93 +199,128 @@ export const PreviewViewport = (): JSX.Element => {
       return;
     }
 
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(darkThemeValues.color.preview.scene);
-
-    const camera = new THREE.PerspectiveCamera(
-      55,
-      Math.max(host.clientWidth, 1) / Math.max(host.clientHeight, 1),
-      0.1,
-      100,
-    );
-    camera.position.set(0, 0.6, 2.4);
-    camera.lookAt(0, 0, 0);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(
-      Math.max(host.clientWidth, 1),
-      Math.max(host.clientHeight, 1),
-    );
-    host.append(renderer.domElement);
-
-    const geometry = new THREE.SphereGeometry(1, 256, 128);
-    const material = createPreviewMaterial(
-      DEFAULT_FRAGMENT_SHADER,
-      DEFAULT_VERTEX_SHADER,
-    );
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
-
-    const hemiLight = new THREE.HemisphereLight(
-      darkThemeValues.color.preview.lightWarm,
-      darkThemeValues.color.preview.lightCool,
-      1.6,
-    );
-    const keyLight = new THREE.DirectionalLight(
-      darkThemeValues.color.preview.lightKey,
-      2.4,
-    );
-    keyLight.position.set(2, 3, 4);
-    scene.add(hemiLight, keyLight);
-
-    sceneRef.current = scene;
-    rendererRef.current = renderer;
-    cameraRef.current = camera;
-    meshRef.current = mesh;
-
-    const syncViewportSize = (): void => {
-      const width = Math.max(host.clientWidth, 1);
-      const height = Math.max(host.clientHeight, 1);
-
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
-    };
-
-    syncViewportSize();
-
-    const resizeObserver = new ResizeObserver(() => {
-      syncViewportSize();
-    });
-
-    resizeObserver.observe(host);
-
+    let scene: THREE.Scene | null = null;
+    let renderer: THREE.WebGLRenderer | null = null;
+    let camera: THREE.PerspectiveCamera | null = null;
+    let geometry: THREE.SphereGeometry | null = null;
+    let mesh: THREE.Mesh<THREE.SphereGeometry, THREE.Material> | null = null;
+    let resizeObserver: ResizeObserver | null = null;
     let frameId = 0;
-    const clock = new THREE.Clock();
 
-    const renderFrame = (): void => {
-      mesh.rotation.x;
-      mesh.rotation.y += 0.001;
-      const activeMaterial = mesh.material;
-      if (activeMaterial instanceof THREE.ShaderMaterial) {
-        const timeUniform = activeMaterial.uniforms.u_time;
-        if (timeUniform !== undefined) {
-          timeUniform.value = clock.getElapsedTime();
+    try {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(darkThemeValues.color.preview.scene);
+
+      camera = new THREE.PerspectiveCamera(
+        55,
+        Math.max(host.clientWidth, 1) / Math.max(host.clientHeight, 1),
+        0.1,
+        100,
+      );
+      camera.position.set(0, 0.6, 2.4);
+      camera.lookAt(0, 0, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(
+        Math.max(host.clientWidth, 1),
+        Math.max(host.clientHeight, 1),
+      );
+      host.append(renderer.domElement);
+
+      geometry = new THREE.SphereGeometry(1, 256, 128);
+      const material = createPreviewMaterial(
+        DEFAULT_FRAGMENT_SHADER,
+        DEFAULT_VERTEX_SHADER,
+      );
+      mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+
+      const hemiLight = new THREE.HemisphereLight(
+        darkThemeValues.color.preview.lightWarm,
+        darkThemeValues.color.preview.lightCool,
+        1.6,
+      );
+      const keyLight = new THREE.DirectionalLight(
+        darkThemeValues.color.preview.lightKey,
+        2.4,
+      );
+      keyLight.position.set(2, 3, 4);
+      scene.add(hemiLight, keyLight);
+
+      sceneRef.current = scene;
+      rendererRef.current = renderer;
+      cameraRef.current = camera;
+      meshRef.current = mesh;
+
+      const syncViewportSize = (): void => {
+        if (camera === null || renderer === null) {
+          return;
         }
-      }
-      renderer.render(scene, camera);
-      frameId = window.requestAnimationFrame(renderFrame);
-    };
 
-    renderFrame();
+        const width = Math.max(host.clientWidth, 1);
+        const height = Math.max(host.clientHeight, 1);
+
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height);
+      };
+
+      syncViewportSize();
+
+      resizeObserver = new ResizeObserver(() => {
+        syncViewportSize();
+      });
+
+      resizeObserver.observe(host);
+
+      const clock = new THREE.Clock();
+
+      const renderFrame = (): void => {
+        if (
+          scene === null ||
+          renderer === null ||
+          camera === null ||
+          mesh === null
+        ) {
+          return;
+        }
+
+        try {
+          mesh.rotation.y += 0.001;
+          const activeMaterial = mesh.material;
+          if (activeMaterial instanceof THREE.ShaderMaterial) {
+            const timeUniform = activeMaterial.uniforms.u_time;
+            if (timeUniform !== undefined) {
+              timeUniform.value = clock.getElapsedTime();
+            }
+          }
+          renderer.render(scene, camera);
+          usePreviewStore.getState().clearFailureStage("render");
+        } catch (error) {
+          usePreviewStore.getState().markFailure({
+            stage: "render",
+            message: getErrorMessage(error, "Preview rendering failed."),
+          });
+        }
+
+        frameId = window.requestAnimationFrame(renderFrame);
+      };
+
+      renderFrame();
+    } catch (error) {
+      usePreviewStore.getState().markFailure({
+        stage: "render",
+        message: getErrorMessage(error, "Preview rendering failed."),
+      });
+    }
 
     return () => {
       window.cancelAnimationFrame(frameId);
-      resizeObserver.disconnect();
-      geometry.dispose();
-      mesh.material.dispose();
-      renderer.dispose();
+      resizeObserver?.disconnect();
+      geometry?.dispose();
+      mesh?.material.dispose();
+      renderer?.dispose();
       host.textContent = "";
       sceneRef.current = null;
       rendererRef.current = null;
@@ -258,9 +349,11 @@ export const PreviewViewport = (): JSX.Element => {
     );
 
     if (compileResult.kind === "error") {
-      usePreviewStore
-        .getState()
-        .markStale(deferredRevision, compileResult.message);
+      usePreviewStore.getState().markFailure({
+        stage: "compile",
+        revision: deferredRevision,
+        message: compileResult.message,
+      });
       return;
     }
 

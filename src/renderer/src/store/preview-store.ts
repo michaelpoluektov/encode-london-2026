@@ -1,20 +1,59 @@
 import { create } from "zustand";
 
+export type PreviewDiagnosticStage = "compile" | "render" | "capture";
+
 export type PreviewDiagnostic = {
+  readonly stage: PreviewDiagnosticStage;
   readonly message: string;
-  readonly revision: string;
+  readonly revision: string | null;
   readonly timestamp: string;
+};
+
+type PreviewFailure = {
+  readonly stage: PreviewDiagnosticStage;
+  readonly message: string;
+  readonly revision?: string | null;
 };
 
 type PreviewState = {
   readonly activeRevision: string | null;
   readonly lastSuccessfulRevision: string | null;
-  readonly diagnostic: PreviewDiagnostic | null;
+  readonly diagnostics: Record<
+    PreviewDiagnosticStage,
+    PreviewDiagnostic | null
+  >;
   readonly isStale: boolean;
   readonly markAttempted: (revision: string) => void;
   readonly markReady: (revision: string) => void;
-  readonly markStale: (revision: string, message: string) => void;
+  readonly markFailure: (failure: PreviewFailure) => void;
+  readonly clearFailureStage: (stage: PreviewDiagnosticStage) => void;
 };
+
+const createEmptyDiagnostics = (): Record<
+  PreviewDiagnosticStage,
+  PreviewDiagnostic | null
+> => ({
+  capture: null,
+  compile: null,
+  render: null,
+});
+
+const derivePreviewStale = (
+  state: Pick<PreviewState, "activeRevision" | "lastSuccessfulRevision">,
+  diagnostics: Record<PreviewDiagnosticStage, PreviewDiagnostic | null>,
+): boolean =>
+  diagnostics.render !== null ||
+  diagnostics.compile !== null ||
+  (state.lastSuccessfulRevision !== null &&
+    state.activeRevision !== null &&
+    state.lastSuccessfulRevision !== state.activeRevision);
+
+export const getPreviewDiagnostic = (
+  state: Pick<PreviewState, "diagnostics">,
+): PreviewDiagnostic | null =>
+  state.diagnostics.render ??
+  state.diagnostics.compile ??
+  state.diagnostics.capture;
 
 export const createPreviewRevision = (
   fragmentShader: string,
@@ -34,32 +73,76 @@ export const createPreviewRevision = (
 export const usePreviewStore = create<PreviewState>((set) => ({
   activeRevision: null,
   lastSuccessfulRevision: null,
-  diagnostic: null,
+  diagnostics: createEmptyDiagnostics(),
   isStale: false,
   markAttempted: (revision) =>
-    set((state) => ({
-      activeRevision: revision,
-      isStale:
-        state.lastSuccessfulRevision !== null &&
-        state.lastSuccessfulRevision !== revision,
-    })),
+    set((state) => {
+      const nextState = {
+        activeRevision: revision,
+        lastSuccessfulRevision: state.lastSuccessfulRevision,
+      };
+
+      return {
+        activeRevision: revision,
+        isStale: derivePreviewStale(nextState, state.diagnostics),
+      };
+    }),
   markReady: (revision) =>
     set({
       activeRevision: revision,
       lastSuccessfulRevision: revision,
-      diagnostic: null,
+      diagnostics: createEmptyDiagnostics(),
       isStale: false,
     }),
-  markStale: (revision, message) =>
-    set((state) => ({
-      activeRevision: revision,
-      diagnostic: {
+  markFailure: ({ stage, message, revision }) =>
+    set((state) => {
+      const failureRevision = revision ?? state.activeRevision;
+      const nextDiagnostic: PreviewDiagnostic = {
+        stage,
         message,
-        revision,
+        revision: failureRevision,
         timestamp: new Date().toISOString(),
-      },
-      isStale:
-        state.lastSuccessfulRevision === null ||
-        state.lastSuccessfulRevision !== revision,
-    })),
+      };
+      const previousDiagnostic = state.diagnostics[stage];
+      const nextDiagnostics = {
+        ...state.diagnostics,
+        [stage]: nextDiagnostic,
+      };
+      const nextState = {
+        activeRevision: failureRevision,
+        lastSuccessfulRevision: state.lastSuccessfulRevision,
+      };
+      const nextIsStale = derivePreviewStale(nextState, nextDiagnostics);
+
+      if (
+        state.activeRevision === failureRevision &&
+        state.isStale === nextIsStale &&
+        previousDiagnostic?.message === nextDiagnostic.message &&
+        previousDiagnostic?.revision === nextDiagnostic.revision
+      ) {
+        return state;
+      }
+
+      return {
+        activeRevision: failureRevision,
+        diagnostics: nextDiagnostics,
+        isStale: nextIsStale,
+      };
+    }),
+  clearFailureStage: (stage) =>
+    set((state) => {
+      if (state.diagnostics[stage] === null) {
+        return state;
+      }
+
+      const nextDiagnostics = {
+        ...state.diagnostics,
+        [stage]: null,
+      };
+
+      return {
+        diagnostics: nextDiagnostics,
+        isStale: derivePreviewStale(state, nextDiagnostics),
+      };
+    }),
 }));
