@@ -9,9 +9,7 @@ import {
   type JSX,
   type KeyboardEvent,
   useEffect,
-  useLayoutEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import remarkGfm from "remark-gfm";
@@ -267,7 +265,6 @@ export const ChatPanel = (): JSX.Element => {
     checkpoints,
     isGenerating,
     isRetrying,
-    streamingText,
     recentFileChanges,
     warningMessage,
     hydrateProject,
@@ -279,29 +276,15 @@ export const ChatPanel = (): JSX.Element => {
   } = useChatStore();
   const project = useProjectStore((s) => s.project);
   const projectId = project?.manifest.projectId ?? null;
-  const runtime = useChatRuntime();
+  const isTurnActive =
+    project !== null && activeThread !== null && isGenerating;
+  const runtime = useChatRuntime(isTurnActive);
 
   const [input, setInput] = useState("");
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void hydrateProject(projectId);
   }, [hydrateProject, projectId]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: these are intentional trigger conditions for scroll, not values used inside the callback
-  useLayoutEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      block: "end",
-    });
-  }, [
-    activeThread?.id,
-    isGenerating,
-    messages.length,
-    recentFileChanges.length,
-    streamingText,
-    warningMessage,
-  ]);
 
   useEffect(() => {
     if (projectId === null) {
@@ -322,7 +305,7 @@ export const ChatPanel = (): JSX.Element => {
 
   const handleSend = () => {
     const prompt = input.trim();
-    if (!prompt || isGenerating || !project) return;
+    if (!prompt || isTurnActive || !project) return;
     setInput("");
     void sendMessage(prompt);
   };
@@ -335,7 +318,7 @@ export const ChatPanel = (): JSX.Element => {
   };
 
   const hasContent =
-    messages.length > 0 || isGenerating || warningMessage !== null;
+    messages.length > 0 || isTurnActive || warningMessage !== null;
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
@@ -368,7 +351,7 @@ export const ChatPanel = (): JSX.Element => {
                       <button
                         className={chatThreadSelectButton}
                         disabled={
-                          isGenerating || currentProjectId !== projectId
+                          isTurnActive || currentProjectId !== projectId
                         }
                         onClick={() => {
                           if (
@@ -390,7 +373,7 @@ export const ChatPanel = (): JSX.Element => {
                         aria-label={`Delete ${getThreadLabel(thread.title, index)}`}
                         className={chatThreadDeleteButton}
                         disabled={
-                          isGenerating ||
+                          isTurnActive ||
                           currentProjectId !== projectId ||
                           !canDeleteThreads
                         }
@@ -413,7 +396,7 @@ export const ChatPanel = (): JSX.Element => {
               </div>
             )}
             <Button
-              disabled={projectId === null || isGenerating}
+              disabled={projectId === null || isTurnActive}
               onClick={() => {
                 if (projectId === null) {
                   return;
@@ -444,7 +427,7 @@ export const ChatPanel = (): JSX.Element => {
             )}
           </div>
         ) : (
-          <div className={chatMessages} ref={messagesContainerRef}>
+          <ThreadPrimitive.Viewport className={chatMessages}>
             <ThreadPrimitive.Messages>
               {({ message }) => {
                 if (message.role === "user") {
@@ -487,9 +470,7 @@ export const ChatPanel = (): JSX.Element => {
             {warningMessage !== null && (
               <div className={chatWarning}>{warningMessage}</div>
             )}
-
-            <div ref={messagesEndRef} />
-          </div>
+          </ThreadPrimitive.Viewport>
         )}
 
         <div className={chatInputArea}>
@@ -503,10 +484,10 @@ export const ChatPanel = (): JSX.Element => {
                 ? "Message Codex..."
                 : "Open a project first"
             }
-            disabled={!project || activeThread === null || isGenerating}
+            disabled={!project || activeThread === null || isTurnActive}
             rows={1}
           />
-          {isGenerating ? (
+          {isTurnActive ? (
             <Button size="sm" variant="outline" onClick={cancelGeneration}>
               Stop
             </Button>

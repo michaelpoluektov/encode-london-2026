@@ -124,10 +124,9 @@ const convertMessage = (msg: ChatMessage): ThreadMessageLike => {
 
 type AuiAdapter = ExternalStoreAdapter<ChatMessage>;
 
-export const useChatRuntime = () => {
+export const useChatRuntime = (isTurnActive: boolean) => {
   const {
     messages,
-    isGenerating,
     streamingText,
     activeThread,
     sendMessage,
@@ -135,12 +134,12 @@ export const useChatRuntime = () => {
   } = useChatStore();
 
   const allMessages: readonly ChatMessage[] =
-    isGenerating && activeThread !== null
+    isTurnActive && activeThread !== null
       ? [...messages, buildStreamingMessage(activeThread.id, streamingText)]
       : messages;
 
   const adapter: AuiAdapter = {
-    isRunning: isGenerating,
+    isRunning: isTurnActive,
     messages: allMessages,
     convertMessage,
     onNew: async (appendMsg) => {
