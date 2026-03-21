@@ -2,6 +2,13 @@ import { type JSX, useEffect, useRef } from "react";
 import {
   appShell,
   footerBar,
+  footerDiagnosticMessage,
+  footerDiagnosticMeta,
+  footerDiagnosticPopover,
+  footerStatusButton,
+  footerStatusButtonDirty,
+  footerStatusDot,
+  footerStatusDotDirty,
   layoutViewport,
   shellFrame,
   workspaceColumn,
@@ -16,8 +23,11 @@ import { PreviewViewport } from "./components/PreviewViewport";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { ShaderEditor } from "./components/ShaderEditor";
 import { SplitLayout } from "./components/SplitLayout";
+import { Button } from "./components/ui/Button";
 import { Text } from "./components/ui/Text";
+import { cx } from "./lib/cx";
 import { useAppStore } from "./store/app-store";
+import { usePreviewStore } from "./store/preview-store";
 import { useProjectStore } from "./store/project-store";
 
 const normalizePaneSizes = (sizes: readonly number[]): number[] => {
@@ -34,7 +44,13 @@ export const App = (): JSX.Element => {
   const hasBootstrappedRef = useRef(false);
   const openProject = useProjectStore((state) => state.openProject);
   const collapsedPanes = useAppStore((state) => state.collapsedPanes);
+  const isPreviewDiagnosticOpen = useAppStore(
+    (state) => state.isPreviewDiagnosticOpen,
+  );
   const togglePaneCollapsed = useAppStore((state) => state.togglePaneCollapsed);
+  const togglePreviewDiagnosticOpen = useAppStore(
+    (state) => state.togglePreviewDiagnosticOpen,
+  );
   const shellPaneSizes = useAppStore((state) => state.shellPaneSizes);
   const setShellPaneSizes = useAppStore((state) => state.setShellPaneSizes);
   const workspaceColumnSizes = useAppStore(
@@ -55,6 +71,8 @@ export const App = (): JSX.Element => {
   const setWorkspaceRightRowSizes = useAppStore(
     (state) => state.setWorkspaceRightRowSizes,
   );
+  const previewDiagnostic = usePreviewStore((state) => state.diagnostic);
+  const isPreviewStale = usePreviewStore((state) => state.isStale);
 
   useEffect(() => {
     if (hasBootstrappedRef.current) {
@@ -286,9 +304,50 @@ export const App = (): JSX.Element => {
       </section>
       <footer className={footerBar}>
         <div className={shellFrame}>
-          <Text as="span" tone="muted" variant="caption">
-            Resizable 2x2 workspace with collapsible pane rails.
-          </Text>
+          <Button
+            aria-controls="preview-diagnostic"
+            aria-expanded={isPreviewStale && isPreviewDiagnosticOpen}
+            className={cx(
+              footerStatusButton,
+              isPreviewStale && footerStatusButtonDirty,
+            )}
+            disabled={!isPreviewStale}
+            onClick={() => {
+              if (!isPreviewStale) {
+                return;
+              }
+
+              togglePreviewDiagnosticOpen();
+            }}
+            variant="plain"
+          >
+            <span
+              aria-hidden="true"
+              className={cx(
+                footerStatusDot,
+                isPreviewStale && footerStatusDotDirty,
+              )}
+            />
+            {isPreviewStale ? "Render stale" : "Render clean"}
+          </Button>
+          {isPreviewStale &&
+          isPreviewDiagnosticOpen &&
+          previewDiagnostic !== null ? (
+            <div id="preview-diagnostic" className={footerDiagnosticPopover}>
+              <Text as="p" tone="default" variant="label">
+                Preview Diagnostic
+              </Text>
+              <div className={footerDiagnosticMeta}>
+                <span>Revision {previewDiagnostic.revision}</span>
+                <span>
+                  {new Date(previewDiagnostic.timestamp).toLocaleTimeString()}
+                </span>
+              </div>
+              <pre className={footerDiagnosticMessage}>
+                {previewDiagnostic.message}
+              </pre>
+            </div>
+          ) : null}
         </div>
       </footer>
     </main>

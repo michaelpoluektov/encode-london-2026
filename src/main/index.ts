@@ -1,11 +1,11 @@
 import { join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
-import type { ProjectSavePayload } from "../shared/contracts";
 import {
   bootstrapPayloadSchema,
   chatAttachPreviewContextPayloadSchema,
   projectEntryRequestSchema,
   projectSaveCapturePayloadSchema,
+  projectSavePayloadSchema,
 } from "../shared/contracts";
 import * as codexRuntime from "./services/codex-runtime";
 import * as projectService from "./services/project-service";
@@ -106,11 +106,12 @@ app.whenReady().then(async () => {
     return result;
   });
 
-  ipcMain.handle("project:save", async (_e, payload: ProjectSavePayload) => {
-    await projectService.saveProject(
-      payload.folderPath,
-      payload.manifest,
-      payload.shaders,
+  ipcMain.handle("project:save", async (_e, payload: unknown) => {
+    const parsedPayload = projectSavePayloadSchema.parse(payload);
+    return projectService.saveProject(
+      parsedPayload.folderPath,
+      parsedPayload.manifest,
+      parsedPayload.shaders,
     );
   });
 

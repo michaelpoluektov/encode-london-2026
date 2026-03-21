@@ -41,8 +41,10 @@ const shadilyDesktopApi = {
       projectOpenResultSchema.parse(
         await ipcRenderer.invoke("project:reload", folderPath),
       ),
-    save: (payload: ProjectSavePayload): Promise<void> =>
-      ipcRenderer.invoke("project:save", payload),
+    save: async (payload: ProjectSavePayload): Promise<ProjectOpenResult> =>
+      projectOpenResultSchema.parse(
+        await ipcRenderer.invoke("project:save", payload),
+      ),
     saveCapture: async (
       payload: ProjectSaveCapturePayload,
     ): Promise<ProjectSaveCaptureResult> =>

@@ -1,6 +1,6 @@
 import Editor, { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
-import { type JSX, useCallback, useEffect, useRef, useState } from "react";
+import { type JSX, useEffect, useRef, useState } from "react";
 import {
   editorEmptyState,
   editorFrame,
@@ -8,7 +8,12 @@ import {
   editorImagePreview,
 } from "../app-shell.css";
 import { GLSL_LANGUAGE_ID, registerGlslLanguage } from "../monaco-glsl";
-import { useProjectStore } from "../store/project-store";
+import {
+  createProjectSavePayload,
+  getProjectDocument,
+  getSavedProjectDocument,
+  useProjectStore,
+} from "../store/project-store";
 import {
   darkThemeValues,
   defineShadilyMonacoTheme,
@@ -17,27 +22,6 @@ import {
 import { Text } from "./ui/Text";
 
 loader.config({ monaco });
-
-const normalizeProjectPath = (path: string): string =>
-  path.replaceAll("\\", "/");
-
-const getShaderFileKey = (
-  fragmentPath: string,
-  vertexPath: string,
-  selectedPath: string,
-): "fragment" | "vertex" | null => {
-  const normalizedPath = normalizeProjectPath(selectedPath);
-
-  if (normalizedPath === normalizeProjectPath(fragmentPath)) {
-    return "fragment";
-  }
-
-  if (normalizedPath === normalizeProjectPath(vertexPath)) {
-    return "vertex";
-  }
-
-  return null;
-};
 
 const EmptyEditorState = ({
   body,
@@ -58,8 +42,8 @@ const EmptyEditorState = ({
 
 export const ShaderEditor = (): JSX.Element => {
   const project = useProjectStore((s) => s.project);
-  const setDocument = useProjectStore((s) => s.setDocument);
-  const updateShader = useProjectStore((s) => s.updateShader);
+  const setSavedDocument = useProjectStore((s) => s.setSavedDocument);
+  const updateDraft = useProjectStore((s) => s.updateDraft);
 
   const [documentLoadState, setDocumentLoadState] = useState<
     "idle" | "loading" | "error"
@@ -70,7 +54,7 @@ export const ShaderEditor = (): JSX.Element => {
   const selectedEntryPath = project?.selectedEntryPath ?? null;
   const selectedDocument =
     project !== null && selectedEntryPath !== null
-      ? (project.documents[selectedEntryPath] ?? null)
+      ? getProjectDocument(project, selectedEntryPath)
       : null;
 
   useEffect(() => {
@@ -79,7 +63,7 @@ export const ShaderEditor = (): JSX.Element => {
       return;
     }
 
-    if (project.documents[selectedEntryPath] !== undefined) {
+    if (getSavedProjectDocument(project, selectedEntryPath) !== null) {
       setDocumentLoadState("idle");
       return;
     }
@@ -98,7 +82,7 @@ export const ShaderEditor = (): JSX.Element => {
           return;
         }
 
-        setDocument(document);
+        setSavedDocument(document);
         setDocumentLoadState("idle");
       })
       .catch(() => {
@@ -110,48 +94,50 @@ export const ShaderEditor = (): JSX.Element => {
     return () => {
       cancelled = true;
     };
-  }, [project, selectedEntryPath, setDocument]);
+  }, [project, selectedEntryPath, setSavedDocument]);
 
-  const handleChange = useCallback(
-    (value: string | undefined): void => {
-      if (
-        value === undefined ||
-        project === null ||
-        selectedEntryPath === null ||
-        selectedDocument === null ||
-        selectedDocument.kind !== "text" ||
-        !selectedDocument.isEditable
-      ) {
-        return;
-      }
-
-      const shaderFile = getShaderFileKey(
-        project.manifest.shaders.fragment,
-        project.manifest.shaders.vertex,
-        selectedEntryPath,
-      );
-
-      if (shaderFile === null) {
-        return;
-      }
-
-      updateShader(shaderFile, value);
-
+  useEffect(
+    () => () => {
       if (saveTimerRef.current !== null) {
         clearTimeout(saveTimerRef.current);
       }
-      saveTimerRef.current = setTimeout(() => {
-        const currentProject = useProjectStore.getState().project;
-        if (currentProject === null) return;
-        void window.shadily.project.save({
-          folderPath: currentProject.folderPath,
-          manifest: currentProject.manifest,
-          shaders: currentProject.shaders,
-        });
-      }, 1000);
     },
-    [project, selectedDocument, selectedEntryPath, updateShader],
+    [],
   );
+
+  const handleChange = (value: string | undefined): void => {
+    if (
+      value === undefined ||
+      project === null ||
+      selectedEntryPath === null ||
+      selectedDocument === null ||
+      selectedDocument.kind !== "text" ||
+      !selectedDocument.isEditable
+    ) {
+      return;
+    }
+
+    updateDraft(selectedEntryPath, value);
+
+    if (saveTimerRef.current !== null) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(() => {
+      const currentProject = useProjectStore.getState().project;
+
+      if (currentProject === null) {
+        return;
+      }
+
+      void window.shadily.project
+        .save(createProjectSavePayload(currentProject))
+        .then((savedProject) => {
+          useProjectStore.getState().commitSavedProject(savedProject);
+        })
+        .catch(() => undefined);
+    }, 1000);
+  };
 
   if (project === null) {
     return (
