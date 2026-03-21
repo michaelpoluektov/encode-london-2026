@@ -80,7 +80,6 @@ export const PreviewFullscreen = ({
     hasInitializedSceneRef.current = true;
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(darkThemeValues.color.preview.scene);
 
     camera = new THREE.PerspectiveCamera(
       55,
@@ -91,7 +90,8 @@ export const PreviewFullscreen = ({
     camera.position.copy(DEFAULT_CAMERA_POSITION);
     camera.lookAt(DEFAULT_CAMERA_TARGET);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(
       Math.max(host.clientWidth, 1),

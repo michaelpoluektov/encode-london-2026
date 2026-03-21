@@ -20,7 +20,10 @@ import {
   createPreviewMaterial,
 } from "../preview-compile";
 import { createPreviewRevision, usePreviewStore } from "../store/preview-store";
-import { getProjectVertexSource, useProjectStore } from "../store/project-store";
+import {
+  getProjectVertexSource,
+  useProjectStore,
+} from "../store/project-store";
 import { darkThemeValues } from "../theme";
 
 const PREVIEW_CAPTURE_SIZE = 200;
@@ -270,7 +273,6 @@ export const PreviewViewport = (): JSX.Element => {
 
     try {
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(darkThemeValues.color.preview.scene);
 
       camera = new THREE.PerspectiveCamera(
         55,
@@ -281,7 +283,8 @@ export const PreviewViewport = (): JSX.Element => {
       camera.position.set(0, 0.6, 2.4);
       camera.lookAt(0, 0, 0);
 
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setClearColor(0x000000, 0);
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(
         Math.max(host.clientWidth, 1),
