@@ -1,4 +1,4 @@
-import { type JSX, useEffect, useRef } from "react";
+import { type ComponentProps, type JSX, useEffect, useRef } from "react";
 import {
   appShell,
   footerBar,
@@ -26,7 +26,7 @@ import { SplitLayout } from "./components/SplitLayout";
 import { Button } from "./components/ui/Button";
 import { Text } from "./components/ui/Text";
 import { cx } from "./lib/cx";
-import { useAppStore } from "./store/app-store";
+import { type CollapsiblePaneId, useAppStore } from "./store/app-store";
 import { usePreviewStore } from "./store/preview-store";
 import { useProjectStore } from "./store/project-store";
 
@@ -38,6 +38,173 @@ const normalizePaneSizes = (sizes: readonly number[]): number[] => {
   }
 
   return sizes.map((size) => (size / total) * 100);
+};
+
+type WorkspacePaneId = Exclude<CollapsiblePaneId, "project">;
+type RestorePlacement = ComponentProps<typeof PaneRestoreControl>["placement"];
+
+type WorkspacePaneConfig = {
+  readonly id: string;
+  readonly paneId: WorkspacePaneId;
+  readonly label: string;
+  readonly content: JSX.Element;
+  readonly minSize: number;
+  readonly restorePlacement: RestorePlacement;
+};
+
+type WorkspaceColumnLayoutProps = {
+  readonly panes: readonly [WorkspacePaneConfig, WorkspacePaneConfig];
+  readonly rowSizes: readonly number[];
+  readonly setRowSizes: (sizes: number[]) => void;
+  readonly collapsedPanes: Record<CollapsiblePaneId, boolean>;
+  readonly togglePaneCollapsed: (paneId: CollapsiblePaneId) => void;
+};
+
+type FooterStatusProps = {
+  readonly isPreviewDiagnosticOpen: boolean;
+  readonly isPreviewStale: boolean;
+  readonly previewDiagnostic: ReturnType<
+    typeof usePreviewStore.getState
+  >["diagnostic"];
+  readonly togglePreviewDiagnosticOpen: () => void;
+};
+
+const isPaneCollapseDisabled = (
+  collapsedPanes: Record<CollapsiblePaneId, boolean>,
+  paneId: WorkspacePaneId,
+  siblingPaneId: WorkspacePaneId,
+): boolean => collapsedPanes[siblingPaneId] && !collapsedPanes[paneId];
+
+const FooterStatus = ({
+  isPreviewDiagnosticOpen,
+  isPreviewStale,
+  previewDiagnostic,
+  togglePreviewDiagnosticOpen,
+}: FooterStatusProps): JSX.Element => (
+  <div className={shellFrame}>
+    <Button
+      aria-controls="preview-diagnostic"
+      aria-expanded={isPreviewStale && isPreviewDiagnosticOpen}
+      className={cx(
+        footerStatusButton,
+        isPreviewStale && footerStatusButtonDirty,
+      )}
+      disabled={!isPreviewStale}
+      onClick={() => {
+        if (!isPreviewStale) {
+          return;
+        }
+
+        togglePreviewDiagnosticOpen();
+      }}
+      variant="plain"
+    >
+      <span
+        aria-hidden="true"
+        className={cx(footerStatusDot, isPreviewStale && footerStatusDotDirty)}
+      />
+      {isPreviewStale ? "Render stale" : "Render clean"}
+    </Button>
+    {isPreviewStale && isPreviewDiagnosticOpen && previewDiagnostic !== null ? (
+      <div id="preview-diagnostic" className={footerDiagnosticPopover}>
+        <Text as="p" tone="default" variant="label">
+          Preview Diagnostic
+        </Text>
+        <div className={footerDiagnosticMeta}>
+          <span>Revision {previewDiagnostic.revision}</span>
+          <span>
+            {new Date(previewDiagnostic.timestamp).toLocaleTimeString()}
+          </span>
+        </div>
+        <pre className={footerDiagnosticMessage}>
+          {previewDiagnostic.message}
+        </pre>
+      </div>
+    ) : null}
+  </div>
+);
+
+const WorkspaceColumnLayout = ({
+  panes,
+  rowSizes,
+  setRowSizes,
+  collapsedPanes,
+  togglePaneCollapsed,
+}: WorkspaceColumnLayoutProps): JSX.Element => {
+  const [topPane, bottomPane] = panes;
+  const hasCollapsedPane = panes.some((pane) => collapsedPanes[pane.paneId]);
+
+  return (
+    <div className={workspaceColumn}>
+      {panes.map((pane) =>
+        collapsedPanes[pane.paneId] ? (
+          <PaneRestoreControl
+            key={`${pane.id}-restore`}
+            label={pane.label}
+            placement={pane.restorePlacement}
+            onRestore={() => {
+              togglePaneCollapsed(pane.paneId);
+            }}
+          />
+        ) : null,
+      )}
+      <SplitLayout
+        defaultSizes={normalizePaneSizes(rowSizes)}
+        onChange={(sizes) => {
+          if (hasCollapsedPane) {
+            return;
+          }
+
+          setRowSizes(sizes);
+        }}
+        orientation="vertical"
+        panes={[
+          {
+            content: (
+              <Panel
+                collapseDisabled={isPaneCollapseDisabled(
+                  collapsedPanes,
+                  topPane.paneId,
+                  bottomPane.paneId,
+                )}
+                label={topPane.label}
+                onToggleCollapsed={() => {
+                  togglePaneCollapsed(topPane.paneId);
+                }}
+              >
+                {topPane.content}
+              </Panel>
+            ),
+            id: topPane.id,
+            minSize: topPane.minSize,
+            preferredSize: `${rowSizes[0]}%`,
+            visible: !collapsedPanes[topPane.paneId],
+          },
+          {
+            content: (
+              <Panel
+                collapseDisabled={isPaneCollapseDisabled(
+                  collapsedPanes,
+                  bottomPane.paneId,
+                  topPane.paneId,
+                )}
+                label={bottomPane.label}
+                onToggleCollapsed={() => {
+                  togglePaneCollapsed(bottomPane.paneId);
+                }}
+              >
+                {bottomPane.content}
+              </Panel>
+            ),
+            id: bottomPane.id,
+            minSize: bottomPane.minSize,
+            preferredSize: `${rowSizes[1]}%`,
+            visible: !collapsedPanes[bottomPane.paneId],
+          },
+        ]}
+      />
+    </div>
+  );
 };
 
 export const App = (): JSX.Element => {
@@ -88,169 +255,78 @@ export const App = (): JSX.Element => {
     });
   }, [openProject]);
 
-  const isSourceCollapseDisabled =
-    collapsedPanes.graph && !collapsedPanes.source;
-  const isGraphCollapseDisabled =
-    collapsedPanes.source && !collapsedPanes.graph;
-  const isChatCollapseDisabled = collapsedPanes.render && !collapsedPanes.chat;
-  const isRenderCollapseDisabled =
-    collapsedPanes.chat && !collapsedPanes.render;
+  const workspaceColumns = [
+    {
+      id: "workspace-left-column",
+      minSize: 360,
+      panes: [
+        {
+          content: <ShaderEditor />,
+          id: "source-panel",
+          label: "Source",
+          minSize: 220,
+          paneId: "source",
+          restorePlacement: "topRight",
+        },
+        {
+          content: <GraphPanel />,
+          id: "graph-panel",
+          label: "Graph",
+          minSize: 180,
+          paneId: "graph",
+          restorePlacement: "bottomRight",
+        },
+      ] as const,
+      preferredSize: `${workspaceColumnSizes[0]}%`,
+      rowSizes: workspaceLeftRowSizes,
+      setRowSizes: setWorkspaceLeftRowSizes,
+    },
+    {
+      id: "workspace-right-column",
+      minSize: 360,
+      panes: [
+        {
+          content: <ChatPanel />,
+          id: "chat-panel",
+          label: "Chat",
+          minSize: 220,
+          paneId: "chat",
+          restorePlacement: "topRight",
+        },
+        {
+          content: <PreviewViewport />,
+          id: "render-panel",
+          label: "Render",
+          minSize: 220,
+          paneId: "render",
+          restorePlacement: "bottomRight",
+        },
+      ] as const,
+      preferredSize: `${workspaceColumnSizes[1]}%`,
+      rowSizes: workspaceRightRowSizes,
+      setRowSizes: setWorkspaceRightRowSizes,
+    },
+  ] as const;
 
   const workspaceGridShell = (
     <div className={workspaceGrid}>
       <SplitLayout
         defaultSizes={normalizePaneSizes(workspaceColumnSizes)}
         onChange={setWorkspaceColumnSizes}
-        panes={[
-          {
-            content: (
-              <div className={workspaceColumn}>
-                {collapsedPanes.source ? (
-                  <PaneRestoreControl
-                    label="Source"
-                    placement="topRight"
-                    onRestore={() => {
-                      togglePaneCollapsed("source");
-                    }}
-                  />
-                ) : null}
-                {collapsedPanes.graph ? (
-                  <PaneRestoreControl
-                    label="Graph"
-                    placement="bottomRight"
-                    onRestore={() => {
-                      togglePaneCollapsed("graph");
-                    }}
-                  />
-                ) : null}
-                <SplitLayout
-                  defaultSizes={normalizePaneSizes(workspaceLeftRowSizes)}
-                  onChange={(sizes) => {
-                    if (collapsedPanes.source || collapsedPanes.graph) {
-                      return;
-                    }
-
-                    setWorkspaceLeftRowSizes(sizes);
-                  }}
-                  orientation="vertical"
-                  panes={[
-                    {
-                      content: (
-                        <Panel
-                          collapseDisabled={isSourceCollapseDisabled}
-                          label="Source"
-                          onToggleCollapsed={() => {
-                            togglePaneCollapsed("source");
-                          }}
-                        >
-                          <ShaderEditor />
-                        </Panel>
-                      ),
-                      id: "source-panel",
-                      minSize: 220,
-                      preferredSize: `${workspaceLeftRowSizes[0]}%`,
-                      visible: !collapsedPanes.source,
-                    },
-                    {
-                      content: (
-                        <Panel
-                          collapseDisabled={isGraphCollapseDisabled}
-                          label="Graph"
-                          onToggleCollapsed={() => {
-                            togglePaneCollapsed("graph");
-                          }}
-                        >
-                          <GraphPanel />
-                        </Panel>
-                      ),
-                      id: "graph-panel",
-                      minSize: 180,
-                      preferredSize: `${workspaceLeftRowSizes[1]}%`,
-                      visible: !collapsedPanes.graph,
-                    },
-                  ]}
-                />
-              </div>
-            ),
-            id: "workspace-left-column",
-            minSize: 360,
-            preferredSize: `${workspaceColumnSizes[0]}%`,
-          },
-          {
-            content: (
-              <div className={workspaceColumn}>
-                {collapsedPanes.chat ? (
-                  <PaneRestoreControl
-                    label="Chat"
-                    placement="topRight"
-                    onRestore={() => {
-                      togglePaneCollapsed("chat");
-                    }}
-                  />
-                ) : null}
-                {collapsedPanes.render ? (
-                  <PaneRestoreControl
-                    label="Render"
-                    placement="bottomRight"
-                    onRestore={() => {
-                      togglePaneCollapsed("render");
-                    }}
-                  />
-                ) : null}
-                <SplitLayout
-                  defaultSizes={normalizePaneSizes(workspaceRightRowSizes)}
-                  onChange={(sizes) => {
-                    if (collapsedPanes.chat || collapsedPanes.render) {
-                      return;
-                    }
-
-                    setWorkspaceRightRowSizes(sizes);
-                  }}
-                  orientation="vertical"
-                  panes={[
-                    {
-                      content: (
-                        <Panel
-                          collapseDisabled={isChatCollapseDisabled}
-                          label="Chat"
-                          onToggleCollapsed={() => {
-                            togglePaneCollapsed("chat");
-                          }}
-                        >
-                          <ChatPanel />
-                        </Panel>
-                      ),
-                      id: "chat-panel",
-                      minSize: 220,
-                      preferredSize: `${workspaceRightRowSizes[0]}%`,
-                      visible: !collapsedPanes.chat,
-                    },
-                    {
-                      content: (
-                        <Panel
-                          collapseDisabled={isRenderCollapseDisabled}
-                          label="Render"
-                          onToggleCollapsed={() => {
-                            togglePaneCollapsed("render");
-                          }}
-                        >
-                          <PreviewViewport />
-                        </Panel>
-                      ),
-                      id: "render-panel",
-                      minSize: 220,
-                      preferredSize: `${workspaceRightRowSizes[1]}%`,
-                      visible: !collapsedPanes.render,
-                    },
-                  ]}
-                />
-              </div>
-            ),
-            id: "workspace-right-column",
-            minSize: 360,
-            preferredSize: `${workspaceColumnSizes[1]}%`,
-          },
-        ]}
+        panes={workspaceColumns.map((column) => ({
+          content: (
+            <WorkspaceColumnLayout
+              collapsedPanes={collapsedPanes}
+              panes={column.panes}
+              rowSizes={column.rowSizes}
+              setRowSizes={column.setRowSizes}
+              togglePaneCollapsed={togglePaneCollapsed}
+            />
+          ),
+          id: column.id,
+          minSize: column.minSize,
+          preferredSize: column.preferredSize,
+        }))}
       />
     </div>
   );
@@ -303,52 +379,12 @@ export const App = (): JSX.Element => {
         />
       </section>
       <footer className={footerBar}>
-        <div className={shellFrame}>
-          <Button
-            aria-controls="preview-diagnostic"
-            aria-expanded={isPreviewStale && isPreviewDiagnosticOpen}
-            className={cx(
-              footerStatusButton,
-              isPreviewStale && footerStatusButtonDirty,
-            )}
-            disabled={!isPreviewStale}
-            onClick={() => {
-              if (!isPreviewStale) {
-                return;
-              }
-
-              togglePreviewDiagnosticOpen();
-            }}
-            variant="plain"
-          >
-            <span
-              aria-hidden="true"
-              className={cx(
-                footerStatusDot,
-                isPreviewStale && footerStatusDotDirty,
-              )}
-            />
-            {isPreviewStale ? "Render stale" : "Render clean"}
-          </Button>
-          {isPreviewStale &&
-          isPreviewDiagnosticOpen &&
-          previewDiagnostic !== null ? (
-            <div id="preview-diagnostic" className={footerDiagnosticPopover}>
-              <Text as="p" tone="default" variant="label">
-                Preview Diagnostic
-              </Text>
-              <div className={footerDiagnosticMeta}>
-                <span>Revision {previewDiagnostic.revision}</span>
-                <span>
-                  {new Date(previewDiagnostic.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
-              <pre className={footerDiagnosticMessage}>
-                {previewDiagnostic.message}
-              </pre>
-            </div>
-          ) : null}
-        </div>
+        <FooterStatus
+          isPreviewDiagnosticOpen={isPreviewDiagnosticOpen}
+          isPreviewStale={isPreviewStale}
+          previewDiagnostic={previewDiagnostic}
+          togglePreviewDiagnosticOpen={togglePreviewDiagnosticOpen}
+        />
       </footer>
     </main>
   );
