@@ -40,6 +40,10 @@ export const buttonSize = styleVariants({
     height: themeVars.size.controlSm,
     padding: `0 ${themeVars.space[3]}`,
   },
+  xs: {
+    height: themeVars.size.controlXs,
+    padding: 0,
+  },
 });
 
 export const buttonVariant = styleVariants({
@@ -51,6 +55,14 @@ export const buttonVariant = styleVariants({
       "&:hover:not(:disabled)": {
         borderColor: themeVars.color.border.strong,
         background: themeVars.color.surface.interactiveHover,
+        color: themeVars.color.text.primary,
+      },
+    },
+  },
+  plain: {
+    fontFamily: themeVars.font.family.mono,
+    selectors: {
+      "&:hover:not(:disabled)": {
         color: themeVars.color.text.primary,
       },
     },
@@ -76,5 +88,9 @@ export const buttonSquare = styleVariants({
   sm: {
     padding: 0,
     width: themeVars.size.controlSm,
+  },
+  xs: {
+    padding: 0,
+    width: themeVars.size.controlXs,
   },
 });

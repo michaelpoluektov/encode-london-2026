@@ -22,23 +22,11 @@ export const panelTone = styleVariants({
 
 export const panelHeader = style({
   display: "flex",
-  alignItems: "flex-start",
-  flexWrap: "wrap",
-  justifyContent: "space-between",
-  gap: themeVars.space[4],
-  padding: `${themeVars.space[4]} ${themeVars.space[5]} ${themeVars.space[3]}`,
+  alignItems: "center",
+  justifyContent: "flex-end",
+  minHeight: themeVars.size.panelHeaderHeight,
+  padding: `${themeVars.space[1]} ${themeVars.space[2]}`,
   borderBottom: `1px solid ${themeVars.color.border.subtle}`,
-});
-
-export const panelTitleBlock = style({
-  display: "grid",
-  gap: themeVars.space[1],
-  minWidth: 0,
-  flex: "1 1 12rem",
-});
-
-export const panelTitle = style({
-  margin: 0,
 });
 
 export const panelBody = style({

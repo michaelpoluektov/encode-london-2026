@@ -6,9 +6,11 @@ import { splitLayout } from "./split-layout.css";
 type SplitPaneDefinition = {
   readonly id: string;
   readonly content: ReactNode;
+  readonly maxSize?: number;
   readonly minSize?: number;
   readonly preferredSize?: number | `${number}px` | `${number}%`;
   readonly snap?: boolean;
+  readonly visible?: boolean;
 };
 
 type SplitLayoutProps = {
@@ -37,9 +39,11 @@ export const SplitLayout = ({
         {panes.map((pane) => (
           <Allotment.Pane
             key={pane.id}
+            maxSize={pane.maxSize}
             minSize={pane.minSize}
             preferredSize={pane.preferredSize}
             snap={pane.snap}
+            visible={pane.visible}
           >
             {pane.content}
           </Allotment.Pane>
