@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import type { ColorNode } from "../../../../dag/dag-schema";
+import type { ColorNode } from "../../dag-schema";
 import {
   type GraphFlowNode,
   type GraphFlowNodeProps,

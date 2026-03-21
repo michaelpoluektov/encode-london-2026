@@ -1,6 +1,6 @@
 import dagre from "@dagrejs/dagre";
 import { type Edge, MarkerType, type NodeTypes } from "@xyflow/react";
-import type { DagGraph, DagNode } from "../../../dag/dag-schema";
+import type { DagNode } from "../dag-schema";
 import {
   type ClampedFloatGraphFlowNode,
   ClampedFloatGraphNode,
@@ -14,6 +14,7 @@ import {
   GlFragColorGraphNode,
   GRAPH_NODE_OUTPUT_HANDLE_ID,
 } from "./nodes";
+import type { ParsedDagGraph, ParsedDagNode } from "./parse-graph";
 
 const NODE_WIDTH = 240;
 const BASE_NODE_HEIGHT = 88;
@@ -28,11 +29,6 @@ type DagFlowNode =
   | FloatGraphFlowNode
   | GlFragColorGraphFlowNode;
 
-type VisualNodeDescriptor = {
-  readonly flowId: string;
-  readonly graphNode: DagNode;
-};
-
 export const dagNodeTypes = {
   clampedFloat: ClampedFloatGraphNode,
   color: ColorGraphNode,
@@ -41,7 +37,7 @@ export const dagNodeTypes = {
   glFragColor: GlFragColorGraphNode,
 } satisfies NodeTypes;
 
-const getNodeInputs = (node: DagNode): Readonly<Record<string, string>> => {
+const getRenderedInputs = (node: DagNode): Readonly<Record<string, string>> => {
   switch (node.kind) {
     case "custom":
       return node.inputs;
@@ -56,103 +52,8 @@ const getNodeInputs = (node: DagNode): Readonly<Record<string, string>> => {
   }
 };
 
-const createFlowNodeId = (
-  node: DagNode,
-  index: number,
-  seenIds: Map<string, number>,
-): string => {
-  const baseId =
-    "instanceName" in node ? node.instanceName : `glFragColor_${index}`;
-  const seenCount = seenIds.get(baseId) ?? 0;
-
-  seenIds.set(baseId, seenCount + 1);
-
-  return seenCount === 0 ? baseId : `${baseId}__${seenCount + 1}`;
-};
-
-const resolveSourceNodeId = (
-  sourceRef: string,
-  nodeIdsByReference: ReadonlyMap<string, string>,
-): string | null => {
-  const candidates = [sourceRef];
-
-  for (const separator of [".", ":"]) {
-    const separatorIndex = sourceRef.indexOf(separator);
-
-    if (separatorIndex > 0) {
-      candidates.push(sourceRef.slice(0, separatorIndex));
-    }
-  }
-
-  for (const candidate of candidates) {
-    const nodeId = nodeIdsByReference.get(candidate);
-
-    if (nodeId !== undefined) {
-      return nodeId;
-    }
-  }
-
-  return null;
-};
-
-const createVisualNodeDescriptors = (
-  graph: DagGraph,
-): VisualNodeDescriptor[] => {
-  const seenIds = new Map<string, number>();
-
-  return graph.nodes.map((node, index) => ({
-    flowId: createFlowNodeId(node, index, seenIds),
-    graphNode: node,
-  }));
-};
-
-const createFlowEdges = (
-  descriptors: readonly VisualNodeDescriptor[],
-): Edge[] => {
-  const nodeIdsByReference = new Map<string, string>();
-
-  for (const descriptor of descriptors) {
-    if ("instanceName" in descriptor.graphNode) {
-      nodeIdsByReference.set(
-        descriptor.graphNode.instanceName,
-        descriptor.flowId,
-      );
-    }
-  }
-
-  const edges: Edge[] = [];
-
-  for (const descriptor of descriptors) {
-    const inputs = getNodeInputs(descriptor.graphNode);
-    let inputIndex = 0;
-
-    for (const [targetInput, sourceRef] of Object.entries(inputs)) {
-      const sourceNodeId = resolveSourceNodeId(sourceRef, nodeIdsByReference);
-
-      if (sourceNodeId === null || sourceNodeId === descriptor.flowId) {
-        continue;
-      }
-
-      edges.push({
-        id: `${sourceNodeId}->${descriptor.flowId}:${targetInput}:${inputIndex}`,
-        interactionWidth: 28,
-        markerEnd: { type: MarkerType.ArrowClosed },
-        selectable: false,
-        source: sourceNodeId,
-        sourceHandle: GRAPH_NODE_OUTPUT_HANDLE_ID,
-        target: descriptor.flowId,
-        targetHandle: targetInput,
-        type: "default",
-      });
-      inputIndex += 1;
-    }
-  }
-
-  return edges;
-};
-
-const getEstimatedNodeHeight = (node: DagNode): number => {
-  const inputCount = Object.keys(getNodeInputs(node)).length;
+const getEstimatedNodeHeight = (node: ParsedDagNode): number => {
+  const inputCount = Object.keys(getRenderedInputs(node.graphNode)).length;
   const detailCount = 1;
 
   let height =
@@ -168,7 +69,7 @@ const getEstimatedNodeHeight = (node: DagNode): number => {
 };
 
 const createDagreGraph = (
-  descriptors: readonly VisualNodeDescriptor[],
+  parsedGraph: ParsedDagGraph,
   edges: readonly Edge[],
 ) => {
   const dagreGraph = new dagre.graphlib.Graph();
@@ -182,9 +83,9 @@ const createDagreGraph = (
     ranksep: 120,
   });
 
-  for (const descriptor of descriptors) {
-    dagreGraph.setNode(descriptor.flowId, {
-      height: getEstimatedNodeHeight(descriptor.graphNode),
+  for (const node of parsedGraph.nodes) {
+    dagreGraph.setNode(node.flowId, {
+      height: getEstimatedNodeHeight(node),
       width: NODE_WIDTH,
     });
   }
@@ -199,14 +100,14 @@ const createDagreGraph = (
 };
 
 const createFlowNode = (
-  descriptor: VisualNodeDescriptor,
+  node: ParsedDagNode,
   position: { x: number; y: number },
 ): DagFlowNode => {
   const baseNode = {
     connectable: false,
     draggable: false,
     focusable: false,
-    id: descriptor.flowId,
+    id: node.flowId,
     position,
     selectable: false,
     style: {
@@ -214,51 +115,64 @@ const createFlowNode = (
     },
   };
 
-  switch (descriptor.graphNode.kind) {
+  switch (node.graphNode.kind) {
     case "clampedFloat":
       return {
         ...baseNode,
-        data: descriptor.graphNode,
+        data: node.graphNode,
         type: "clampedFloat",
       };
     case "color":
       return {
         ...baseNode,
-        data: descriptor.graphNode,
+        data: node.graphNode,
         type: "color",
       };
     case "custom":
       return {
         ...baseNode,
-        data: descriptor.graphNode,
+        data: node.graphNode,
         type: "custom",
       };
     case "float":
       return {
         ...baseNode,
-        data: descriptor.graphNode,
+        data: node.graphNode,
         type: "float",
       };
     case "glFragColor":
       return {
         ...baseNode,
-        data: descriptor.graphNode,
+        data: node.graphNode,
         type: "glFragColor",
       };
   }
 };
 
+const createFlowEdges = (parsedGraph: ParsedDagGraph): Edge[] =>
+  parsedGraph.edges.map((edge, index) => ({
+    id: `${edge.sourceNode.flowId}->${edge.targetNode.flowId}:${edge.targetInputName}:${index}`,
+    interactionWidth: 28,
+    markerEnd: { type: MarkerType.ArrowClosed },
+    selectable: false,
+    source: edge.sourceNode.flowId,
+    sourceHandle: GRAPH_NODE_OUTPUT_HANDLE_ID,
+    target: edge.targetNode.flowId,
+    targetHandle: edge.targetInputName,
+    type: "default",
+  }));
+
 const createFlowNodes = (
-  descriptors: readonly VisualNodeDescriptor[],
+  parsedGraph: ParsedDagGraph,
   edges: readonly Edge[],
 ): DagFlowNode[] => {
-  const dagreGraph = createDagreGraph(descriptors, edges);
+  const dagreGraph = createDagreGraph(parsedGraph, edges);
 
-  return descriptors.map((descriptor) => {
-    const dagreNode = dagreGraph.node(descriptor.flowId);
-    const height = getEstimatedNodeHeight(descriptor.graphNode);
+  return parsedGraph.nodes.map((node) => {
+    const dagreNode = dagreGraph.node(node.flowId);
+    const height = getEstimatedNodeHeight(node);
 
-    return createFlowNode(descriptor, {
+    return createFlowNode(node, {
       x: (dagreNode.x as number) - NODE_WIDTH / 2,
       y: (dagreNode.y as number) - height / 2,
     });
@@ -266,11 +180,10 @@ const createFlowNodes = (
 };
 
 export const createFlowElements = (
-  graph: DagGraph,
+  parsedGraph: ParsedDagGraph,
 ): { edges: Edge[]; nodes: DagFlowNode[] } => {
-  const descriptors = createVisualNodeDescriptors(graph);
-  const edges = createFlowEdges(descriptors);
-  const nodes = createFlowNodes(descriptors, edges);
+  const edges = createFlowEdges(parsedGraph);
+  const nodes = createFlowNodes(parsedGraph, edges);
 
   return { edges, nodes };
 };
