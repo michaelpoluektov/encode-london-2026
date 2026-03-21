@@ -18,13 +18,13 @@ import {
   setActiveChatThread,
   truncateChatThreadFrom,
 } from "./chat-persistence";
+import * as codexRuntime from "./codex-runtime";
 import {
   getCheckpointFileSnapshots,
   getCheckpointInfo,
   getProjectFolderPath,
   listCheckpoints,
 } from "./project-metadata";
-import * as codexRuntime from "./codex-runtime";
 
 export const listProjectThreads = async (
   projectId: string,
@@ -88,7 +88,7 @@ export const listThreadCheckpoints = async (
 export const revertToCheckpoint = async (
   request: HistoryRevertRequest,
 ): Promise<ChatThreadDetail> => {
-  const { writeFile, mkdir } = await import("node:fs/promises");
+  const { mkdir, rm, writeFile } = await import("node:fs/promises");
   const { join, dirname } = await import("node:path");
 
   const info = await getCheckpointInfo(request.checkpointId);
@@ -105,6 +105,18 @@ export const revertToCheckpoint = async (
   const snapshots = await getCheckpointFileSnapshots(request.checkpointId);
   if (snapshots === null) {
     throw new Error("Checkpoint file snapshots not found.");
+  }
+
+  const { listProjectSnapshotPaths } = await import("./project-snapshot-files");
+  const currentSnapshotPaths = await listProjectSnapshotPaths(folderPath);
+  const snapshotPathSet = new Set(Object.keys(snapshots));
+
+  for (const relativePath of currentSnapshotPaths) {
+    if (snapshotPathSet.has(relativePath)) {
+      continue;
+    }
+
+    await rm(join(folderPath, relativePath), { force: true });
   }
 
   // Restore files.

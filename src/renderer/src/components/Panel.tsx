@@ -20,7 +20,7 @@ type PanelProps = {
   readonly children?: ReactNode;
   readonly label: string;
   readonly collapseDisabled?: boolean;
-  readonly collapseSymbol?: string;
+  readonly collapseSymbol?: ReactNode;
   readonly headerActions?: readonly PanelHeaderAction[];
   readonly onToggleCollapsed?: () => void;
   readonly bodyClassName?: string;

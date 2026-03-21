@@ -1,14 +1,11 @@
 import { type JSX, useCallback, useRef } from "react";
 import { editorFrame } from "../app-shell.css";
-import type { GraphSourceLoader } from "./graph/graph-types";
+import { getProjectGraphSource, useProjectStore } from "../store/project-store";
+import { FloatingPreview } from "./FloatingPreview";
 import { EXAMPLE_GRAPH_SOURCE } from "./graph/example";
 import { Graph } from "./graph/Graph";
+import type { GraphSourceLoader } from "./graph/graph-types";
 import { graphContainer } from "./graph-panel.css";
-import { FloatingPreview } from "./FloatingPreview";
-import {
-  getProjectGraphSource,
-  useProjectStore,
-} from "../store/project-store";
 
 export const GraphEditor = (): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -17,9 +14,13 @@ export const GraphEditor = (): JSX.Element => {
 
   const loadCustomNodeSource = useCallback<GraphSourceLoader>(
     async (filepath) => {
+      if (project === null) {
+        throw new Error("A project must be open to load node source files.");
+      }
+
       const entry = await window.shadily.project.readEntry({
-        folderPath: project!.folderPath,
-        manifest: project!.manifest,
+        folderPath: project.folderPath,
+        manifest: project.manifest,
         path: filepath,
       });
 

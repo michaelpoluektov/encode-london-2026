@@ -2,11 +2,7 @@ import { create } from "zustand";
 import type { ProjectLayoutState } from "../../../shared/contracts";
 import { projectLayoutStateSchema } from "../../../shared/contracts";
 
-export type CollapsiblePaneId =
-  | "project"
-  | "source"
-  | "graph"
-  | "chat";
+export type CollapsiblePaneId = "project" | "source" | "graph" | "chat";
 
 type PaneCollapseState = Record<CollapsiblePaneId, boolean>;
 
@@ -18,7 +14,7 @@ export const DEFAULT_PROJECT_LAYOUT: ProjectLayoutState = {
     chat: false,
   },
   shellPaneSizes: [18, 82],
-  workspaceColumnSizes: [50, 50],
+  workspaceColumnSizes: [65, 35],
   workspaceLeftRowSizes: [50, 50],
 };
 

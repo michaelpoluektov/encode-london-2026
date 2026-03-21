@@ -1,5 +1,3 @@
-import { readdir, readFile, stat } from "node:fs/promises";
-import { extname, join } from "node:path";
 import type { Thread, ThreadItem, Usage } from "@openai/codex-sdk";
 import { Codex } from "@openai/codex-sdk";
 import type {
@@ -24,6 +22,7 @@ import {
   getProjectFolderPath,
   saveCheckpointPreview,
 } from "./project-metadata";
+import { readProjectSnapshotFiles } from "./project-snapshot-files";
 
 let _codex: Codex | null = null;
 let _mcpPort: number | null = null;
@@ -135,56 +134,6 @@ const toAssistantParts = (
   return parts;
 };
 
-const TEXT_EXTENSIONS = new Set([
-  ".glsl",
-  ".frag",
-  ".vert",
-  ".js",
-  ".ts",
-  ".json",
-  ".txt",
-  ".yaml",
-  ".yml",
-  ".toml",
-  ".md",
-]);
-
-const readProjectFiles = async (
-  folderPath: string,
-): Promise<Record<string, string>> => {
-  const result: Record<string, string> = {};
-
-  const walk = async (dir: string): Promise<void> => {
-    let entries: string[];
-    try {
-      entries = await readdir(dir);
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      if (entry.startsWith(".") || entry === "node_modules") continue;
-      const fullPath = join(dir, entry);
-      const s = await stat(fullPath).catch(() => null);
-      if (s === null) continue;
-      if (s.isDirectory()) {
-        await walk(fullPath);
-      } else if (TEXT_EXTENSIONS.has(extname(entry).toLowerCase())) {
-        const content = await readFile(fullPath, "utf-8").catch(() => null);
-        if (content !== null) {
-          const relativePath = fullPath
-            .slice(folderPath.length)
-            .replace(/\\/g, "/")
-            .replace(/^\//, "");
-          result[relativePath] = content;
-        }
-      }
-    }
-  };
-
-  await walk(folderPath);
-  return result;
-};
-
 const getOrCreateThreadSession = async (
   projectId: string,
   threadId: string,
@@ -262,8 +211,11 @@ const runCodexTurn = async ({
   resultMessageId: string | null;
   usage: Usage | null;
 }> => {
-  const { codexThreadId: initialThreadId, thread, folderPath } =
-    await getOrCreateThreadSession(projectId, threadId);
+  const {
+    codexThreadId: initialThreadId,
+    thread,
+    folderPath,
+  } = await getOrCreateThreadSession(projectId, threadId);
   const triggerMessage = await createTriggerMessage(folderPath);
   const runId = await createChatRun({
     threadId,
@@ -354,7 +306,11 @@ const runCodexTurn = async ({
       }
     }
 
-    const assistantParts = toAssistantParts(finalText, reasoningTexts, mcpToolCallParts);
+    const assistantParts = toAssistantParts(
+      finalText,
+      reasoningTexts,
+      mcpToolCallParts,
+    );
     const assistantMessage =
       assistantParts.length === 0
         ? null
@@ -390,7 +346,11 @@ const runCodexTurn = async ({
       usage,
     };
   } catch (error) {
-    const incompleteParts = toAssistantParts(finalText, reasoningTexts, mcpToolCallParts);
+    const incompleteParts = toAssistantParts(
+      finalText,
+      reasoningTexts,
+      mcpToolCallParts,
+    );
 
     if (incompleteParts.length > 0) {
       await appendAssistantMessage({
@@ -458,14 +418,11 @@ export const sendMessage = async (
 
       // Snapshot files and create a checkpoint for this user message.
       try {
-        const fileSnapshots = await readProjectFiles(folderPath);
+        const fileSnapshots = await readProjectSnapshotFiles(folderPath);
         let resolvedPreviewPath = payload.previewPath ?? null;
 
         // If the renderer sent a data URL instead of a path, save it to disk.
-        if (
-          resolvedPreviewPath !== null &&
-          resolvedPreviewPath.startsWith("data:")
-        ) {
+        if (resolvedPreviewPath?.startsWith("data:")) {
           resolvedPreviewPath = saveCheckpointPreview(
             folderPath,
             resolvedPreviewPath,

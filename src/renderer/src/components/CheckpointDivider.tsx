@@ -8,6 +8,7 @@ import {
   chatCheckpointDivider,
   chatCheckpointLine,
 } from "./chat-panel.css";
+import { CloseIcon, MagnifyingGlassIcon, UndoIcon } from "./ui/icons";
 
 export const CheckpointDivider = ({
   checkpoint,
@@ -76,7 +77,11 @@ export const CheckpointDivider = ({
             }
             type="button"
           >
-            {isPreviewing ? "✕" : "👁"}
+            {isPreviewing ? (
+              <CloseIcon size={12} />
+            ) : (
+              <MagnifyingGlassIcon size={12} />
+            )}
           </button>
         )}
         <button
@@ -87,7 +92,7 @@ export const CheckpointDivider = ({
           title="Revert project files to this checkpoint"
           type="button"
         >
-          {isReverting ? "…" : "↩"}
+          {isReverting ? "…" : <UndoIcon size={12} />}
         </button>
       </div>
       <div className={chatCheckpointLine} />

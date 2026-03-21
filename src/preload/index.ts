@@ -168,14 +168,11 @@ const shadilyDesktopApi = {
     },
   },
   preview: {
-    onCompileCheck: (
-      cb: (requestId: string) => void,
-    ): (() => void) => {
+    onCompileCheck: (cb: (requestId: string) => void): (() => void) => {
       const handler = (_e: Electron.IpcRendererEvent, requestId: string) =>
         cb(requestId);
       ipcRenderer.on("preview:compile-check", handler);
-      return () =>
-        ipcRenderer.removeListener("preview:compile-check", handler);
+      return () => ipcRenderer.removeListener("preview:compile-check", handler);
     },
     respondCompile: (
       requestId: string,

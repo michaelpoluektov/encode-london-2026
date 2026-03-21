@@ -5,6 +5,7 @@ export const buttonBase = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
+  gap: themeVars.space[2],
   minWidth: 0,
   borderRadius: 0,
   border: `1px solid transparent`,

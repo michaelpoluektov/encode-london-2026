@@ -192,20 +192,6 @@ export const chatPartReasoning = style({
   borderRadius: themeVars.radius.sm,
 });
 
-export const chatPartImage = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: themeVars.space[1],
-  padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
-  background: themeVars.color.background.panelInset,
-  border: `1px solid ${themeVars.color.border.subtle}`,
-  borderRadius: themeVars.radius.sm,
-});
-
-export const chatPartLabel = style({
-  marginTop: themeVars.space[1],
-});
-
 export const chatPartPre = style({
   whiteSpace: "pre-wrap",
   wordBreak: "break-word",
@@ -256,16 +242,6 @@ globalStyle(`${chatMarkdown} ul, ${chatMarkdown} ol`, {
 globalStyle(`${chatMarkdown} li`, { margin: `${themeVars.space[1]} 0` });
 globalStyle(`${chatMarkdown} strong`, {
   fontWeight: themeVars.font.weight.strong,
-});
-
-export const chatFileChange = style({
-  alignSelf: "flex-start",
-  padding: `${themeVars.space[1]} ${themeVars.space[2]}`,
-  borderRadius: themeVars.radius.sm,
-  background: themeVars.color.surface.successMuted,
-  color: themeVars.color.text.secondary,
-  fontFamily: themeVars.font.family.mono,
-  fontSize: themeVars.font.size.xs,
 });
 
 export const chatWarning = style({

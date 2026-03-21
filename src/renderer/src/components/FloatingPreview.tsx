@@ -7,9 +7,16 @@ import {
   useRef,
   useState,
 } from "react";
-import { dragHandle, expandButton, floatingPanel, gripIcon, previewBody } from "./floating-preview.css";
+import {
+  dragHandle,
+  expandButton,
+  floatingPanel,
+  gripIcon,
+  previewBody,
+} from "./floating-preview.css";
 import { PreviewFullscreen } from "./PreviewFullscreen";
 import { PreviewViewport } from "./PreviewViewport";
+import { ExpandIcon, GripIcon } from "./ui/icons";
 
 type Corner = "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
 
@@ -22,13 +29,33 @@ const SNAP_TRANSITION = "top 0.18s, left 0.18s, right 0.18s, bottom 0.18s";
 const getCornerStyle = (corner: Corner): CSSProperties => {
   switch (corner) {
     case "topLeft":
-      return { top: SNAP_INSET, left: SNAP_INSET, right: "unset", bottom: "unset" };
+      return {
+        top: SNAP_INSET,
+        left: SNAP_INSET,
+        right: "unset",
+        bottom: "unset",
+      };
     case "topRight":
-      return { top: SNAP_INSET, right: SNAP_INSET, left: "unset", bottom: "unset" };
+      return {
+        top: SNAP_INSET,
+        right: SNAP_INSET,
+        left: "unset",
+        bottom: "unset",
+      };
     case "bottomLeft":
-      return { bottom: SNAP_INSET, left: SNAP_INSET, right: "unset", top: "unset" };
+      return {
+        bottom: SNAP_INSET,
+        left: SNAP_INSET,
+        right: "unset",
+        top: "unset",
+      };
     case "bottomRight":
-      return { bottom: SNAP_INSET, right: SNAP_INSET, left: "unset", top: "unset" };
+      return {
+        bottom: SNAP_INSET,
+        right: SNAP_INSET,
+        left: "unset",
+        top: "unset",
+      };
   }
 };
 
@@ -155,9 +182,13 @@ export const FloatingPreview = ({
   return (
     <>
       <div className={floatingPanel} style={style}>
-        <div className={dragHandle} onMouseDown={handleMouseDown}>
+        <button
+          className={dragHandle}
+          onMouseDown={handleMouseDown}
+          type="button"
+        >
           <span aria-hidden="true" className={gripIcon}>
-            ⠿
+            <GripIcon size={12} />
           </span>
           Preview
           <button
@@ -171,9 +202,9 @@ export const FloatingPreview = ({
               setIsFullscreen(true);
             }}
           >
-            ⛶
+            <ExpandIcon size={12} />
           </button>
-        </div>
+        </button>
         <div className={previewBody}>
           <PreviewViewport />
         </div>

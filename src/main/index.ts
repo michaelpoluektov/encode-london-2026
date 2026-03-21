@@ -98,7 +98,13 @@ app.whenReady().then(async () => {
   // Preview IPC: renderer responds to compile-check requests from MCP tools.
   ipcMain.handle(
     "preview:compile-check-result",
-    (_e, payload: { requestId: string; result: { success: boolean; error?: string } }) => {
+    (
+      _e,
+      payload: {
+        requestId: string;
+        result: { success: boolean; error?: string };
+      },
+    ) => {
       mcpServer.resolveCompileCheck(payload.requestId, payload.result);
     },
   );
@@ -111,7 +117,9 @@ app.whenReady().then(async () => {
       payload: { requestId: string; dataUrl: string | null; error?: string },
     ) => {
       if (payload.dataUrl !== null) {
-        mcpServer.resolveCapture(payload.requestId, { dataUrl: payload.dataUrl });
+        mcpServer.resolveCapture(payload.requestId, {
+          dataUrl: payload.dataUrl,
+        });
       } else {
         mcpServer.resolveCapture(payload.requestId, {
           error: payload.error ?? "Capture failed.",

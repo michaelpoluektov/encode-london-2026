@@ -1,6 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { randomUUID } from "node:crypto";
 import {
   DatabaseSync,
   type SQLInputValue,
@@ -385,9 +385,11 @@ const createDatabase = async (): Promise<Kysely<MetadataDatabase>> => {
   // Migrate existing databases that lack the fragment_shader_source column.
   await sql`
     ALTER TABLE project_checkpoints ADD COLUMN fragment_shader_source TEXT
-  `.execute(db).catch(() => {
-    // Column already exists — ignore.
-  });
+  `
+    .execute(db)
+    .catch(() => {
+      // Column already exists — ignore.
+    });
 
   return db;
 };

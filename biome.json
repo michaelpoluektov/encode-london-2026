@@ -3,6 +3,8 @@
   "files": {
     "includes": [
       "**",
+      "!**/.claude",
+      "!**/.claire",
       "!**/.references",
       "!**/.worktrees",
       "!**/node_modules",

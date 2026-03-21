@@ -14,6 +14,11 @@ export const projectSection = style({
   padding: themeVars.space[2],
 });
 
+export const projectActions = style({
+  display: "flex",
+  gap: themeVars.space[2],
+});
+
 export const treeShell = style({
   flex: 1,
   height: "100%",
@@ -79,15 +84,13 @@ export const treeCaret = style({
   alignItems: "center",
   justifyContent: "center",
   width: "16px",
+  height: "16px",
   color: themeVars.color.text.muted,
-  fontFamily: themeVars.font.family.mono,
-  fontSize: themeVars.font.size.xs,
   flexShrink: 0,
-  transform: "translateY(-1px)",
 });
 
 export const treeCaretHidden = style({
-  opacity: 0,
+  visibility: "hidden",
 });
 
 export const treeGlyph = style({
@@ -95,30 +98,30 @@ export const treeGlyph = style({
   alignItems: "center",
   justifyContent: "center",
   flexShrink: 0,
-  width: "8px",
-  height: "8px",
+  width: "16px",
+  height: "16px",
   marginRight: "6px",
-  borderRadius: themeVars.radius.pill,
+  color: themeVars.color.text.muted,
 });
 
 export const folderGlyph = style({
-  background: themeVars.color.surface.warning,
+  color: themeVars.color.surface.warning,
 });
 
 export const editableGlyph = style({
-  background: themeVars.color.surface.accent,
+  color: themeVars.color.surface.accent,
 });
 
 export const readOnlyGlyph = style({
-  background: themeVars.color.text.muted,
+  color: themeVars.color.text.muted,
 });
 
 export const imageGlyph = style({
-  background: themeVars.color.surface.success,
+  color: themeVars.color.surface.success,
 });
 
 export const binaryGlyph = style({
-  background: themeVars.color.surface.danger,
+  color: themeVars.color.surface.danger,
 });
 
 export const treeLabelGroup = style({

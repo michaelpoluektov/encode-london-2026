@@ -2,6 +2,7 @@ import {
   type JSX,
   type KeyboardEvent,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -9,13 +10,13 @@ import { type NodeRendererProps, Tree } from "react-arborist";
 import type { ProjectTreeNode } from "../../../shared/contracts";
 import { cx } from "../lib/cx";
 import { useProjectStore } from "../store/project-store";
-import { Panel, type PanelHeaderAction } from "./Panel";
 import {
   binaryGlyph,
   editableGlyph,
   emptyState,
   folderGlyph,
   imageGlyph,
+  projectActions,
   projectSection,
   projectSidebar,
   readOnlyGlyph,
@@ -30,21 +31,57 @@ import {
   treeShell,
   treeViewport,
 } from "./project-sidebar.css";
+import { Button } from "./ui/Button";
 import { textInputField } from "./ui/field.css";
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  DocumentIcon,
+  FileIcon,
+  FolderClosedIcon,
+  FolderOpenIcon,
+  ImageFileIcon,
+  PlusIcon,
+  ReadOnlyFileIcon,
+} from "./ui/icons";
 import { Text } from "./ui/Text";
 
-const getGlyphClassName = (node: ProjectTreeNode): string => {
+const getItemIcon = (node: ProjectTreeNode, isOpen: boolean): JSX.Element => {
   switch (node.itemKind) {
     case "directory":
-      return folderGlyph;
+      return (
+        <span className={cx(treeGlyph, folderGlyph)}>
+          {isOpen ? (
+            <FolderOpenIcon size={14} />
+          ) : (
+            <FolderClosedIcon size={14} />
+          )}
+        </span>
+      );
     case "editable":
-      return editableGlyph;
+      return (
+        <span className={cx(treeGlyph, editableGlyph)}>
+          <FileIcon size={14} />
+        </span>
+      );
     case "image":
-      return imageGlyph;
+      return (
+        <span className={cx(treeGlyph, imageGlyph)}>
+          <ImageFileIcon size={14} />
+        </span>
+      );
     case "binary":
-      return binaryGlyph;
+      return (
+        <span className={cx(treeGlyph, binaryGlyph)}>
+          <DocumentIcon size={14} />
+        </span>
+      );
     case "readOnly":
-      return readOnlyGlyph;
+      return (
+        <span className={cx(treeGlyph, readOnlyGlyph)}>
+          <ReadOnlyFileIcon size={14} />
+        </span>
+      );
   }
 };
 
@@ -69,12 +106,13 @@ const ProjectTreeRow = ({
         aria-hidden="true"
         className={cx(treeCaret, node.isLeaf && treeCaretHidden)}
       >
-        {node.isLeaf ? ">" : node.isOpen ? "v" : ">"}
+        {node.isOpen ? (
+          <ChevronDownIcon size={12} />
+        ) : (
+          <ChevronRightIcon size={12} />
+        )}
       </span>
-      <span
-        aria-hidden="true"
-        className={cx(treeGlyph, getGlyphClassName(node.data))}
-      />
+      {getItemIcon(node.data, node.isOpen)}
       <div className={treeLabelGroup}>
         <Text as="span" className={treeLabel} tone="default" variant="body">
           {node.data.name}
@@ -84,41 +122,25 @@ const ProjectTreeRow = ({
   </div>
 );
 
-const NewProjectIcon = (): JSX.Element => (
-  <svg aria-hidden="true" fill="none" height="8" viewBox="0 0 12 12" width="8">
-    <path
-      d="M6 2v8M2 6h8"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeWidth="1.25"
-    />
-  </svg>
-);
+const createInitialOpenState = (
+  nodes: readonly ProjectTreeNode[],
+): Record<string, boolean> =>
+  Object.fromEntries(
+    nodes.flatMap((node) => {
+      if (node.kind !== "directory") {
+        return [];
+      }
 
-const OpenProjectIcon = (): JSX.Element => (
-  <svg aria-hidden="true" fill="none" height="8" viewBox="0 0 12 12" width="8">
-    <path
-      d="M3 1.75h4l2 2v6.5H3z"
-      stroke="currentColor"
-      strokeLinejoin="round"
-      strokeWidth="1.25"
-    />
-    <path
-      d="M7 1.75v2h2"
-      stroke="currentColor"
-      strokeLinejoin="round"
-      strokeWidth="1.25"
-    />
-  </svg>
-);
+      const isOpen = node.name !== "captures";
 
-type ProjectSidebarProps = {
-  readonly onToggleCollapsed: () => void;
-};
+      return [
+        [node.path, isOpen] as const,
+        ...Object.entries(createInitialOpenState(node.children ?? [])),
+      ];
+    }),
+  );
 
-export const ProjectSidebar = ({
-  onToggleCollapsed,
-}: ProjectSidebarProps): JSX.Element => {
+export const ProjectSidebar = (): JSX.Element => {
   const project = useProjectStore((s) => s.project);
   const openProject = useProjectStore((s) => s.openProject);
   const selectEntry = useProjectStore((s) => s.selectEntry);
@@ -128,6 +150,10 @@ export const ProjectSidebar = ({
   const [treeHeight, setTreeHeight] = useState(1);
 
   const treeViewportRef = useRef<HTMLDivElement | null>(null);
+  const initialOpenState = useMemo(
+    () => createInitialOpenState(project?.tree ?? []),
+    [project?.tree],
+  );
 
   useEffect(() => {
     const viewport = treeViewportRef.current;
@@ -135,6 +161,10 @@ export const ProjectSidebar = ({
     if (viewport === null) {
       return;
     }
+
+    setTreeHeight(
+      Math.max(Math.floor(viewport.getBoundingClientRect().height), 1),
+    );
 
     const resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
@@ -189,88 +219,90 @@ export const ProjectSidebar = ({
       openProject(result);
     }
   };
-  const headerActions: readonly PanelHeaderAction[] = [
-    {
-      ariaLabel: "Create project",
-      content: <NewProjectIcon />,
-      key: "new-project",
-      onClick: () => {
-        void handleNewProject();
-      },
-    },
-    {
-      ariaLabel: "Open project",
-      content: <OpenProjectIcon />,
-      key: "open-project",
-      onClick: () => {
-        void handleOpenProject();
-      },
-    },
-  ];
 
   return (
-    <Panel
-      collapseSymbol="<"
-      headerActions={headerActions}
-      label="Project"
-      onToggleCollapsed={onToggleCollapsed}
-    >
-      <div className={projectSidebar}>
-        {pendingFolder !== null ? (
-          <section className={projectSection}>
-            <Text as="span" variant="label">
-              New project name
-            </Text>
-            <input
-              // biome-ignore lint/a11y/noAutofocus: intentional focus for inline input
-              autoFocus
-              className={textInputField}
-              type="text"
-              value={pendingName}
-              onChange={(event) => setPendingName(event.target.value)}
-              onKeyDown={handleCreateKeyDown}
-            />
-          </section>
-        ) : null}
+    <div className={projectSidebar}>
+      <section className={projectSection}>
+        <div className={projectActions}>
+          <Button
+            aria-label="Create project"
+            onClick={() => {
+              void handleNewProject();
+            }}
+            size="sm"
+            variant="outline"
+          >
+            <PlusIcon size={12} />
+            New
+          </Button>
+          <Button
+            aria-label="Open project"
+            onClick={() => {
+              void handleOpenProject();
+            }}
+            size="sm"
+            variant="outline"
+          >
+            <DocumentIcon size={12} />
+            Open
+          </Button>
+        </div>
+      </section>
+      {pendingFolder !== null ? (
+        <section className={projectSection}>
+          <Text as="span" variant="label">
+            New project name
+          </Text>
+          <input
+            // biome-ignore lint/a11y/noAutofocus: intentional focus for inline input
+            autoFocus
+            className={textInputField}
+            type="text"
+            value={pendingName}
+            onChange={(event) => setPendingName(event.target.value)}
+            onKeyDown={handleCreateKeyDown}
+          />
+        </section>
+      ) : null}
 
-        <div className={treeShell}>
-          <div ref={treeViewportRef} className={treeViewport}>
-            {project !== null ? (
-              <Tree<ProjectTreeNode>
-                className={treeClassName}
-                data={project.tree}
-                disableDrag
-                disableEdit
-                disableMultiSelection
-                height={treeHeight}
-                idAccessor="path"
-                indent={20}
-                openByDefault
-                overscanCount={8}
-                padding={0}
-                rowHeight={24}
-                selection={project.selectedEntryPath ?? undefined}
-                width="100%"
-                onSelect={(nodes) => {
-                  const nextNode = nodes[0];
+      <div className={treeShell}>
+        <div ref={treeViewportRef} className={treeViewport}>
+          {project !== null ? (
+            <Tree<ProjectTreeNode>
+              key={`${project.manifest.projectId}-${treeHeight}`}
+              className={treeClassName}
+              data={project.tree}
+              disableDrag
+              disableEdit
+              disableMultiSelection
+              height={treeHeight}
+              idAccessor="path"
+              indent={20}
+              initialOpenState={initialOpenState}
+              overscanCount={8}
+              padding={0}
+              rowHeight={24}
+              selection={project.selectedEntryPath ?? undefined}
+              width="100%"
+              onSelect={(nodes) => {
+                const nextNode = nodes[0];
 
-                  if (nextNode?.data.kind === "file") {
-                    selectEntry(nextNode.data.path);
-                  }
-                }}
-              >
-                {ProjectTreeRow}
-              </Tree>
-            ) : (
-              <div className={emptyState}>
-                <Text as="p" tone="muted" variant="caption">
-                  The project tree appears here once a project is open.
-                </Text>
-              </div>
-            )}
-          </div>
+                if (nextNode?.data.kind === "file") {
+                  selectEntry(nextNode.data.path);
+                }
+              }}
+            >
+              {ProjectTreeRow}
+            </Tree>
+          ) : (
+            <div className={emptyState}>
+              <Text as="p" tone="muted" variant="caption">
+                The project tree appears here once a project is open.
+              </Text>
+            </div>
+          )}
         </div>
       </div>
-    </Panel>
+    </div>
   );
 };

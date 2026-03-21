@@ -12,6 +12,16 @@ export const DEFAULT_AGENTS_MD = `# Shadily Shader Project
 
 This is a Shadily project. You can read and edit GLSL shader files (\`.frag\`, \`.vert\`) to change the visual output.
 
+## Workflow
+
+When making shader changes, always follow this order:
+
+1. Call \`render_preview\` before making any changes to see the current state.
+2. Make your changes, then call \`check_compilation\` to verify they compile without errors.
+3. Call \`render_preview\` again to see what changed and confirm the result.
+
+Iterate on steps 2–3 until the output looks correct.
+
 ## Environment constraints
 
 - \`rg\` (ripgrep) is **not available**. Use \`grep\` for text search or read files directly.
@@ -134,7 +144,11 @@ export const DEFAULT_GRAPH_SOURCE = JSON.stringify(
       },
       {
         filepath: "./nodes/mask.glsl",
-        inputs: { intensity: "intensity", invert: "invertMask", pattern: "noise" },
+        inputs: {
+          intensity: "intensity",
+          invert: "invertMask",
+          pattern: "noise",
+        },
         instanceName: "mask",
         kind: "custom",
       },

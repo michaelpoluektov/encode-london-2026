@@ -1,9 +1,4 @@
-import {
-  type JSX,
-  useDeferredValue,
-  useEffect,
-  useRef,
-} from "react";
+import { type JSX, useDeferredValue, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -17,7 +12,6 @@ import {
   createPreviewMaterial,
 } from "../preview-compile";
 import { useGraphPreviewStore } from "../store/graph-preview-store";
-import { createPreviewRevision } from "../store/preview-store";
 import { darkThemeValues } from "../theme";
 import type { GraphUniformValues } from "./graph/graph-types";
 import {
@@ -27,6 +21,7 @@ import {
   sceneHost,
   topBar,
 } from "./preview-fullscreen.css";
+import { CloseIcon } from "./ui/icons";
 
 const EMPTY_UNIFORM_VALUES: GraphUniformValues = Object.freeze({});
 
@@ -61,7 +56,8 @@ export const PreviewFullscreen = ({
   const vertexSource = DEFAULT_VERTEX_SHADER;
   const activeUniformValues =
     graphFragmentSource === null ? EMPTY_UNIFORM_VALUES : graphUniformValues;
-  const activeUniformValuesRef = useRef<GraphUniformValues>(activeUniformValues);
+  const activeUniformValuesRef =
+    useRef<GraphUniformValues>(activeUniformValues);
 
   useEffect(() => {
     activeUniformValuesRef.current = activeUniformValues;
@@ -69,7 +65,6 @@ export const PreviewFullscreen = ({
 
   const deferredFragment = useDeferredValue(fragmentSource);
   const deferredVertex = useDeferredValue(vertexSource);
-  const deferredRevision = createPreviewRevision(deferredFragment, deferredVertex);
 
   // Scene setup
   useEffect(() => {
@@ -114,8 +109,8 @@ export const PreviewFullscreen = ({
 
     geometry = new THREE.SphereGeometry(1, 256, 128);
     const material = createPreviewMaterial(
-      fragmentSource,
-      vertexSource,
+      DEFAULT_FRAGMENT_SHADER,
+      DEFAULT_VERTEX_SHADER,
       activeUniformValuesRef.current,
     );
     mesh = new THREE.Mesh(geometry, material);
@@ -194,7 +189,6 @@ export const PreviewFullscreen = ({
       meshRef.current = null;
       controlsRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Shader recompilation
@@ -218,7 +212,7 @@ export const PreviewFullscreen = ({
     const prev = mesh.material;
     mesh.material = compileResult.material;
     prev.dispose();
-  }, [deferredFragment, deferredRevision, deferredVertex]);
+  }, [deferredFragment, deferredVertex]);
 
   // Uniform updates
   useEffect(() => {
@@ -255,12 +249,12 @@ export const PreviewFullscreen = ({
           type="button"
           onClick={onClose}
         >
-          ✕
+          <CloseIcon size={12} />
         </button>
       </div>
       <div className={hint}>
-        Drag to orbit · Scroll to zoom · Right-drag to pan · R to reset · Esc
-        to close
+        Drag to orbit · Scroll to zoom · Right-drag to pan · R to reset · Esc to
+        close
       </div>
     </div>
   );

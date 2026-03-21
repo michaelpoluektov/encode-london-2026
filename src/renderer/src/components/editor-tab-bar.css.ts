@@ -74,10 +74,13 @@ export const tabLabel = style({
 });
 
 export const tabBell = style({
-  fontSize: "10px",
   color: themeVars.color.surface.warning,
   flexShrink: 0,
-  lineHeight: 1,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "12px",
+  height: "12px",
 });
 
 export const tabClose = style({
@@ -90,11 +93,9 @@ export const tabClose = style({
   border: "none",
   background: "transparent",
   color: themeVars.color.text.muted,
-  fontSize: "10px",
   cursor: "pointer",
   padding: 0,
   flexShrink: 0,
-  lineHeight: 1,
   selectors: {
     "&:hover": {
       background: themeVars.color.surface.interactiveHover,

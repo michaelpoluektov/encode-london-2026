@@ -16,14 +16,18 @@ export const floatingPanel = style({
 });
 
 export const dragHandle = style({
+  appearance: "none",
   display: "flex",
   alignItems: "center",
   gap: themeVars.space[2],
+  width: "100%",
   height: "28px",
   flexShrink: 0,
   padding: `0 ${themeVars.space[2]} 0 ${themeVars.space[3]}`,
   cursor: "grab",
   userSelect: "none",
+  border: 0,
+  background: "transparent",
   borderBottom: `1px solid ${themeVars.color.border.subtle}`,
   color: themeVars.color.text.muted,
   fontFamily: themeVars.font.family.mono,
@@ -37,8 +41,9 @@ export const dragHandle = style({
 
 export const gripIcon = style({
   opacity: 0.4,
-  fontSize: "14px",
-  lineHeight: 1,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
 });
 
 export const expandButton = style({
@@ -52,8 +57,6 @@ export const expandButton = style({
   background: "transparent",
   color: themeVars.color.text.muted,
   cursor: "pointer",
-  fontSize: "14px",
-  lineHeight: 1,
   padding: 0,
   flexShrink: 0,
   selectors: {

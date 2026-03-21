@@ -6,20 +6,21 @@ import {
   paneRestorePlacement,
 } from "./pane-restore-control.css";
 import { Button } from "./ui/Button";
+import { ChevronRightIcon } from "./ui/icons";
 
 type PaneRestorePlacement = keyof typeof paneRestorePlacement;
 
 type PaneRestoreControlProps = {
   readonly label: string;
   readonly placement: PaneRestorePlacement;
-  readonly restoreSymbol?: string;
+  readonly restoreIcon?: JSX.Element;
   readonly onRestore: () => void;
 };
 
 export const PaneRestoreControl = ({
   label,
   placement,
-  restoreSymbol = "+",
+  restoreIcon = <ChevronRightIcon size={12} />,
   onRestore,
 }: PaneRestoreControlProps): JSX.Element => (
   <div className={cx(paneRestoreControl, paneRestorePlacement[placement])}>
@@ -31,7 +32,7 @@ export const PaneRestoreControl = ({
       square
       variant="plain"
     >
-      {restoreSymbol}
+      {restoreIcon}
     </Button>
   </div>
 );

@@ -1,17 +1,14 @@
-import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
-import type { BrowserWindow } from "electron";
+import { createServer } from "node:http";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import type { BrowserWindow } from "electron";
 import { z } from "zod";
 
 type CompileResult = { success: boolean; error?: string };
 type CaptureResult = { dataUrl: string } | { error: string };
 
-const pendingCompileChecks = new Map<
-  string,
-  (result: CompileResult) => void
->();
+const pendingCompileChecks = new Map<string, (result: CompileResult) => void>();
 const pendingCaptures = new Map<string, (result: CaptureResult) => void>();
 
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -103,7 +100,9 @@ const createMcpServerInstance = (): McpServer => {
       const result = await requestCompileCheck();
       if (result.success) {
         return {
-          content: [{ type: "text" as const, text: "Shaders compiled successfully." }],
+          content: [
+            { type: "text" as const, text: "Shaders compiled successfully." },
+          ],
         };
       }
       return {
@@ -140,10 +139,7 @@ const createMcpServerInstance = (): McpServer => {
           isError: true,
         };
       }
-      const base64Data = result.dataUrl.replace(
-        /^data:image\/png;base64,/,
-        "",
-      );
+      const base64Data = result.dataUrl.replace(/^data:image\/png;base64,/, "");
       return {
         content: [
           {

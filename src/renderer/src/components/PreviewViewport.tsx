@@ -75,9 +75,10 @@ export const PreviewViewport = (): JSX.Element => {
 
   const fragmentSource = graphFragmentSource ?? DEFAULT_FRAGMENT_SHADER;
   const vertexSource = DEFAULT_VERTEX_SHADER;
-  const activeUniformValues = graphFragmentSource === null
-    ? EMPTY_GRAPH_UNIFORM_VALUES
-    : graphUniformValues;
+  const activeUniformValues =
+    graphFragmentSource === null
+      ? EMPTY_GRAPH_UNIFORM_VALUES
+      : graphUniformValues;
 
   const deferredFragment = useDeferredValue(fragmentSource);
   const deferredVertex = useDeferredValue(vertexSource);

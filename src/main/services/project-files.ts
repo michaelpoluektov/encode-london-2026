@@ -44,8 +44,7 @@ const getEditablePaths = (manifest: ShadilyManifest): Set<string> =>
 export const readGraphSource = (
   folderPath: string,
   manifest: ShadilyManifest,
-): string =>
-  readFileSync(join(folderPath, manifest.graph.source), "utf-8");
+): string => readFileSync(join(folderPath, manifest.graph.source), "utf-8");
 
 export const createProjectOpenResult = (
   folderPath: string,
@@ -91,11 +90,7 @@ export const createProject = async (
     JSON.stringify(manifest, null, 2),
     "utf-8",
   );
-  writeFileSync(
-    join(folderPath, manifest.graph.source),
-    graphSource,
-    "utf-8",
-  );
+  writeFileSync(join(folderPath, manifest.graph.source), graphSource, "utf-8");
   writeFileSync(
     join(folderPath, DEFAULT_PROJECT_FILE_PATHS.agentInstructions),
     DEFAULT_AGENTS_MD,
@@ -168,11 +163,7 @@ export const saveProject = async (
     modified: new Date().toISOString(),
   };
 
-  writeFileSync(
-    join(folderPath, manifest.graph.source),
-    graphSource,
-    "utf-8",
-  );
+  writeFileSync(join(folderPath, manifest.graph.source), graphSource, "utf-8");
   writeFileSync(
     join(folderPath, DEFAULT_PROJECT_FILE_PATHS.manifest),
     JSON.stringify(updated, null, 2),

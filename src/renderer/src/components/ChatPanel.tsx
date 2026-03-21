@@ -10,21 +10,27 @@ import {
   type JSX,
   type KeyboardEvent,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import remarkGfm from "remark-gfm";
 import type { FileChangeInfo } from "../../../shared/contracts";
+import { getPathBasename } from "../../../shared/path-utils";
 import { useChatStore } from "../store/chat-store";
 import { useProjectStore } from "../store/project-store";
+import { CheckpointDivider } from "./CheckpointDivider";
 import {
   chatEmpty,
+  chatError,
   chatFileChangeRow,
   chatFileChip,
   chatFileChipKind,
   chatHeader,
   chatInputArea,
+  chatLoadingDot,
+  chatLoadingSpinner,
   chatMarkdown,
   chatMessageBody,
   chatMessageBubbleAssistant,
@@ -53,15 +59,12 @@ import {
   chatToolCallPre,
   chatToolCallSection,
   chatToolCallSectionLabel,
-  chatError,
-  chatLoadingDot,
-  chatLoadingSpinner,
   chatWarning,
 } from "./chat-panel.css";
-import { CheckpointDivider } from "./CheckpointDivider";
 import { useChatRuntime } from "./chat-runtime-adapter";
 import { Button } from "./ui/Button";
 import { textareaField } from "./ui/field.css";
+import { CloseIcon, PlusIcon } from "./ui/icons";
 import { Text } from "./ui/Text";
 
 // ─── File change chip ────────────────────────────────────────────────────────
@@ -72,11 +75,6 @@ const FILE_KIND_LABEL: Record<FileChangeInfo["kind"], string> = {
   delete: "-",
 };
 
-const getBasename = (path: string): string => {
-  const normalized = path.replaceAll("\\", "/");
-  return normalized.split("/").at(-1) ?? path;
-};
-
 const FileChangeChip = ({
   change,
 }: {
@@ -84,7 +82,7 @@ const FileChangeChip = ({
 }): JSX.Element => (
   <span className={chatFileChip} title={change.path}>
     <span className={chatFileChipKind}>{FILE_KIND_LABEL[change.kind]}</span>
-    {getBasename(change.path)}
+    {getPathBasename(change.path)}
   </span>
 );
 
@@ -108,11 +106,7 @@ const ToolCallResult = ({
     return (
       <div className={chatToolCallSection}>
         <span className={chatToolCallSectionLabel}>Preview</span>
-        <img
-          alt="Shader preview"
-          className={chatToolCallImage}
-          src={result}
-        />
+        <img alt="Shader preview" className={chatToolCallImage} src={result} />
       </div>
     );
   }
@@ -137,9 +131,7 @@ const ToolCallResult = ({
         Result
       </span>
       <pre className={chatToolCallPre}>
-        {typeof result === "string"
-          ? result
-          : JSON.stringify(result, null, 2)}
+        {typeof result === "string" ? result : JSON.stringify(result, null, 2)}
       </pre>
     </div>
   );
@@ -221,7 +213,9 @@ const AssistantMessageBubble = ({
   return (
     <div className={chatMessageRow}>
       <div
-        className={isStreaming ? chatStreamingBubble : chatMessageBubbleAssistant}
+        className={
+          isStreaming ? chatStreamingBubble : chatMessageBubbleAssistant
+        }
       >
         <div className={chatMessageBody}>
           {showSpinner && (
@@ -280,6 +274,7 @@ export const ChatPanel = (): JSX.Element => {
     checkpoints,
     isGenerating,
     isRetrying,
+    streamingText,
     recentFileChanges,
     warningMessage,
     hydrateProject,
@@ -302,10 +297,18 @@ export const ChatPanel = (): JSX.Element => {
   }, [hydrateProject, projectId]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: these are intentional trigger conditions for scroll, not values used inside the callback
-  useEffect(() => {
-    const el = messagesContainerRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages.length, recentFileChanges.length, warningMessage]);
+  useLayoutEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      block: "end",
+    });
+  }, [
+    activeThread?.id,
+    isGenerating,
+    messages.length,
+    recentFileChanges.length,
+    streamingText,
+    warningMessage,
+  ]);
 
   useEffect(() => {
     if (projectId === null) {
@@ -350,9 +353,13 @@ export const ChatPanel = (): JSX.Element => {
               <Text as="p" tone="muted" variant="caption">
                 Open a project to start a chat thread.
               </Text>
-            ) : sortedThreads.length === 0 ? (
+            ) : sortedThreads.length === 0 && activeThread === null ? (
               <Text as="p" tone="muted" variant="caption">
                 Loading threads...
+              </Text>
+            ) : sortedThreads.length === 0 ? (
+              <Text as="p" tone="muted" variant="caption">
+                No chat threads yet.
               </Text>
             ) : (
               <div className={chatThreadList}>
@@ -405,7 +412,7 @@ export const ChatPanel = (): JSX.Element => {
                         }}
                         type="button"
                       >
-                        ×
+                        <CloseIcon size={10} />
                       </button>
                     </div>
                   </div>
@@ -425,7 +432,7 @@ export const ChatPanel = (): JSX.Element => {
               square
               variant="plain"
             >
-              +
+              <PlusIcon size={10} />
             </Button>
           </div>
         </div>
@@ -483,9 +490,7 @@ export const ChatPanel = (): JSX.Element => {
               </div>
             )}
 
-            {isRetrying && (
-              <div className={chatError}>Error, retrying</div>
-            )}
+            {isRetrying && <div className={chatError}>Error, retrying</div>}
             {warningMessage !== null && (
               <div className={chatWarning}>{warningMessage}</div>
             )}

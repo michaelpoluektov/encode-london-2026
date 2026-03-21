@@ -1,4 +1,5 @@
 import type { JSX } from "react";
+import { getPathBasename } from "../../../shared/path-utils";
 import { cx } from "../lib/cx";
 import {
   tab,
@@ -8,6 +9,7 @@ import {
   tabClose,
   tabLabel,
 } from "./editor-tab-bar.css";
+import { CloseIcon, MagnifyingGlassIcon } from "./ui/icons";
 
 type EditorTabBarProps = {
   readonly openTabPaths: string[];
@@ -15,11 +17,6 @@ type EditorTabBarProps = {
   readonly aiNotifiedTabs: string[];
   readonly onSelectTab: (path: string) => void;
   readonly onCloseTab: (path: string) => void;
-};
-
-const getBasename = (path: string): string => {
-  const parts = path.replaceAll("\\", "/").split("/");
-  return parts[parts.length - 1] ?? path;
 };
 
 export const EditorTabBar = ({
@@ -34,7 +31,7 @@ export const EditorTabBar = ({
       {openTabPaths.map((path) => {
         const isActive = path === selectedEntryPath;
         const hasNotification = aiNotifiedTabs.includes(path);
-        const name = getBasename(path);
+        const name = getPathBasename(path);
 
         return (
           <div
@@ -60,7 +57,7 @@ export const EditorTabBar = ({
                 className={tabBell}
                 title="Modified by AI"
               >
-                &#x1F514;
+                <MagnifyingGlassIcon size={10} />
               </span>
             ) : null}
             <button
@@ -72,7 +69,7 @@ export const EditorTabBar = ({
                 onCloseTab(path);
               }}
             >
-              &#xd7;
+              <CloseIcon size={10} />
             </button>
           </div>
         );

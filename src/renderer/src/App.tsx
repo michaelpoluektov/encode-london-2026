@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { normalizeProjectPath } from "../../shared/path-utils";
 import {
   appShell,
   footerBar,
@@ -32,6 +33,11 @@ import { ProjectSidebar } from "./components/ProjectSidebar";
 import { ShaderEditor } from "./components/ShaderEditor";
 import { SplitLayout } from "./components/SplitLayout";
 import { Button } from "./components/ui/Button";
+import {
+  CaptureIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "./components/ui/icons";
 import { Text } from "./components/ui/Text";
 import { cx } from "./lib/cx";
 import { captureRegisteredPreview } from "./preview-capture";
@@ -189,6 +195,7 @@ const WorkspaceColumnLayout = ({
             key={`${pane.id}-restore`}
             label={pane.label}
             placement={pane.restorePlacement}
+            restoreIcon={<ChevronRightIcon size={12} />}
             onRestore={() => {
               togglePaneCollapsed(pane.paneId);
             }}
@@ -443,11 +450,12 @@ export const App = (): JSX.Element => {
 
     refreshProject(freshProject);
 
-    const folderNorm = currentProject.folderPath.replaceAll("\\", "/");
+    const folderNorm = normalizeProjectPath(currentProject.folderPath);
     const separator = folderNorm.endsWith("/") ? "" : "/";
-    const relativePath = imagePath
-      .replaceAll("\\", "/")
-      .replace(`${folderNorm}${separator}`, "");
+    const relativePath = normalizeProjectPath(imagePath).replace(
+      `${folderNorm}${separator}`,
+      "",
+    );
 
     // Use the dataUrl we already have in memory — file:// URLs don't work
     // in the renderer when running from the dev server (HTTP origin).
@@ -462,7 +470,7 @@ export const App = (): JSX.Element => {
 
   const captureAction: PanelHeaderAction = {
     ariaLabel: "Capture preview",
-    content: "\u2299",
+    content: <CaptureIcon size={12} />,
     disabled: project === null,
     key: "capture",
     onClick: () => {
@@ -557,7 +565,7 @@ export const App = (): JSX.Element => {
           <PaneRestoreControl
             label="Project"
             placement="leftCenter"
-            restoreSymbol=">"
+            restoreIcon={<ChevronRightIcon size={12} />}
             onRestore={() => {
               handleTogglePaneCollapsed("project");
             }}
@@ -579,11 +587,15 @@ export const App = (): JSX.Element => {
           panes={[
             {
               content: (
-                <ProjectSidebar
+                <Panel
+                  collapseSymbol={<ChevronLeftIcon size={12} />}
+                  label="Project"
                   onToggleCollapsed={() => {
                     handleTogglePaneCollapsed("project");
                   }}
-                />
+                >
+                  <ProjectSidebar />
+                </Panel>
               ),
               id: "project-sidebar",
               minSize: 220,
