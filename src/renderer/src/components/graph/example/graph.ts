@@ -31,15 +31,46 @@ const exampleGraph = graphSchema.parse({
       uniformName: "u_intensity",
     },
     {
+      defaultValue: 5,
+      instanceName: "bandCount",
+      kind: "int",
+      uniformName: "u_band_count",
+    },
+    {
+      defaultValue: false,
+      instanceName: "invertMask",
+      kind: "bool",
+      uniformName: "u_invert_mask",
+    },
+    {
+      defaultValue: {
+        x: 1.1,
+        y: 0.9,
+      },
+      instanceName: "uvScale",
+      kind: "vec2",
+      uniformName: "u_uv_scale",
+    },
+    {
+      defaultValue: {
+        x: 0.08,
+        y: 0.03,
+        z: 0.12,
+      },
+      instanceName: "colorBias",
+      kind: "vec3",
+      uniformName: "u_color_bias",
+    },
+    {
       defaultValue: {
         a: 1,
         b: 0.95,
         g: 0.52,
         r: 0.14,
       },
-      instanceName: "baseColor",
+      instanceName: "baseTint",
       kind: "color",
-      uniformName: "u_base_color",
+      uniformName: "u_base_tint",
     },
     {
       defaultValue: {
@@ -48,15 +79,16 @@ const exampleGraph = graphSchema.parse({
         g: 0.76,
         r: 0.94,
       },
-      instanceName: "accentColor",
+      instanceName: "accentTint",
       kind: "color",
-      uniformName: "u_accent_color",
+      uniformName: "u_accent_tint",
     },
     {
       filepath: "./nodes/wave.glsl",
       inputs: {
         frequency: "frequency",
         time: "time",
+        uvScale: "uvScale",
       },
       instanceName: "wave",
       kind: "custom",
@@ -66,6 +98,7 @@ const exampleGraph = graphSchema.parse({
       inputs: {
         frequency: "frequency",
         time: "time",
+        uvScale: "uvScale",
       },
       instanceName: "noise",
       kind: "custom",
@@ -82,6 +115,7 @@ const exampleGraph = graphSchema.parse({
       filepath: "./nodes/mask.glsl",
       inputs: {
         intensity: "intensity",
+        invert: "invertMask",
         pattern: "noise",
       },
       instanceName: "mask",
@@ -92,6 +126,7 @@ const exampleGraph = graphSchema.parse({
       inputs: {
         base: "remap",
         mask: "mask",
+        steps: "bandCount",
       },
       instanceName: "blend",
       kind: "custom",
@@ -99,8 +134,8 @@ const exampleGraph = graphSchema.parse({
     {
       filepath: "./nodes/tint.glsl",
       inputs: {
-        accent: "accentColor",
-        base: "baseColor",
+        accent: "accentTint",
+        base: "baseTint",
         mask: "mask",
       },
       instanceName: "tint",
@@ -109,6 +144,7 @@ const exampleGraph = graphSchema.parse({
     {
       filepath: "./nodes/shade.glsl",
       inputs: {
+        bias: "colorBias",
         detail: "noise",
         roughness: "roughness",
         signal: "blend",

@@ -7,12 +7,17 @@ import type {
   ValidatedGraphNode,
 } from "../graph-types";
 import type {
+  BoolNode,
   ColorNode,
   CustomNode,
   FloatNode,
   GlFragColorNode,
   GraphDefinition,
   GraphNodeDefinition,
+  IntNode,
+  Vec2Node,
+  Vec3Node,
+  Vec4Node,
 } from "./json-schema";
 import { graphSchema } from "./json-schema";
 
@@ -149,8 +154,13 @@ const getNodeInputs = (
       return node.inputs;
     case "glFragColor":
       return node.inputs;
+    case "bool":
     case "color":
     case "float":
+    case "int":
+    case "vec2":
+    case "vec3":
+    case "vec4":
       return {};
   }
 };
@@ -193,23 +203,56 @@ const resolveSourceNodeInstanceName = (
 };
 
 const inferStaticNodeTypeInfo = (
-  node: FloatNode | ColorNode | GlFragColorNode,
+  node:
+    | BoolNode
+    | ColorNode
+    | FloatNode
+    | GlFragColorNode
+    | IntNode
+    | Vec2Node
+    | Vec3Node
+    | Vec4Node,
 ): InferredNodeTypeInfo => {
   switch (node.kind) {
-    case "float":
+    case "bool":
       return {
         inputTypes: new Map(),
-        outputType: "float",
+        outputType: "bool",
       };
     case "color":
       return {
         inputTypes: new Map(),
         outputType: "vec4",
       };
+    case "float":
+      return {
+        inputTypes: new Map(),
+        outputType: "float",
+      };
     case "glFragColor":
       return {
         inputTypes: new Map(),
         outputType: null,
+      };
+    case "int":
+      return {
+        inputTypes: new Map(),
+        outputType: "int",
+      };
+    case "vec2":
+      return {
+        inputTypes: new Map(),
+        outputType: "vec2",
+      };
+    case "vec3":
+      return {
+        inputTypes: new Map(),
+        outputType: "vec3",
+      };
+    case "vec4":
+      return {
+        inputTypes: new Map(),
+        outputType: "vec4",
       };
   }
 };
@@ -379,9 +422,14 @@ const inferNodeTypeInfo = async (
   switch (node.kind) {
     case "custom":
       return inferCustomNodeTypeInfo(node, loadCustomNodeSource);
-    case "glFragColor":
+    case "bool":
     case "color":
     case "float":
+    case "glFragColor":
+    case "int":
+    case "vec2":
+    case "vec3":
+    case "vec4":
       return {
         errors: [],
         info: inferStaticNodeTypeInfo(node),

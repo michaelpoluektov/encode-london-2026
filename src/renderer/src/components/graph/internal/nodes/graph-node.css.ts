@@ -47,6 +47,21 @@ export const graphNodeControls = style({
   minWidth: 0,
 });
 
+export const graphNodeCheckboxRow = style({
+  display: "flex",
+  alignItems: "center",
+  gap: themeVars.space[2],
+  minWidth: 0,
+});
+
+export const graphNodeCheckbox = style({
+  width: 16,
+  height: 16,
+  margin: 0,
+  accentColor: themeVars.color.text.accent,
+  cursor: "pointer",
+});
+
 export const graphNodeDetailRow = style({
   display: "grid",
   gridTemplateColumns: "auto minmax(0, 1fr)",
@@ -157,6 +172,25 @@ export const graphNodeRangeValue = style({
   textAlign: "right",
   whiteSpace: "nowrap",
   fontVariantNumeric: "tabular-nums",
+});
+
+export const graphNodeVectorControls = style({
+  display: "grid",
+  gap: themeVars.space[2],
+  minWidth: 0,
+});
+
+export const graphNodeVectorRow = style({
+  display: "grid",
+  gridTemplateColumns: "auto minmax(0, 1fr)",
+  gap: themeVars.space[2],
+  alignItems: "center",
+  minWidth: 0,
+});
+
+export const graphNodeVectorLabel = style({
+  minWidth: themeVars.space[5],
+  textTransform: "uppercase",
 });
 
 export const graphNodeColorInput = style([
