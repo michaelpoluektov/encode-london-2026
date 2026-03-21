@@ -1,4 +1,11 @@
-import { type ComponentProps, type JSX, useEffect, useRef } from "react";
+import {
+  type ComponentProps,
+  type JSX,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import {
   appShell,
   footerBar,
@@ -26,7 +33,11 @@ import { SplitLayout } from "./components/SplitLayout";
 import { Button } from "./components/ui/Button";
 import { Text } from "./components/ui/Text";
 import { cx } from "./lib/cx";
-import { type CollapsiblePaneId, useAppStore } from "./store/app-store";
+import {
+  type CollapsiblePaneId,
+  createProjectLayoutSnapshot,
+  useAppStore,
+} from "./store/app-store";
 import { getPreviewDiagnostic, usePreviewStore } from "./store/preview-store";
 import { useProjectStore } from "./store/project-store";
 
@@ -39,6 +50,11 @@ const normalizePaneSizes = (sizes: readonly number[]): number[] => {
 
   return sizes.map((size) => (size / total) * 100);
 };
+
+const toPaneSizePair = (sizes: readonly number[]): [number, number] => [
+  sizes[0] ?? 50,
+  sizes[1] ?? 50,
+];
 
 type WorkspacePaneId = Exclude<CollapsiblePaneId, "project">;
 type RestorePlacement = ComponentProps<typeof PaneRestoreControl>["placement"];
@@ -53,9 +69,11 @@ type WorkspacePaneConfig = {
 };
 
 type WorkspaceColumnLayoutProps = {
+  readonly layoutRevision: number;
   readonly panes: readonly [WorkspacePaneConfig, WorkspacePaneConfig];
   readonly rowSizes: readonly number[];
-  readonly setRowSizes: (sizes: number[]) => void;
+  readonly onDragEnd: () => void;
+  readonly onRowSizesChange: (sizes: number[]) => void;
   readonly collapsedPanes: Record<CollapsiblePaneId, boolean>;
   readonly togglePaneCollapsed: (paneId: CollapsiblePaneId) => void;
 };
@@ -149,9 +167,11 @@ const FooterStatus = ({
 };
 
 const WorkspaceColumnLayout = ({
+  layoutRevision,
   panes,
   rowSizes,
-  setRowSizes,
+  onDragEnd,
+  onRowSizesChange,
   collapsedPanes,
   togglePaneCollapsed,
 }: WorkspaceColumnLayoutProps): JSX.Element => {
@@ -173,14 +193,16 @@ const WorkspaceColumnLayout = ({
         ) : null,
       )}
       <SplitLayout
+        key={`${layoutRevision}-${topPane.id}-${bottomPane.id}`}
         defaultSizes={normalizePaneSizes(rowSizes)}
         onChange={(sizes) => {
           if (hasCollapsedPane) {
             return;
           }
 
-          setRowSizes(sizes);
+          onRowSizesChange(sizes);
         }}
+        onDragEnd={onDragEnd}
         orientation="vertical"
         panes={[
           {
@@ -233,10 +255,31 @@ const WorkspaceColumnLayout = ({
 
 export const App = (): JSX.Element => {
   const hasBootstrappedRef = useRef(false);
+  const hydratedProjectIdRef = useRef<string | null>(null);
+  const activeProjectIdRef = useRef<string | null>(null);
+  const layoutSnapshotRef = useRef(
+    createProjectLayoutSnapshot({
+      collapsedPanes: useAppStore.getState().collapsedPanes,
+      shellPaneSizes: useAppStore.getState().shellPaneSizes,
+      workspaceColumnSizes: useAppStore.getState().workspaceColumnSizes,
+      workspaceLeftRowSizes: useAppStore.getState().workspaceLeftRowSizes,
+      workspaceRightRowSizes: useAppStore.getState().workspaceRightRowSizes,
+    }),
+  );
+  const pendingLayoutSnapshotRef = useRef<ReturnType<
+    typeof createProjectLayoutSnapshot
+  > | null>(null);
+  const [layoutRevision, setLayoutRevision] = useState(0);
   const openProject = useProjectStore((state) => state.openProject);
+  const projectId = useProjectStore(
+    (state) => state.project?.manifest.projectId ?? null,
+  );
   const collapsedPanes = useAppStore((state) => state.collapsedPanes);
   const isPreviewDiagnosticOpen = useAppStore(
     (state) => state.isPreviewDiagnosticOpen,
+  );
+  const replaceProjectLayout = useAppStore(
+    (state) => state.replaceProjectLayout,
   );
   const togglePaneCollapsed = useAppStore((state) => state.togglePaneCollapsed);
   const togglePreviewDiagnosticOpen = useAppStore(
@@ -265,6 +308,67 @@ export const App = (): JSX.Element => {
   const previewDiagnostic = usePreviewStore(getPreviewDiagnostic);
   const isPreviewStale = usePreviewStore((state) => state.isStale);
 
+  const createLayoutSnapshot = (
+    overrides: Partial<ReturnType<typeof createProjectLayoutSnapshot>> = {},
+  ): ReturnType<typeof createProjectLayoutSnapshot> =>
+    createProjectLayoutSnapshot({
+      collapsedPanes: overrides.collapsedPanes ?? collapsedPanes,
+      shellPaneSizes: overrides.shellPaneSizes ?? shellPaneSizes,
+      workspaceColumnSizes:
+        overrides.workspaceColumnSizes ?? workspaceColumnSizes,
+      workspaceLeftRowSizes:
+        overrides.workspaceLeftRowSizes ?? workspaceLeftRowSizes,
+      workspaceRightRowSizes:
+        overrides.workspaceRightRowSizes ?? workspaceRightRowSizes,
+    });
+
+  layoutSnapshotRef.current = createLayoutSnapshot();
+
+  const hydrateProjectLayout = useEffectEvent(async (nextProjectId: string) => {
+    hydratedProjectIdRef.current = null;
+    pendingLayoutSnapshotRef.current = null;
+    replaceProjectLayout(null);
+    setLayoutRevision((revision) => revision + 1);
+
+    const layout = await window.shadily.project.getLayout(nextProjectId);
+
+    if (activeProjectIdRef.current !== nextProjectId) {
+      return;
+    }
+
+    pendingLayoutSnapshotRef.current = null;
+    replaceProjectLayout(layout);
+    hydratedProjectIdRef.current = nextProjectId;
+    setLayoutRevision((revision) => revision + 1);
+  });
+
+  const persistProjectLayout = useEffectEvent(async () => {
+    if (projectId === null || hydratedProjectIdRef.current !== projectId) {
+      return;
+    }
+
+    const layout =
+      pendingLayoutSnapshotRef.current ?? layoutSnapshotRef.current;
+
+    pendingLayoutSnapshotRef.current = null;
+
+    await window.shadily.project.saveLayout({
+      projectId,
+      layout,
+    });
+  });
+
+  const handleTogglePaneCollapsed = (paneId: CollapsiblePaneId): void => {
+    pendingLayoutSnapshotRef.current = createLayoutSnapshot({
+      collapsedPanes: {
+        ...collapsedPanes,
+        [paneId]: !collapsedPanes[paneId],
+      },
+    });
+    togglePaneCollapsed(paneId);
+    void persistProjectLayout();
+  };
+
   useEffect(() => {
     if (hasBootstrappedRef.current) {
       return;
@@ -278,6 +382,48 @@ export const App = (): JSX.Element => {
       }
     });
   }, [openProject]);
+
+  useEffect(() => {
+    activeProjectIdRef.current = projectId;
+
+    if (projectId === null) {
+      hydratedProjectIdRef.current = null;
+      pendingLayoutSnapshotRef.current = null;
+      replaceProjectLayout(null);
+      setLayoutRevision((revision) => revision + 1);
+      return;
+    }
+
+    void hydrateProjectLayout(projectId);
+  }, [projectId, replaceProjectLayout]);
+
+  const handleShellPaneSizesChange = (sizes: number[]): void => {
+    setShellPaneSizes(sizes);
+    pendingLayoutSnapshotRef.current = createLayoutSnapshot({
+      shellPaneSizes: toPaneSizePair(sizes),
+    });
+  };
+
+  const handleWorkspaceColumnSizesChange = (sizes: number[]): void => {
+    setWorkspaceColumnSizes(sizes);
+    pendingLayoutSnapshotRef.current = createLayoutSnapshot({
+      workspaceColumnSizes: toPaneSizePair(sizes),
+    });
+  };
+
+  const handleWorkspaceLeftRowSizesChange = (sizes: number[]): void => {
+    setWorkspaceLeftRowSizes(sizes);
+    pendingLayoutSnapshotRef.current = createLayoutSnapshot({
+      workspaceLeftRowSizes: toPaneSizePair(sizes),
+    });
+  };
+
+  const handleWorkspaceRightRowSizesChange = (sizes: number[]): void => {
+    setWorkspaceRightRowSizes(sizes);
+    pendingLayoutSnapshotRef.current = createLayoutSnapshot({
+      workspaceRightRowSizes: toPaneSizePair(sizes),
+    });
+  };
 
   const workspaceColumns = [
     {
@@ -303,7 +449,7 @@ export const App = (): JSX.Element => {
       ] as const,
       preferredSize: `${workspaceColumnSizes[0]}%`,
       rowSizes: workspaceLeftRowSizes,
-      setRowSizes: setWorkspaceLeftRowSizes,
+      onRowSizesChange: handleWorkspaceLeftRowSizesChange,
     },
     {
       id: "workspace-right-column",
@@ -328,23 +474,31 @@ export const App = (): JSX.Element => {
       ] as const,
       preferredSize: `${workspaceColumnSizes[1]}%`,
       rowSizes: workspaceRightRowSizes,
-      setRowSizes: setWorkspaceRightRowSizes,
+      onRowSizesChange: handleWorkspaceRightRowSizesChange,
     },
   ] as const;
 
   const workspaceGridShell = (
     <div className={workspaceGrid}>
       <SplitLayout
+        key={`workspace-${layoutRevision}`}
         defaultSizes={normalizePaneSizes(workspaceColumnSizes)}
-        onChange={setWorkspaceColumnSizes}
+        onChange={handleWorkspaceColumnSizesChange}
+        onDragEnd={() => {
+          void persistProjectLayout();
+        }}
         panes={workspaceColumns.map((column) => ({
           content: (
             <WorkspaceColumnLayout
               collapsedPanes={collapsedPanes}
+              layoutRevision={layoutRevision}
+              onDragEnd={() => {
+                void persistProjectLayout();
+              }}
+              onRowSizesChange={column.onRowSizesChange}
               panes={column.panes}
               rowSizes={column.rowSizes}
-              setRowSizes={column.setRowSizes}
-              togglePaneCollapsed={togglePaneCollapsed}
+              togglePaneCollapsed={handleTogglePaneCollapsed}
             />
           ),
           id: column.id,
@@ -364,25 +518,29 @@ export const App = (): JSX.Element => {
             placement="leftCenter"
             restoreSymbol=">"
             onRestore={() => {
-              togglePaneCollapsed("project");
+              handleTogglePaneCollapsed("project");
             }}
           />
         ) : null}
         <SplitLayout
+          key={`shell-${layoutRevision}`}
           defaultSizes={normalizePaneSizes(shellPaneSizes)}
+          onDragEnd={() => {
+            void persistProjectLayout();
+          }}
           onChange={(sizes) => {
             if (collapsedPanes.project) {
               return;
             }
 
-            setShellPaneSizes(sizes);
+            handleShellPaneSizesChange(sizes);
           }}
           panes={[
             {
               content: (
                 <ProjectSidebar
                   onToggleCollapsed={() => {
-                    togglePaneCollapsed("project");
+                    handleTogglePaneCollapsed("project");
                   }}
                 />
               ),

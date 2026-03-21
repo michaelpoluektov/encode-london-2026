@@ -1,59 +1,96 @@
-import type { ProjectOpenResult, RecentProject } from "../../shared/contracts";
+import type {
+  ProjectEntryRequest,
+  ProjectEntryResult,
+  ProjectLayoutState,
+  ProjectOpenResult,
+  ProjectSaveCapturePayload,
+  ProjectSaveCaptureResult,
+  ShadilyManifest,
+} from "../../shared/contracts";
 import {
-  createProject,
+  createProject as createProjectFiles,
   loadProject,
-  openProject,
-  readProjectEntry,
-  reloadProject,
-  saveCapture,
-  saveProject,
+  openProject as openProjectFiles,
+  readProjectEntry as readProjectEntryFile,
+  reloadProject as reloadProjectFiles,
+  saveCapture as saveCaptureFile,
+  saveProject as saveProjectFiles,
 } from "./project-files";
 import {
-  addRecentProject,
-  getAppConfig,
-  replaceRecentProjects,
-} from "./recent-projects";
+  deleteProjectMetadata,
+  deleteProjectMetadataByPath,
+  getProjectLayout,
+  hasProjectFolder,
+  listRecentProjectMetadata,
+  saveProjectLayout,
+  upsertOpenProjectMetadata,
+  upsertProjectMetadata,
+} from "./project-metadata";
 
-export {
-  createProject,
-  openProject,
-  readProjectEntry,
-  reloadProject,
-  saveCapture,
-  saveProject,
+export const createProject = async (
+  parentDir: string,
+  name: string,
+): Promise<ProjectOpenResult> => {
+  const project = await createProjectFiles(parentDir, name);
+  await upsertOpenProjectMetadata(project);
+  return project;
 };
+
+export const openProject = async (
+  folderPath: string,
+): Promise<ProjectOpenResult> => {
+  const project = await openProjectFiles(folderPath);
+  await upsertOpenProjectMetadata(project);
+  return project;
+};
+
+export const reloadProject = async (
+  folderPath: string,
+): Promise<ProjectOpenResult> => reloadProjectFiles(folderPath);
+
+export const readProjectEntry = (
+  payload: ProjectEntryRequest,
+): ProjectEntryResult => readProjectEntryFile(payload);
+
+export const saveCapture = async (
+  payload: ProjectSaveCapturePayload,
+): Promise<ProjectSaveCaptureResult> => saveCaptureFile(payload);
+
+export const saveProject = async (
+  folderPath: string,
+  manifest: ShadilyManifest,
+  shaders: { fragment: string; vertex: string },
+): Promise<ProjectOpenResult> => {
+  const project = await saveProjectFiles(folderPath, manifest, shaders);
+  await upsertProjectMetadata(project.folderPath, project.manifest);
+  return project;
+};
+
+export const readProjectLayout = (
+  projectId: string,
+): Promise<ProjectLayoutState | null> => getProjectLayout(projectId);
+
+export const writeProjectLayout = (
+  projectId: string,
+  layout: ProjectLayoutState,
+): Promise<void> => saveProjectLayout(projectId, layout);
 
 export const openMostRecentProject =
   async (): Promise<ProjectOpenResult | null> => {
-    const config = getAppConfig();
-    const validRecents: RecentProject[] = [];
-    let initialProject: ProjectOpenResult | null = null;
+    for (const metadata of await listRecentProjectMetadata()) {
+      if (!hasProjectFolder(metadata.folder_path)) {
+        await deleteProjectMetadata(metadata.project_id);
+        continue;
+      }
 
-    for (const recentProject of config.recentProjects) {
       try {
-        const project = loadProject(recentProject.path, false);
-        validRecents.push({
-          name: project.manifest.name,
-          path: recentProject.path,
-        });
-        initialProject ??= project;
+        const project = loadProject(metadata.folder_path);
+        await upsertOpenProjectMetadata(project);
+        return project;
       } catch {
-        // Drop stale or invalid recents while scanning the list.
+        await deleteProjectMetadataByPath(metadata.folder_path);
       }
     }
 
-    if (validRecents.length !== config.recentProjects.length) {
-      replaceRecentProjects(validRecents);
-    }
-
-    if (initialProject === null) {
-      return null;
-    }
-
-    addRecentProject({
-      name: initialProject.manifest.name,
-      path: initialProject.folderPath,
-    });
-
-    return initialProject;
+    return null;
   };

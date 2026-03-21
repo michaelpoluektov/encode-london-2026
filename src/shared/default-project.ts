@@ -36,6 +36,7 @@ export const createDefaultProjectContents = (
   timestamp = new Date().toISOString(),
 ): DefaultProjectContents => ({
   manifest: {
+    projectId: crypto.randomUUID(),
     name,
     version: "1",
     shaders: {

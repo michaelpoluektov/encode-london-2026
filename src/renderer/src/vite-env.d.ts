@@ -6,6 +6,8 @@ import type {
   FileChangeInfo,
   ProjectEntryRequest,
   ProjectEntryResult,
+  ProjectLayoutSavePayload,
+  ProjectLayoutState,
   ProjectOpenResult,
   ProjectSaveCapturePayload,
   ProjectSaveCaptureResult,
@@ -35,6 +37,8 @@ declare global {
         readEntry: (
           payload: ProjectEntryRequest,
         ) => Promise<ProjectEntryResult>;
+        getLayout: (projectId: string) => Promise<ProjectLayoutState | null>;
+        saveLayout: (payload: ProjectLayoutSavePayload) => Promise<void>;
       };
       chat: {
         send: (prompt: string) => Promise<void>;

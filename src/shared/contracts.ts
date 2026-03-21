@@ -10,6 +10,7 @@ export const codexRuntimeSchema = z.object({
 export type CodexRuntimeState = z.infer<typeof codexRuntimeSchema>;
 
 export const shadilyManifestSchema = z.object({
+  projectId: z.string().uuid(),
   name: z.string(),
   version: z.literal("1"),
   shaders: z.object({ fragment: z.string(), vertex: z.string() }),
@@ -19,19 +20,6 @@ export const shadilyManifestSchema = z.object({
 });
 
 export type ShadilyManifest = z.infer<typeof shadilyManifestSchema>;
-
-export const recentProjectSchema = z.object({
-  name: z.string(),
-  path: z.string(),
-});
-
-export type RecentProject = z.infer<typeof recentProjectSchema>;
-
-export const appConfigSchema = z.object({
-  recentProjects: z.array(recentProjectSchema),
-});
-
-export type AppConfig = z.infer<typeof appConfigSchema>;
 
 export type ProjectTreeNode = {
   path: string;
@@ -71,11 +59,46 @@ export type BootstrapPayload = z.infer<typeof bootstrapPayloadSchema>;
 
 export const projectFolderPathSchema = z.string().min(1);
 export const projectNameSchema = z.string().trim().min(1);
+export const projectIdSchema = z.string().uuid();
 export const projectCreatePayloadSchema = z.object({
   parentDir: projectFolderPathSchema,
   name: projectNameSchema,
 });
 export const pickFolderResultSchema = projectFolderPathSchema.nullable();
+
+const paneSizeSchema = z.number().finite().nonnegative();
+const paneSizePairSchema = z.tuple([paneSizeSchema, paneSizeSchema]);
+
+export const projectLayoutStateSchema = z.object({
+  collapsedPanes: z.object({
+    project: z.boolean(),
+    source: z.boolean(),
+    graph: z.boolean(),
+    chat: z.boolean(),
+    render: z.boolean(),
+  }),
+  shellPaneSizes: paneSizePairSchema,
+  workspaceColumnSizes: paneSizePairSchema,
+  workspaceLeftRowSizes: paneSizePairSchema,
+  workspaceRightRowSizes: paneSizePairSchema,
+});
+
+export type ProjectLayoutState = z.infer<typeof projectLayoutStateSchema>;
+
+export const projectLayoutRequestSchema = z.object({
+  projectId: projectIdSchema,
+});
+
+export type ProjectLayoutRequest = z.infer<typeof projectLayoutRequestSchema>;
+
+export const projectLayoutSavePayloadSchema = z.object({
+  projectId: projectIdSchema,
+  layout: projectLayoutStateSchema,
+});
+
+export type ProjectLayoutSavePayload = z.infer<
+  typeof projectLayoutSavePayloadSchema
+>;
 
 export const projectSavePayloadSchema = z.object({
   folderPath: projectFolderPathSchema,

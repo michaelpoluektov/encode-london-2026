@@ -4,6 +4,8 @@ import type {
   FileChangeInfo,
   ProjectEntryRequest,
   ProjectEntryResult,
+  ProjectLayoutSavePayload,
+  ProjectLayoutState,
   ProjectOpenResult,
   ProjectSaveCapturePayload,
   ProjectSaveCaptureResult,
@@ -18,6 +20,8 @@ import {
   projectCreatePayloadSchema,
   projectEntryResultSchema,
   projectFolderPathSchema,
+  projectLayoutRequestSchema,
+  projectLayoutStateSchema,
   projectOpenResultSchema,
   projectSaveCaptureResultSchema,
 } from "../shared/contracts";
@@ -69,6 +73,18 @@ const shadilyDesktopApi = {
       projectEntryResultSchema.parse(
         await ipcRenderer.invoke("project:readEntry", payload),
       ),
+    getLayout: async (
+      projectId: string,
+    ): Promise<ProjectLayoutState | null> => {
+      const result = await ipcRenderer.invoke(
+        "project:getLayout",
+        projectLayoutRequestSchema.parse({ projectId }),
+      );
+      return result === null ? null : projectLayoutStateSchema.parse(result);
+    },
+    saveLayout: async (payload: ProjectLayoutSavePayload): Promise<void> => {
+      await ipcRenderer.invoke("project:saveLayout", payload);
+    },
   },
   chat: {
     send: (prompt: string): Promise<void> =>
