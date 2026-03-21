@@ -36,33 +36,40 @@ export const glFragColorNodeSchema = z.object({
   inputs: glFragColorInputsSchema,
 });
 
-export const floatNodeSchema = z.object({
-  kind: z.literal("float"),
-  instanceName: nodeInstanceNameSchema,
-  uniformName: uniformNameSchema,
-  defaultValue: finiteNumberSchema,
-});
-
-export const clampedFloatNodeSchema = z
+export const floatNodeSchema = z
   .object({
-    kind: z.literal("clampedFloat"),
+    kind: z.literal("float"),
     instanceName: nodeInstanceNameSchema,
     uniformName: uniformNameSchema,
     defaultValue: finiteNumberSchema,
-    min: finiteNumberSchema,
-    max: finiteNumberSchema,
+    min: finiteNumberSchema.optional(),
+    max: finiteNumberSchema.optional(),
   })
-  .refine(({ min, max }) => min <= max, {
-    message: "Clamped float min must be less than or equal to max.",
-    path: ["max"],
-  })
-  .refine(
-    ({ defaultValue, min, max }) => defaultValue >= min && defaultValue <= max,
-    {
-      message: "Clamped float defaultValue must be within min/max bounds.",
-      path: ["defaultValue"],
-    },
-  );
+  .superRefine(({ defaultValue, max, min }, context) => {
+    if (min !== undefined && max !== undefined && min > max) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Float min must be less than or equal to max.",
+        path: ["max"],
+      });
+    }
+
+    if (min !== undefined && defaultValue < min) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Float defaultValue must be greater than or equal to min.",
+        path: ["defaultValue"],
+      });
+    }
+
+    if (max !== undefined && defaultValue > max) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Float defaultValue must be less than or equal to max.",
+        path: ["defaultValue"],
+      });
+    }
+  });
 
 export const colorNodeSchema = z.object({
   kind: z.literal("color"),
@@ -75,7 +82,6 @@ export const graphNodeSchema = z.discriminatedUnion("kind", [
   customNodeSchema,
   glFragColorNodeSchema,
   floatNodeSchema,
-  clampedFloatNodeSchema,
   colorNodeSchema,
 ]);
 
@@ -86,7 +92,6 @@ export const graphSchema = z.object({
 export type CustomNode = z.infer<typeof customNodeSchema>;
 export type GlFragColorNode = z.infer<typeof glFragColorNodeSchema>;
 export type FloatNode = z.infer<typeof floatNodeSchema>;
-export type ClampedFloatNode = z.infer<typeof clampedFloatNodeSchema>;
 export type ColorNode = z.infer<typeof colorNodeSchema>;
 export type ColorValue = z.infer<typeof colorValueSchema>;
 export type GraphNodeDefinition = z.infer<typeof graphNodeSchema>;
