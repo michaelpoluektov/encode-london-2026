@@ -22,6 +22,10 @@ import {
   updateChatRunStatus,
 } from "./chat-persistence";
 import {
+  createCodexClientOptions,
+  createCodexThreadOptions,
+} from "./codex-config";
+import {
   createCheckpoint,
   getProjectFolderPath,
   saveCheckpointPreview,
@@ -71,18 +75,7 @@ const ensureProjectSandboxRoot = (folderPath: string): string => {
 
 const getCodex = (): Codex => {
   if (_codex === null) {
-    _codex =
-      _mcpPort !== null
-        ? new Codex({
-            config: {
-              mcp_servers: {
-                "shadily-tools": {
-                  url: `http://127.0.0.1:${_mcpPort}/mcp`,
-                },
-              },
-            },
-          })
-        : new Codex();
+    _codex = new Codex(createCodexClientOptions(_mcpPort));
   }
   return _codex;
 };
@@ -310,18 +303,11 @@ const getOrCreateThreadSession = async (
   const codexInstance = getCodex();
   const thread =
     session.codexThreadId === null
-      ? codexInstance.startThread({
-          workingDirectory: sandboxRoot,
-          additionalDirectories: [],
-          sandboxMode: "workspace-write",
-          approvalPolicy: "never",
-        })
-      : codexInstance.resumeThread(session.codexThreadId, {
-          workingDirectory: sandboxRoot,
-          additionalDirectories: [],
-          sandboxMode: "workspace-write",
-          approvalPolicy: "never",
-        });
+      ? codexInstance.startThread(createCodexThreadOptions(sandboxRoot))
+      : codexInstance.resumeThread(
+          session.codexThreadId,
+          createCodexThreadOptions(sandboxRoot),
+        );
 
   threadSessions.set(threadId, thread);
 
