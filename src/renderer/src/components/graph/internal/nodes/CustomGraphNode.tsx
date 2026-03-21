@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import type { CustomNode } from "../../dag/dag-schema";
+import type { CustomNode } from "../../../../dag/dag-schema";
 import {
   createGraphNodeInputs,
   type GraphFlowNode,
@@ -20,6 +20,6 @@ export const CustomGraphNode = ({
       },
     ]}
     inputs={createGraphNodeInputs(Object.keys(data.inputs))}
-    title={`${data.instanceName} (${data.kind})`}
+    title={data.instanceName}
   />
 );

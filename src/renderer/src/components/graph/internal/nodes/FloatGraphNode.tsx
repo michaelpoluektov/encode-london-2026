@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import type { FloatNode } from "../../dag/dag-schema";
+import type { FloatNode } from "../../../../dag/dag-schema";
 import {
   type GraphFlowNode,
   type GraphFlowNodeProps,
@@ -18,6 +18,6 @@ export const FloatGraphNode = ({
         value: data.uniformName,
       },
     ]}
-    title={`${data.instanceName} (float)`}
+    title={data.instanceName}
   />
 );
