@@ -39,10 +39,9 @@ import {
   type GraphNodeMeasurements,
   graphNodeTypes,
   layoutReactFlowNodes,
-  syncReactFlowGraphSubgraphPreviews,
   syncReactFlowGraphUniformValues,
 } from "./create-react-flow-graph";
-import { useSubgraphPreviews } from "./use-subgraph-previews";
+import { SubgraphPreviewCoordinator } from "./SubgraphPreviewCoordinator";
 
 type GraphCanvasProps = {
   readonly className?: string;
@@ -232,7 +231,6 @@ export const GraphCanvas = ({
   uniformValues,
   validatedGraph,
 }: GraphCanvasProps): JSX.Element => {
-  const subgraphPreviews = useSubgraphPreviews(validatedGraph, uniformValues);
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
   const [viewportSize, setViewportSize] = useState<GraphViewportSize>({
     height: 0,
@@ -287,12 +285,9 @@ export const GraphCanvas = ({
   const flowGraph = useMemo(
     () => ({
       edges: baseFlowGraph.edges,
-      nodes: syncReactFlowGraphSubgraphPreviews(
-        syncReactFlowGraphUniformValues(layoutedNodes, uniformValues),
-        subgraphPreviews,
-      ),
+      nodes: syncReactFlowGraphUniformValues(layoutedNodes, uniformValues),
     }),
-    [baseFlowGraph.edges, layoutedNodes, uniformValues, subgraphPreviews],
+    [baseFlowGraph.edges, layoutedNodes, uniformValues],
   );
 
   if (errors.length > 0 && validatedGraph === null) {
@@ -351,6 +346,11 @@ export const GraphCanvas = ({
         >
           {validatedGraph !== null ? (
             <>
+              <SubgraphPreviewCoordinator
+                enabled={isViewportReady}
+                uniformValues={uniformValues}
+                validatedGraph={validatedGraph}
+              />
               <AutoCenterOnGraphRender validatedGraph={validatedGraph} />
               <MeasuredGraphLayout
                 edges={baseFlowGraph.edges}
