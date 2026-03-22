@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 import { normalizeProjectPath } from "../../shared/path-utils";
-import { cx } from "./lib/cx";
 import {
   appShell,
   layoutViewport,
@@ -31,6 +30,7 @@ import {
   ChevronRightIcon,
   MinusIcon,
 } from "./components/ui/icons";
+import { cx } from "./lib/cx";
 import { captureRegisteredPreview } from "./preview-capture";
 import {
   type CollapsiblePaneId,

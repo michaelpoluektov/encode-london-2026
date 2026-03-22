@@ -127,12 +127,21 @@ export const chatThreadDeleteButton = style({
 });
 
 export const chatMessages = style({
-  flex: 1,
-  overflowY: "auto",
+  height: "100%",
+  minHeight: 0,
+  minWidth: 0,
+  overflow: "hidden",
   padding: `${themeVars.space[4]} ${themeVars.space[5]}`,
   display: "flex",
   flexDirection: "column",
   gap: themeVars.space[3],
+});
+
+export const chatMessagesViewport = style({
+  flex: 1,
+  minHeight: 0,
+  minWidth: 0,
+  position: "relative",
 });
 
 export const chatMessageRow = style({

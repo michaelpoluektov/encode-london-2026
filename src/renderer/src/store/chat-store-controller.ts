@@ -607,6 +607,7 @@ export const revertChatToCheckpoint = async (
   ).catch(() => [] as readonly ProjectCheckpoint[]);
 
   replaceThreadState(set, detail, null, freshCheckpoints);
+  useGraphPreviewStore.getState().clearCompiledGraphShader();
 
   const project = useProjectStore.getState().project;
 
@@ -615,7 +616,7 @@ export const revertChatToCheckpoint = async (
       const freshProject = await window.shadily.project.reload(
         project.folderPath,
       );
-      useProjectStore.getState().refreshProject(freshProject);
+      useProjectStore.getState().revertProject(freshProject);
     } catch {
       // non-fatal
     }

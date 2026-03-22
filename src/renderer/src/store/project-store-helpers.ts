@@ -145,12 +145,12 @@ const filterTabPaths = (
 export const createProjectState = (
   result: ProjectOpenResult,
   previousProject: ProjectState | null,
-  mode: "open" | "refresh" | "commit",
+  mode: "open" | "refresh" | "commit" | "revert",
 ): ProjectState => {
   const tree = result.tree;
   const savedFiles = createSavedFiles(result, previousProject);
   const draftFiles =
-    mode === "open"
+    mode === "open" || mode === "revert"
       ? {}
       : filterDraftFiles(previousProject?.draftFiles ?? {}, tree, savedFiles);
 

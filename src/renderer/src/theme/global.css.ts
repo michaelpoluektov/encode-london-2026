@@ -83,7 +83,7 @@ globalStyle(".monaco-scrollable-element > .scrollbar", {
 
 globalStyle(".monaco-scrollable-element > .scrollbar > .slider", {
   background: "rgba(199, 153, 255, 0.18) !important" as string,
-  borderRadius: "3px",
+  borderRadius: "0",
 });
 
 globalStyle(".monaco-scrollable-element > .scrollbar > .slider:hover", {

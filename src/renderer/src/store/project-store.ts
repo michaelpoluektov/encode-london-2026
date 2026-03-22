@@ -43,6 +43,7 @@ type ProjectStore = {
 
   readonly openProject: (result: ProjectOpenResult) => void;
   readonly refreshProject: (result: ProjectOpenResult) => void;
+  readonly revertProject: (result: ProjectOpenResult) => void;
   readonly commitSavedProject: (result: ProjectOpenResult) => void;
   readonly selectEntry: (path: string) => void;
   readonly openTab: (path: string) => void;
@@ -65,6 +66,11 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   refreshProject: (result) =>
     set((state) => ({
       project: createProjectState(result, state.project, "refresh"),
+    })),
+
+  revertProject: (result) =>
+    set((state) => ({
+      project: createProjectState(result, state.project, "revert"),
     })),
 
   commitSavedProject: (result) =>
