@@ -27,8 +27,6 @@ import {
   getProjectItemKind,
 } from "./project-tree";
 
-const toProjectPath = (path: string): string => path.split(sep).join("/");
-
 const resolveProjectPath = (folderPath: string, path: string): string => {
   const projectRoot = resolve(folderPath);
   const resolvedPath = resolve(projectRoot, path);
@@ -42,12 +40,6 @@ const resolveProjectPath = (folderPath: string, path: string): string => {
 
   return resolvedPath;
 };
-
-const getEditablePaths = (manifest: ShadilyManifest): Set<string> =>
-  new Set([
-    toProjectPath(manifest.graph.source),
-    DEFAULT_PROJECT_FILE_PATHS.vertex,
-  ]);
 
 const getDefaultProjectTemplatePath = (): string => {
   const candidates = [
@@ -138,13 +130,11 @@ export const reloadProject = async (
 
 export const readProjectEntry = ({
   folderPath,
-  manifest,
   path,
 }: ProjectEntryRequest): ProjectEntryResult => {
-  const projectPath = toProjectPath(path);
+  const projectPath = path.split(sep).join("/");
   const absolutePath = resolveProjectPath(folderPath, projectPath);
-  const editablePaths = getEditablePaths(manifest);
-  const itemKind = getProjectItemKind(absolutePath, projectPath, editablePaths);
+  const itemKind = getProjectItemKind(absolutePath, projectPath);
 
   if (!existsSync(absolutePath)) {
     throw new Error("Project entry does not exist.");
@@ -180,27 +170,29 @@ export const readProjectEntry = ({
 export const saveProject = async (
   folderPath: string,
   manifest: ShadilyManifest,
-  graphSource: string,
-  vertexSource: string,
+  textEntries: Record<string, string>,
 ): Promise<ProjectOpenResult> => {
   const updated: ShadilyManifest = {
     ...manifest,
     modified: new Date().toISOString(),
   };
 
-  writeFileSync(join(folderPath, manifest.graph.source), graphSource, "utf-8");
-  writeFileSync(
-    join(folderPath, DEFAULT_PROJECT_FILE_PATHS.vertex),
-    vertexSource,
-    "utf-8",
-  );
+  for (const [path, content] of Object.entries(textEntries)) {
+    const absolutePath = resolveProjectPath(folderPath, path);
+    writeFileSync(absolutePath, content, "utf-8");
+  }
+
   writeFileSync(
     join(folderPath, DEFAULT_PROJECT_FILE_PATHS.manifest),
     JSON.stringify(updated, null, 2),
     "utf-8",
   );
 
-  return createProjectOpenResult(folderPath, updated, graphSource);
+  return createProjectOpenResult(
+    folderPath,
+    updated,
+    readGraphSource(folderPath, updated),
+  );
 };
 
 export const saveCapture = async ({

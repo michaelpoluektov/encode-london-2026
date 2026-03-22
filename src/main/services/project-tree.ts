@@ -1,15 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { extname, join, sep } from "node:path";
+import { extname, join } from "node:path";
 import type { ProjectTreeNode, ShadilyManifest } from "../../shared/contracts";
-import { DEFAULT_PROJECT_FILE_PATHS } from "../../shared/default-project";
-
-const toProjectPath = (path: string): string => path.split(sep).join("/");
-
-const getEditablePaths = (manifest: ShadilyManifest): Set<string> =>
-  new Set([
-    toProjectPath(manifest.graph.source),
-    DEFAULT_PROJECT_FILE_PATHS.vertex,
-  ]);
 
 const IMAGE_EXTENSIONS = new Set([
   ".avif",
@@ -64,18 +55,13 @@ export const getLanguageForPath = (projectPath: string): string => {
 export const getProjectItemKind = (
   absolutePath: string,
   projectPath: string,
-  editablePaths: ReadonlySet<string>,
 ): ProjectTreeNode["itemKind"] => {
-  if (editablePaths.has(projectPath) && isTextFile(absolutePath)) {
-    return "editable";
-  }
-
   if (IMAGE_EXTENSIONS.has(extname(projectPath).toLowerCase())) {
     return "image";
   }
 
   if (isTextFile(absolutePath)) {
-    return "readOnly";
+    return "editable";
   }
 
   return "binary";
@@ -95,10 +81,8 @@ const sortTreeNodes = (nodes: ProjectTreeNode[]): ProjectTreeNode[] =>
 
 export const buildProjectTree = (
   folderPath: string,
-  manifest: ShadilyManifest,
+  _manifest: ShadilyManifest,
 ): ProjectTreeNode[] => {
-  const editablePaths = getEditablePaths(manifest);
-
   const walkDirectory = (
     absoluteDir: string,
     relativeDir = "",
@@ -123,11 +107,7 @@ export const buildProjectTree = (
           path: relativePath,
           name: entry.name,
           kind: "file",
-          itemKind: getProjectItemKind(
-            absolutePath,
-            relativePath,
-            editablePaths,
-          ),
+          itemKind: getProjectItemKind(absolutePath, relativePath),
         } satisfies ProjectTreeNode;
       }),
     );

@@ -69,6 +69,16 @@ const createVertexDocument = (content: string): ProjectTextEntryResult => ({
   content,
 });
 
+const ensureEditableTextDocument = (
+  document: ProjectEntryResult,
+): ProjectEntryResult =>
+  document.kind === "text"
+    ? {
+        ...document,
+        isEditable: true,
+      }
+    : document;
+
 export const getGraphDocumentPath = (manifest: ShadilyManifest): string =>
   normalizeProjectPath(manifest.graph.source);
 
@@ -96,6 +106,7 @@ const filterSavedFiles = (
 const createSavedFiles = (
   result: ProjectOpenResult,
   previousProject: ProjectState | null,
+  mode: "open" | "refresh" | "commit" | "revert",
 ): ProjectSavedFiles => {
   const savedFiles = filterSavedFiles(
     previousProject?.savedFiles ?? {},
@@ -103,13 +114,31 @@ const createSavedFiles = (
   );
   const graphPath = getGraphDocumentPath(result.manifest);
 
-  return {
+  const nextSavedFiles: ProjectSavedFiles = {
     ...savedFiles,
     [graphPath]: createGraphDocument(graphPath, result.graphSource),
     [DEFAULT_PROJECT_FILE_PATHS.vertex]: createVertexDocument(
       result.vertexSource,
     ),
   };
+
+  if (mode === "commit" && previousProject !== null) {
+    for (const [path, draftContent] of Object.entries(
+      previousProject.draftFiles,
+    )) {
+      const savedDocument = nextSavedFiles[path];
+
+      if (savedDocument !== undefined && savedDocument.kind === "text") {
+        nextSavedFiles[path] = {
+          ...savedDocument,
+          isEditable: true,
+          content: draftContent,
+        };
+      }
+    }
+  }
+
+  return nextSavedFiles;
 };
 
 const filterDraftFiles = (
@@ -125,11 +154,7 @@ const filterDraftFiles = (
 
       const savedDocument = savedFiles[path];
 
-      if (
-        savedDocument === undefined ||
-        savedDocument.kind !== "text" ||
-        !savedDocument.isEditable
-      ) {
+      if (savedDocument === undefined || savedDocument.kind !== "text") {
         return false;
       }
 
@@ -148,7 +173,7 @@ export const createProjectState = (
   mode: "open" | "refresh" | "commit" | "revert",
 ): ProjectState => {
   const tree = result.tree;
-  const savedFiles = createSavedFiles(result, previousProject);
+  const savedFiles = createSavedFiles(result, previousProject, mode);
   const draftFiles =
     mode === "open" || mode === "revert"
       ? {}
@@ -270,8 +295,17 @@ export const createProjectSavePayload = (
 ): ProjectSavePayload => ({
   folderPath: project.folderPath,
   manifest: project.manifest,
-  graphSource: getProjectGraphSource(project),
-  vertexSource: getProjectVertexSource(project),
+  textEntries: Object.fromEntries(
+    Object.entries(project.savedFiles)
+      .map(([path]) => [path, getProjectDocument(project, path)] as const)
+      .filter(
+        (entry): entry is readonly [string, ProjectTextEntryResult] =>
+          entry[1] !== null &&
+          entry[1].kind === "text" &&
+          typeof entry[1].content === "string",
+      )
+      .map(([path, document]) => [path, document.content] as const),
+  ),
 });
 
 export const selectProjectEntry = (
@@ -371,10 +405,10 @@ export const setProjectSavedDocument = (
     return project;
   }
 
-  const nextSavedDocument = {
+  const nextSavedDocument = ensureEditableTextDocument({
     ...document,
     path: projectPath,
-  };
+  });
   const nextDraftFiles = { ...project.draftFiles };
 
   if (
@@ -406,8 +440,7 @@ export const updateProjectDraft = (
   if (
     !hasFilePath(project.tree, projectPath) ||
     savedDocument === undefined ||
-    savedDocument.kind !== "text" ||
-    !savedDocument.isEditable
+    savedDocument.kind !== "text"
   ) {
     return project;
   }

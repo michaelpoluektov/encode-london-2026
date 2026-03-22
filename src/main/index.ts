@@ -199,8 +199,7 @@ app.whenReady().then(async () => {
     return projectService.saveProject(
       parsedPayload.folderPath,
       parsedPayload.manifest,
-      parsedPayload.graphSource,
-      parsedPayload.vertexSource,
+      parsedPayload.textEntries,
     );
   });
 

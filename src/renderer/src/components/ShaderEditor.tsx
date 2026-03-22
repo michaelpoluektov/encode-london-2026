@@ -154,8 +154,7 @@ export const ShaderEditor = ({
       project === null ||
       selectedEntryPath === null ||
       selectedDocument === null ||
-      selectedDocument.kind !== "text" ||
-      !selectedDocument.isEditable
+      selectedDocument.kind !== "text"
     ) {
       return;
     }
@@ -317,7 +316,7 @@ export const ShaderEditor = ({
             padding: {
               top: Number.parseInt(darkThemeValues.size.editorPaddingTop, 10),
             },
-            readOnly: !selectedDocument.isEditable,
+            readOnly: false,
             roundedSelection: false,
             scrollBeyondLastLine: false,
           }}

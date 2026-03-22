@@ -9,7 +9,6 @@ import { createPortal } from "react-dom";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
-  DEFAULT_VERTEX_SHADER,
   PREVIEW_MODELS,
   type PreviewModelId,
 } from "../../../shared/default-project";
@@ -22,7 +21,10 @@ import {
   applyPreviewMeshTransform,
   createPreviewGeometry,
 } from "../preview-geometry";
-import { useProjectStore } from "../store/project-store";
+import {
+  getProjectVertexSource,
+  useProjectStore,
+} from "../store/project-store";
 import { saveCurrentProject } from "../store/save-project";
 import { darkThemeValues } from "../theme";
 import type { GraphUniformValues } from "./graph/graph-types";
@@ -61,9 +63,8 @@ export const PreviewFullscreen = ({
   const hasInitializedSceneRef = useRef(false);
 
   const previewGraphShader = usePreviewGraphShader();
-  const previewMesh = useProjectStore(
-    (s) => s.project?.manifest.preview.mesh ?? "sphere",
-  );
+  const project = useProjectStore((s) => s.project);
+  const previewMesh = project?.manifest.preview.mesh ?? "sphere";
   const updatePreviewMesh = useProjectStore((s) => s.updatePreviewMesh);
 
   const handleSelectMesh = useCallback(
@@ -75,7 +76,7 @@ export const PreviewFullscreen = ({
   );
 
   const fragmentSource = previewGraphShader.fragmentSource;
-  const vertexSource = DEFAULT_VERTEX_SHADER;
+  const vertexSource = getProjectVertexSource(project);
   const activeUniformValues =
     fragmentSource === null
       ? EMPTY_UNIFORM_VALUES
@@ -138,7 +139,7 @@ export const PreviewFullscreen = ({
     geometry = createPreviewGeometry(previewMesh);
     const material = createPreviewMaterial(
       fragmentSource,
-      DEFAULT_VERTEX_SHADER,
+      vertexSource,
       activeUniformValuesRef.current,
     );
     mesh = new THREE.Mesh(geometry, material);
@@ -219,7 +220,7 @@ export const PreviewFullscreen = ({
       controlsRef.current = null;
       hasInitializedSceneRef.current = false;
     };
-  }, [fragmentSource, previewMesh]);
+  }, [fragmentSource, previewMesh, vertexSource]);
 
   // Shader recompilation
   useEffect(() => {

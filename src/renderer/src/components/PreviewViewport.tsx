@@ -1,7 +1,6 @@
 import { type JSX, useDeferredValue, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { DEFAULT_VERTEX_SHADER } from "../../../shared/default-project";
 import {
   previewFrame,
   previewFrameStale,
@@ -24,7 +23,10 @@ import {
   createPreviewGeometry,
 } from "../preview-geometry";
 import { createPreviewRevision, usePreviewStore } from "../store/preview-store";
-import { useProjectStore } from "../store/project-store";
+import {
+  getProjectVertexSource,
+  useProjectStore,
+} from "../store/project-store";
 import { darkThemeValues } from "../theme";
 
 const PREVIEW_CAPTURE_SIZE = 200;
@@ -69,12 +71,11 @@ const EMPTY_GRAPH_UNIFORM_VALUES: GraphUniformValues = Object.freeze({});
 export const PreviewViewport = (): JSX.Element => {
   const isPreviewStale = usePreviewStore((state) => state.isStale);
   const previewGraphShader = usePreviewGraphShader();
-  const previewMesh = useProjectStore(
-    (s) => s.project?.manifest.preview.mesh ?? "sphere",
-  );
+  const project = useProjectStore((s) => s.project);
+  const previewMesh = project?.manifest.preview.mesh ?? "sphere";
 
   const fragmentSource = previewGraphShader.fragmentSource;
-  const vertexSource = DEFAULT_VERTEX_SHADER;
+  const vertexSource = getProjectVertexSource(project);
   const activeUniformValues =
     fragmentSource === null
       ? EMPTY_GRAPH_UNIFORM_VALUES
@@ -98,11 +99,26 @@ export const PreviewViewport = (): JSX.Element => {
   > | null>(null);
   const activeUniformValuesRef =
     useRef<GraphUniformValues>(activeUniformValues);
+  const fragmentSourceRef = useRef<string | null>(fragmentSource);
+  const vertexSourceRef = useRef(vertexSource);
+  const graphErrorsRef = useRef<readonly string[]>(previewGraphShader.errors);
   const hasInitializedSceneRef = useRef(false);
 
   useEffect(() => {
     activeUniformValuesRef.current = activeUniformValues;
   }, [activeUniformValues]);
+
+  useEffect(() => {
+    fragmentSourceRef.current = fragmentSource;
+  }, [fragmentSource]);
+
+  useEffect(() => {
+    vertexSourceRef.current = vertexSource;
+  }, [vertexSource]);
+
+  useEffect(() => {
+    graphErrorsRef.current = previewGraphShader.errors;
+  }, [previewGraphShader.errors]);
 
   useEffect(() => {
     if (fragmentSource !== null || previewGraphShader.errors.length === 0) {
@@ -119,10 +135,70 @@ export const PreviewViewport = (): JSX.Element => {
   // Handle MCP compile-check requests from the main process.
   useEffect(() => {
     const unsub = window.shadily.preview.onCompileCheck((requestId) => {
-      const compileDiag = usePreviewStore.getState().diagnostics.compile;
+      const currentFragmentSource = fragmentSourceRef.current;
+      const currentGraphErrors = graphErrorsRef.current;
+
+      if (currentGraphErrors.length > 0 || currentFragmentSource === null) {
+        const error =
+          currentGraphErrors.length > 0
+            ? currentGraphErrors.join("\n\n")
+            : "No compiled fragment shader is available.";
+
+        usePreviewStore.getState().markFailure({
+          stage: "compile",
+          message: error,
+          revision: null,
+        });
+        void window.shadily.preview.respondCompile(requestId, {
+          success: false,
+          error,
+        });
+        return;
+      }
+
+      const renderer = rendererRef.current;
+      const camera = cameraRef.current;
+      const mesh = meshRef.current;
+
+      if (renderer === null || camera === null || mesh === null) {
+        const error = "Preview renderer is unavailable.";
+        usePreviewStore.getState().markFailure({
+          stage: "compile",
+          message: error,
+          revision: null,
+        });
+        void window.shadily.preview.respondCompile(requestId, {
+          success: false,
+          error,
+        });
+        return;
+      }
+
+      const compileResult = compilePreviewMaterial(
+        renderer,
+        camera,
+        mesh.geometry,
+        currentFragmentSource,
+        vertexSourceRef.current,
+        activeUniformValuesRef.current,
+      );
+
+      if (compileResult.kind === "error") {
+        usePreviewStore.getState().markFailure({
+          stage: "compile",
+          message: compileResult.message,
+        });
+        void window.shadily.preview.respondCompile(requestId, {
+          success: false,
+          error: compileResult.message,
+        });
+        return;
+      }
+
+      compileResult.material.dispose();
+      usePreviewStore.getState().clearFailureStage("compile");
       void window.shadily.preview.respondCompile(requestId, {
-        success: compileDiag === null,
-        error: compileDiag?.message,
+        success: true,
       });
     });
     return unsub;
@@ -307,7 +383,7 @@ export const PreviewViewport = (): JSX.Element => {
       geometry = createPreviewGeometry(previewMesh);
       const material = createPreviewMaterial(
         fragmentSource,
-        DEFAULT_VERTEX_SHADER,
+        vertexSource,
         activeUniformValuesRef.current,
       );
       mesh = new THREE.Mesh(geometry, material);
@@ -411,7 +487,7 @@ export const PreviewViewport = (): JSX.Element => {
       meshRef.current = null;
       hasInitializedSceneRef.current = false;
     };
-  }, [fragmentSource, previewMesh]);
+  }, [fragmentSource, previewMesh, vertexSource]);
 
   useEffect(() => {
     const renderer = rendererRef.current;

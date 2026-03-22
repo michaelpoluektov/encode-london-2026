@@ -59,15 +59,9 @@ export const saveCapture = async (
 export const saveProject = async (
   folderPath: string,
   manifest: ShadilyManifest,
-  graphSource: string,
-  vertexSource: string,
+  textEntries: Record<string, string>,
 ): Promise<ProjectOpenResult> => {
-  const project = await saveProjectFiles(
-    folderPath,
-    manifest,
-    graphSource,
-    vertexSource,
-  );
+  const project = await saveProjectFiles(folderPath, manifest, textEntries);
   await upsertProjectMetadata(project.folderPath, project.manifest);
   return project;
 };

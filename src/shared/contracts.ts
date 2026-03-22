@@ -102,8 +102,7 @@ export type ProjectLayoutSavePayload = z.infer<
 export const projectSavePayloadSchema = z.object({
   folderPath: projectFolderPathSchema,
   manifest: shadilyManifestSchema,
-  graphSource: z.string(),
-  vertexSource: z.string(),
+  textEntries: z.record(z.string().min(1), z.string()),
 });
 
 export type ProjectSavePayload = z.infer<typeof projectSavePayloadSchema>;
