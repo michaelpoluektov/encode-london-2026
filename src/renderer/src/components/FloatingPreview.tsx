@@ -40,7 +40,10 @@ const BOTTOM_BAR_HEIGHT = 32;
 
 const SNAP_TRANSITION = "top 0.18s, left 0.18s, right 0.18s, bottom 0.18s";
 
-const getCornerStyle = (corner: Corner, extraBottomInset: number): CSSProperties => {
+const getCornerStyle = (
+  corner: Corner,
+  extraBottomInset: number,
+): CSSProperties => {
   switch (corner) {
     case "topLeft":
       return {
@@ -140,7 +143,7 @@ export const FloatingPreview = ({
       setDragPos({ top: initTop, left: initLeft });
       setDragging(true);
     },
-    [corner, containerRef],
+    [corner, containerRef, extraBottomInset],
   );
 
   useEffect(() => {

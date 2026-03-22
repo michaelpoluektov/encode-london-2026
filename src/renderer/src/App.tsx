@@ -455,7 +455,12 @@ export const App = (): JSX.Element => {
   ] as const;
 
   const workspaceGridShell = (
-    <div className={cx(workspaceGrid, collapsedPanes.chat && workspaceGridChatCollapsed)}>
+    <div
+      className={cx(
+        workspaceGrid,
+        collapsedPanes.chat && workspaceGridChatCollapsed,
+      )}
+    >
       {collapsedPanes.chat && (
         <PaneRestoreControl
           label="Chat"
@@ -517,7 +522,12 @@ export const App = (): JSX.Element => {
 
   return (
     <main className={appShell}>
-      <section className={cx(layoutViewport, collapsedPanes.project && layoutViewportProjectCollapsed)}>
+      <section
+        className={cx(
+          layoutViewport,
+          collapsedPanes.project && layoutViewportProjectCollapsed,
+        )}
+      >
         {collapsedPanes.project ? (
           <PaneRestoreControl
             label="Project"

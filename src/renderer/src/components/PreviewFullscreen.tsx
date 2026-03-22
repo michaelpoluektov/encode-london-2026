@@ -18,7 +18,10 @@ import {
   compilePreviewMaterial,
   createPreviewMaterial,
 } from "../preview-compile";
-import { createPreviewGeometry } from "../preview-geometry";
+import {
+  applyPreviewMeshTransform,
+  createPreviewGeometry,
+} from "../preview-geometry";
 import { useProjectStore } from "../store/project-store";
 import { saveCurrentProject } from "../store/save-project";
 import { darkThemeValues } from "../theme";
@@ -139,6 +142,7 @@ export const PreviewFullscreen = ({
       activeUniformValuesRef.current,
     );
     mesh = new THREE.Mesh(geometry, material);
+    applyPreviewMeshTransform(mesh, previewMesh);
     scene.add(mesh);
 
     const hemiLight = new THREE.HemisphereLight(
@@ -262,6 +266,7 @@ export const PreviewFullscreen = ({
     if (mesh === null) return;
     const old = mesh.geometry;
     mesh.geometry = createPreviewGeometry(previewMesh);
+    applyPreviewMeshTransform(mesh, previewMesh);
     old.dispose();
   }, [previewMesh]);
 

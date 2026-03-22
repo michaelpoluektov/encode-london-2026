@@ -1,5 +1,6 @@
 import { type JSX, useDeferredValue, useEffect, useRef } from "react";
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { DEFAULT_VERTEX_SHADER } from "../../../shared/default-project";
 import {
   previewFrame,
@@ -90,6 +91,7 @@ export const PreviewViewport = (): JSX.Element => {
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
   const meshRef = useRef<THREE.Mesh<
     THREE.BufferGeometry,
     THREE.Material
@@ -267,6 +269,7 @@ export const PreviewViewport = (): JSX.Element => {
     let scene: THREE.Scene | null = null;
     let renderer: THREE.WebGLRenderer | null = null;
     let camera: THREE.PerspectiveCamera | null = null;
+    let controls: OrbitControls | null = null;
     let geometry: THREE.BufferGeometry | null = null;
     let mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material> | null = null;
     let resizeObserver: ResizeObserver | null = null;
@@ -295,6 +298,12 @@ export const PreviewViewport = (): JSX.Element => {
       );
       host.append(renderer.domElement);
 
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.07;
+      controls.minDistance = 1.2;
+      controls.maxDistance = 10;
+
       geometry = createPreviewGeometry(previewMesh);
       const material = createPreviewMaterial(
         fragmentSource,
@@ -320,6 +329,7 @@ export const PreviewViewport = (): JSX.Element => {
       sceneRef.current = scene;
       rendererRef.current = renderer;
       cameraRef.current = camera;
+      controlsRef.current = controls;
       meshRef.current = mesh;
 
       const syncViewportSize = (): void => {
@@ -350,6 +360,7 @@ export const PreviewViewport = (): JSX.Element => {
           scene === null ||
           renderer === null ||
           camera === null ||
+          controls === null ||
           mesh === null
         ) {
           return;
@@ -363,6 +374,7 @@ export const PreviewViewport = (): JSX.Element => {
               timeUniform.value = clock.getElapsedTime();
             }
           }
+          controls.update();
           renderer.render(scene, camera);
           usePreviewStore.getState().clearFailureStage("render");
         } catch (error) {
@@ -387,6 +399,7 @@ export const PreviewViewport = (): JSX.Element => {
     return () => {
       window.cancelAnimationFrame(frameId);
       resizeObserver?.disconnect();
+      controls?.dispose();
       geometry?.dispose();
       mesh?.material.dispose();
       renderer?.dispose();
@@ -394,6 +407,7 @@ export const PreviewViewport = (): JSX.Element => {
       sceneRef.current = null;
       rendererRef.current = null;
       cameraRef.current = null;
+      controlsRef.current = null;
       meshRef.current = null;
       hasInitializedSceneRef.current = false;
     };
