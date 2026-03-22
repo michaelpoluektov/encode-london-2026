@@ -1,4 +1,4 @@
-import { style, styleVariants } from "@vanilla-extract/css";
+import { style } from "@vanilla-extract/css";
 import { themeVars } from "../theme";
 
 export const floatingPanel = style({
@@ -77,38 +77,27 @@ export const previewBody = style({
   position: "relative",
 });
 
-export const modelSelector = style({
-  display: "inline-flex",
-  gap: themeVars.space[1],
+export const modelSelect = style({
   marginLeft: themeVars.space[2],
-});
-
-export const modelButton = styleVariants({
-  active: {
-    color: themeVars.color.text.primary,
-    opacity: 1,
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    fontSize: themeVars.font.size.xs,
-    fontFamily: themeVars.font.family.mono,
-    padding: `0 ${themeVars.space[1]}`,
-    lineHeight: "1",
-  },
-  inactive: {
-    color: themeVars.color.text.muted,
-    opacity: 0.55,
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    fontSize: themeVars.font.size.xs,
-    fontFamily: themeVars.font.family.mono,
-    padding: `0 ${themeVars.space[1]}`,
-    lineHeight: "1",
-    selectors: {
-      "&:hover": {
-        opacity: 0.85,
-      },
+  appearance: "none",
+  background: themeVars.color.background.panelRaised,
+  border: `1px solid ${themeVars.color.border.standard}`,
+  borderRadius: "3px",
+  color: themeVars.color.text.secondary,
+  cursor: "pointer",
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+  padding: `1px 22px 1px ${themeVars.space[2]}`,
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%237d7983'/%3E%3C/svg%3E")`,
+  backgroundRepeat: "no-repeat",
+  backgroundPosition: "right 6px center",
+  selectors: {
+    "&:hover": {
+      color: themeVars.color.text.primary,
+      borderColor: themeVars.color.border.strong,
+    },
+    "&:focus": {
+      outline: "none",
     },
   },
 });

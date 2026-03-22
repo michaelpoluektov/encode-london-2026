@@ -29,8 +29,7 @@ import { usePreviewGraphShader } from "./graph/internal/use-preview-graph-shader
 import {
   closeButton,
   hint,
-  modelButton,
-  modelSelector,
+  modelSelect,
   overlay,
   sceneHost,
   topBar,
@@ -296,22 +295,19 @@ export const PreviewFullscreen = ({
     <div className={overlay}>
       <div className={sceneHost} ref={hostRef} />
       <div className={topBar}>
-        <span className={modelSelector}>
+        <select
+          className={modelSelect}
+          value={previewMesh}
+          onChange={(e) => {
+            handleSelectMesh(e.currentTarget.value as PreviewModelId);
+          }}
+        >
           {PREVIEW_MODELS.map((m) => (
-            <button
-              key={m.id}
-              className={
-                modelButton[previewMesh === m.id ? "active" : "inactive"]
-              }
-              type="button"
-              onClick={() => {
-                handleSelectMesh(m.id);
-              }}
-            >
+            <option key={m.id} value={m.id}>
               {m.label}
-            </button>
+            </option>
           ))}
-        </span>
+        </select>
         <button
           aria-label="Close fullscreen preview"
           className={closeButton}

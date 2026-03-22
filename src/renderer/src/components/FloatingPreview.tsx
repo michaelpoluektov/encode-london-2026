@@ -20,8 +20,7 @@ import {
   expandButton,
   floatingPanel,
   gripIcon,
-  modelButton,
-  modelSelector,
+  modelSelect,
   previewBody,
 } from "./floating-preview.css";
 import { PreviewFullscreen } from "./PreviewFullscreen";
@@ -222,25 +221,22 @@ export const FloatingPreview = ({
           </span>
           Preview
           {project !== null && (
-            <span className={modelSelector}>
+            <select
+              className={modelSelect}
+              value={previewMesh}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+              }}
+              onChange={(e) => {
+                handleSelectMesh(e.currentTarget.value as PreviewModelId);
+              }}
+            >
               {PREVIEW_MODELS.map((m) => (
-                <button
-                  key={m.id}
-                  className={
-                    modelButton[previewMesh === m.id ? "active" : "inactive"]
-                  }
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                  }}
-                  onClick={() => {
-                    handleSelectMesh(m.id);
-                  }}
-                >
+                <option key={m.id} value={m.id}>
                   {m.label}
-                </button>
+                </option>
               ))}
-            </span>
+            </select>
           )}
           <button
             aria-label="Open fullscreen preview"

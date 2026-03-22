@@ -3,12 +3,14 @@ import defaultPulseNodeSource from "../project-template/nodes/pulse.glsl?raw";
 import defaultVertexShaderSource from "../project-template/vertex.vert?raw";
 import type { ShadilyManifest } from "./contracts";
 
-export const PREVIEW_MODEL_IDS = ["sphere", "plane"] as const;
+export const PREVIEW_MODEL_IDS = ["sphere", "plane", "torus", "cube"] as const;
 export type PreviewModelId = (typeof PREVIEW_MODEL_IDS)[number];
 
 export const PREVIEW_MODELS: Array<{ id: PreviewModelId; label: string }> = [
   { id: "sphere", label: "Sphere" },
   { id: "plane", label: "Plane" },
+  { id: "torus", label: "Torus" },
+  { id: "cube", label: "Cube" },
 ];
 
 const normalizeTemplateText = (text: string): string =>

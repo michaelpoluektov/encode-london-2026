@@ -1,4 +1,4 @@
-import { style, styleVariants } from "@vanilla-extract/css";
+import { style } from "@vanilla-extract/css";
 import { themeVars } from "../theme";
 
 export const overlay = style({
@@ -29,41 +29,28 @@ export const topBar = style({
   pointerEvents: "none",
 });
 
-export const modelSelector = style({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: themeVars.space[1],
+export const modelSelect = style({
   pointerEvents: "all",
-  background: "rgba(38, 38, 38, 0.7)",
+  appearance: "none",
+  background: "rgba(31, 32, 32, 0.82)",
   backdropFilter: "blur(20px)",
-  padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
-});
-
-export const modelButton = styleVariants({
-  active: {
-    color: themeVars.color.text.primary,
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    fontFamily: themeVars.font.family.mono,
-    fontSize: themeVars.font.size.xs,
-    lineHeight: "1",
-    padding: `0 ${themeVars.space[1]}`,
-  },
-  inactive: {
-    color: themeVars.color.text.muted,
-    opacity: 0.6,
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    fontFamily: themeVars.font.family.mono,
-    fontSize: themeVars.font.size.xs,
-    lineHeight: "1",
-    padding: `0 ${themeVars.space[1]}`,
-    selectors: {
-      "&:hover": {
-        opacity: 1,
-      },
+  border: `1px solid ${themeVars.color.border.strong}`,
+  borderRadius: "3px",
+  color: themeVars.color.text.secondary,
+  cursor: "pointer",
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+  padding: `${themeVars.space[2]} 26px ${themeVars.space[2]} ${themeVars.space[3]}`,
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%237d7983'/%3E%3C/svg%3E")`,
+  backgroundRepeat: "no-repeat",
+  backgroundPosition: "right 8px center",
+  selectors: {
+    "&:hover": {
+      color: themeVars.color.text.primary,
+      borderColor: themeVars.color.border.accent,
+    },
+    "&:focus": {
+      outline: "none",
     },
   },
 });

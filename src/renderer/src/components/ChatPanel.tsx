@@ -100,7 +100,7 @@ const ToolCallResult = ({
 }): JSX.Element | null => {
   if (result === undefined) return null;
 
-  if (toolName === "render_preview" && isDataImageUrl(result)) {
+  if ((toolName === "render_preview" || toolName === "render_subgraph") && isDataImageUrl(result)) {
     return (
       <div className={chatToolCallSection}>
         <span className={chatToolCallSectionLabel}>Preview</span>

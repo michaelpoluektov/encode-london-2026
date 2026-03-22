@@ -1,4 +1,4 @@
-import { type JSX, useEffect, useState } from "react";
+import { type JSX, useEffect, useRef, useState } from "react";
 import { Text } from "../../../ui/Text";
 import type {
   GlslValueType,
@@ -98,6 +98,8 @@ const readScalarInputValue = (
   return valueType === "int" ? Math.round(parsedValue) : parsedValue;
 };
 
+const SLIDER_DEBOUNCE_MS = 150;
+
 const SliderControl = ({
   instanceName,
   max,
@@ -114,6 +116,7 @@ const SliderControl = ({
   readonly valueType: GlslValueType;
 }): JSX.Element => {
   const [draftValue, setDraftValue] = useState(value);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setDraftValue(value);
@@ -137,7 +140,13 @@ const SliderControl = ({
             valueType === "int" ? Math.round(nextValue) : nextValue;
 
           setDraftValue(normalizedValue);
-          onValueChange(normalizedValue);
+
+          if (debounceRef.current !== null) {
+            clearTimeout(debounceRef.current);
+          }
+          debounceRef.current = setTimeout(() => {
+            onValueChange(normalizedValue);
+          }, SLIDER_DEBOUNCE_MS);
         }}
         onPointerDown={(event) => {
           event.stopPropagation();
@@ -277,31 +286,42 @@ const ColorControl = ({
   readonly instanceName: string;
   readonly onValueChange: (nextValue: Vec4Value) => void;
   readonly value: Vec4Value;
-}): JSX.Element => (
-  <input
-    aria-label={`${instanceName} color`}
-    className={`${graphNodeColorInput} nodrag nowheel nopan`}
-    onChange={(event) => {
-      const nextValue = parseColorHex(event.currentTarget.value, value.w);
+}): JSX.Element => {
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [draftHex, setDraftHex] = useState(formatColorHex(value));
 
-      if (nextValue !== null) {
-        onValueChange(nextValue);
-      }
-    }}
-    onInput={(event) => {
-      const nextValue = parseColorHex(event.currentTarget.value, value.w);
+  useEffect(() => {
+    setDraftHex(formatColorHex(value));
+  }, [value]);
 
-      if (nextValue !== null) {
-        onValueChange(nextValue);
-      }
-    }}
-    onPointerDown={(event) => {
-      event.stopPropagation();
-    }}
-    type="color"
-    value={formatColorHex(value)}
-  />
-);
+  const handleColor = (hexValue: string): void => {
+    setDraftHex(hexValue);
+    const nextValue = parseColorHex(hexValue, value.w);
+    if (nextValue === null) return;
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onValueChange(nextValue);
+    }, SLIDER_DEBOUNCE_MS);
+  };
+
+  return (
+    <input
+      aria-label={`${instanceName} color`}
+      className={`${graphNodeColorInput} nodrag nowheel nopan`}
+      onChange={(event) => {
+        handleColor(event.currentTarget.value);
+      }}
+      onInput={(event) => {
+        handleColor(event.currentTarget.value);
+      }}
+      onPointerDown={(event) => {
+        event.stopPropagation();
+      }}
+      type="color"
+      value={draftHex}
+    />
+  );
+};
 
 export const UniformGraphNodeControls = ({
   editor,

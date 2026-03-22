@@ -10,6 +10,27 @@ import type { GraphUniformValues } from "../graph-types";
 // Matches the graphNodeCard background in graph-node.css.ts
 const PREVIEW_BACKGROUND_COLOR = 0x262626;
 
+// Shared renderer reused across all subgraph previews to avoid exhausting
+// the browser's WebGL context limit when sliders fire rapid re-renders.
+let sharedRenderer: THREE.WebGLRenderer | null = null;
+let sharedRendererWidth = 0;
+let sharedRendererHeight = 0;
+
+const getSharedRenderer = (width: number, height: number): THREE.WebGLRenderer => {
+  if (sharedRenderer === null) {
+    const canvas = document.createElement("canvas");
+    sharedRenderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+    sharedRenderer.setPixelRatio(1);
+    sharedRenderer.setClearColor(PREVIEW_BACKGROUND_COLOR, 1);
+  }
+  if (sharedRendererWidth !== width || sharedRendererHeight !== height) {
+    sharedRenderer.setSize(width, height);
+    sharedRendererWidth = width;
+    sharedRendererHeight = height;
+  }
+  return sharedRenderer;
+};
+
 const encodeCaptureDataUrl = (
   pixels: Uint8Array,
   width: number,
@@ -49,23 +70,12 @@ export const renderSubgraphToDataUrl = async (
   height = 120,
   modelId: PreviewModelId = "sphere",
 ): Promise<string | null> => {
-  const hiddenCanvas = document.createElement("canvas");
-  hiddenCanvas.width = width;
-  hiddenCanvas.height = height;
-
-  let renderer: THREE.WebGLRenderer | null = null;
   let geometry: THREE.BufferGeometry | null = null;
   let material: THREE.ShaderMaterial | null = null;
   let renderTarget: THREE.WebGLRenderTarget | null = null;
 
   try {
-    renderer = new THREE.WebGLRenderer({
-      canvas: hiddenCanvas,
-      antialias: false,
-    });
-    renderer.setPixelRatio(1);
-    renderer.setSize(width, height);
-    renderer.setClearColor(PREVIEW_BACKGROUND_COLOR, 1);
+    const renderer = getSharedRenderer(width, height);
 
     const camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 100);
     camera.position.set(0, 0.6, 2.4);
@@ -96,6 +106,6 @@ export const renderSubgraphToDataUrl = async (
     renderTarget?.dispose();
     material?.dispose();
     geometry?.dispose();
-    renderer?.dispose();
+    // Shared renderer is intentionally not disposed here.
   }
 };
