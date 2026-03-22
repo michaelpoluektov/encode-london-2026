@@ -36,10 +36,11 @@ const PANEL_WIDTH = 340;
 const PANEL_HEIGHT = 220;
 const SNAP_INSET = 16;
 const TOP_SNAP_INSET = 52;
+const BOTTOM_BAR_HEIGHT = 32;
 
 const SNAP_TRANSITION = "top 0.18s, left 0.18s, right 0.18s, bottom 0.18s";
 
-const getCornerStyle = (corner: Corner): CSSProperties => {
+const getCornerStyle = (corner: Corner, extraBottomInset: number): CSSProperties => {
   switch (corner) {
     case "topLeft":
       return {
@@ -57,14 +58,14 @@ const getCornerStyle = (corner: Corner): CSSProperties => {
       };
     case "bottomLeft":
       return {
-        bottom: SNAP_INSET,
+        bottom: SNAP_INSET + extraBottomInset,
         left: SNAP_INSET,
         right: "unset",
         top: "unset",
       };
     case "bottomRight":
       return {
-        bottom: SNAP_INSET,
+        bottom: SNAP_INSET + extraBottomInset,
         right: SNAP_INSET,
         left: "unset",
         top: "unset",
@@ -75,12 +76,15 @@ const getCornerStyle = (corner: Corner): CSSProperties => {
 type FloatingPreviewProps = {
   readonly containerRef: RefObject<HTMLDivElement | null>;
   readonly headerActions?: ReactNode;
+  readonly sourceCollapsed?: boolean;
 };
 
 export const FloatingPreview = ({
   containerRef,
   headerActions = null,
+  sourceCollapsed = false,
 }: FloatingPreviewProps): JSX.Element => {
+  const extraBottomInset = sourceCollapsed ? BOTTOM_BAR_HEIGHT : 0;
   const project = useProjectStore((s) => s.project);
   const previewMesh = project?.manifest.preview.mesh ?? "sphere";
   const updatePreviewMesh = useProjectStore((s) => s.updatePreviewMesh);
@@ -115,7 +119,7 @@ export const FloatingPreview = ({
 
       const { width: containerWidth, height: containerHeight } =
         container.getBoundingClientRect();
-      const cs = getCornerStyle(corner);
+      const cs = getCornerStyle(corner, extraBottomInset);
 
       // Resolve current top/left from corner style
       const initTop =
@@ -203,7 +207,7 @@ export const FloatingPreview = ({
           transition: "none",
         }
       : {
-          ...getCornerStyle(corner),
+          ...getCornerStyle(corner, extraBottomInset),
           transition: SNAP_TRANSITION,
         };
 

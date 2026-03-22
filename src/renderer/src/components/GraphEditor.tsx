@@ -21,9 +21,11 @@ const PARAM_SAVE_DEBOUNCE_MS = 1000;
 export const GraphEditor = ({
   collapseAction = null,
   previewHeaderActions = null,
+  sourceCollapsed = false,
 }: {
   readonly collapseAction?: ReactNode;
   readonly previewHeaderActions?: ReactNode;
+  readonly sourceCollapsed?: boolean;
 }): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null);
   const project = useProjectStore((s) => s.project);
@@ -103,6 +105,7 @@ export const GraphEditor = ({
         <FloatingPreview
           containerRef={containerRef}
           headerActions={previewHeaderActions}
+          sourceCollapsed={sourceCollapsed}
         />
       </div>
     </div>

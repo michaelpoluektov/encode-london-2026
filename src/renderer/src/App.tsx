@@ -435,6 +435,7 @@ export const App = (): JSX.Element => {
         <GraphEditor
           collapseAction={graphCollapseAction}
           previewHeaderActions={graphPreviewHeaderActions}
+          sourceCollapsed={collapsedPanes.source}
         />
       ),
       id: "graph-panel",
