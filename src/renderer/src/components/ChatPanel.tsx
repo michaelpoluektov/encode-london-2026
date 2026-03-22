@@ -57,6 +57,11 @@ import {
   chatToolCallPre,
   chatToolCallSection,
   chatToolCallSectionLabel,
+  chatToolCallTable,
+  chatToolCallTableHeader,
+  chatToolCallTableKey,
+  chatToolCallTableRow,
+  chatToolCallTableValue,
   chatWarning,
 } from "./chat-panel.css";
 import { useChatRuntime } from "./chat-runtime-adapter";
@@ -85,6 +90,12 @@ const FileChangeChip = ({
 );
 
 // ─── Tool call block ─────────────────────────────────────────────────────────
+
+const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  check_compilation: "Check compilation",
+  render_preview: "Render preview",
+  render_subgraph: "Render subgraph",
+};
 
 const isDataImageUrl = (value: unknown): value is string =>
   typeof value === "string" && value.startsWith("data:image");
@@ -115,52 +126,74 @@ const ToolCallResult = ({
   if (toolName === "check_compilation" && typeof result === "string") {
     const ok = !isError;
     return (
-      <div className={chatToolCallSection}>
-        <span className={chatToolCallSectionLabel}>Result</span>
-        <Text as="span" tone={ok ? "secondary" : "accent"} variant="caption">
-          {ok ? "✓" : "✗"} {result}
-        </Text>
-      </div>
+      <Text as="span" tone={ok ? "secondary" : "accent"} variant="caption">
+        {result}
+      </Text>
     );
   }
 
   return (
-    <div className={chatToolCallSection}>
-      <span
-        className={`${chatToolCallSectionLabel}${isError === true ? ` ${chatToolCallError}` : ""}`}
-      >
-        Result
-      </span>
-      <pre className={chatToolCallPre}>
-        {typeof result === "string" ? result : JSON.stringify(result, null, 2)}
-      </pre>
-    </div>
+    <pre
+      className={`${chatToolCallPre}${isError === true ? ` ${chatToolCallError}` : ""}`}
+    >
+      {typeof result === "string" ? result : JSON.stringify(result, null, 2)}
+    </pre>
   );
 };
 
-const ToolCallBlock = (props: ToolCallMessagePartProps): JSX.Element => (
-  <div className={chatToolCallBlock}>
-    <div className={chatToolCallHeader}>
-      <span className={chatToolCallName}>{props.toolName}</span>
-      {props.isError === true && (
-        <Text as="span" tone="accent" variant="caption">
-          error
-        </Text>
-      )}
-    </div>
-    {props.argsText && props.argsText !== "{}" && (
-      <div className={chatToolCallSection}>
-        <span className={chatToolCallSectionLabel}>Args</span>
-        <pre className={chatToolCallPre}>{props.argsText}</pre>
+const ToolCallBlock = (props: ToolCallMessagePartProps): JSX.Element => {
+  let parsedArgs: Record<string, unknown> | null = null;
+  if (props.argsText && props.argsText !== "{}") {
+    try {
+      parsedArgs = JSON.parse(props.argsText) as Record<string, unknown>;
+    } catch {
+      /* ignore */
+    }
+  }
+  const hasArgs = parsedArgs !== null && Object.keys(parsedArgs).length > 0;
+  const displayName = TOOL_DISPLAY_NAMES[props.toolName] ?? props.toolName;
+
+  return (
+    <div className={chatToolCallBlock}>
+      <div className={chatToolCallHeader}>
+        <span className={chatToolCallName}>{displayName}</span>
+        {props.isError === true && (
+          <Text as="span" tone="accent" variant="caption">
+            error
+          </Text>
+        )}
       </div>
-    )}
-    <ToolCallResult
-      toolName={props.toolName}
-      result={props.result}
-      isError={props.isError}
-    />
-  </div>
-);
+      {hasArgs && parsedArgs !== null && (
+        <table className={chatToolCallTable}>
+          <thead>
+            <tr>
+              <th className={chatToolCallTableHeader}>Name</th>
+              <th className={chatToolCallTableHeader}>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(parsedArgs).map(([key, val]) => (
+              <tr key={key} className={chatToolCallTableRow}>
+                <td className={chatToolCallTableKey}>{key}</td>
+                <td className={chatToolCallTableValue}>
+                  {typeof val === "string" ? val : JSON.stringify(val)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {!hasArgs && props.argsText && props.argsText !== "{}" && (
+        <pre className={chatToolCallPre}>{props.argsText}</pre>
+      )}
+      <ToolCallResult
+        toolName={props.toolName}
+        result={props.result}
+        isError={props.isError}
+      />
+    </div>
+  );
+};
 
 // ─── Message content renderers ───────────────────────────────────────────────
 
@@ -486,7 +519,7 @@ export const ChatPanel = (): JSX.Element => {
                     : "Open a project first"
                 }
                 disabled={!project || activeThread === null}
-                rows={1}
+                rows={3}
               />
             )}
           </div>
