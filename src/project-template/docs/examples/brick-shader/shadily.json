@@ -1,0 +1,13 @@
+{
+  "projectId": "cd94340a-fed2-4140-bb31-b9d2ea87d834",
+  "name": "bricks",
+  "version": "2",
+  "graph": {
+    "source": "graph.json"
+  },
+  "preview": {
+    "mesh": "sphere"
+  },
+  "created": "2026-03-22T00:01:25.045Z",
+  "modified": "2026-03-22T00:07:02.120Z"
+}

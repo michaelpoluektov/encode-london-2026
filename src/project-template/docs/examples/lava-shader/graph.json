@@ -1,0 +1,148 @@
+{
+  "nodes": [
+    {
+      "instanceName": "time",
+      "kind": "time"
+    },
+    {
+      "instanceName": "uv",
+      "kind": "varying",
+      "valueType": "vec2",
+      "varyingName": "vUv"
+    },
+    {
+      "defaultValue": 3.2,
+      "editor": {
+        "kind": "slider",
+        "max": 8,
+        "min": 1
+      },
+      "instanceName": "scale",
+      "kind": "uniform",
+      "uniformName": "uScale",
+      "valueType": "float"
+    },
+    {
+      "defaultValue": 0.45,
+      "editor": {
+        "kind": "slider",
+        "max": 2,
+        "min": 0.05
+      },
+      "instanceName": "speed",
+      "kind": "uniform",
+      "uniformName": "uSpeed",
+      "valueType": "float"
+    },
+    {
+      "defaultValue": 1.2,
+      "editor": {
+        "kind": "slider",
+        "max": 2,
+        "min": 0.5
+      },
+      "instanceName": "glow",
+      "kind": "uniform",
+      "uniformName": "uGlow",
+      "valueType": "float"
+    },
+    {
+      "defaultValue": {
+        "w": 1,
+        "x": 0.09,
+        "y": 0.03,
+        "z": 0.02
+      },
+      "editor": {
+        "kind": "color"
+      },
+      "instanceName": "crustColor",
+      "kind": "uniform",
+      "uniformName": "uCrustColor",
+      "valueType": "vec4"
+    },
+    {
+      "defaultValue": {
+        "w": 1,
+        "x": 0.86,
+        "y": 0.23,
+        "z": 0.04
+      },
+      "editor": {
+        "kind": "color"
+      },
+      "instanceName": "lavaColor",
+      "kind": "uniform",
+      "uniformName": "uLavaColor",
+      "valueType": "vec4"
+    },
+    {
+      "defaultValue": {
+        "w": 1,
+        "x": 1,
+        "y": 0.77,
+        "z": 0.24
+      },
+      "editor": {
+        "kind": "color"
+      },
+      "instanceName": "hotColor",
+      "kind": "uniform",
+      "uniformName": "uHotColor",
+      "valueType": "vec4"
+    },
+    {
+      "filepath": "./nodes/lavaWarp.glsl",
+      "inputs": {
+        "scale": "scale",
+        "speed": "speed",
+        "time": "time",
+        "uv": "uv"
+      },
+      "instanceName": "lavaWarp",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/lavaFields.glsl",
+      "inputs": {
+        "flowUv": "lavaWarp",
+        "speed": "speed",
+        "time": "time"
+      },
+      "instanceName": "lavaFields",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/lavaPalette.glsl",
+      "inputs": {
+        "crustColor": "crustColor",
+        "fields": "lavaFields",
+        "glow": "glow",
+        "hotColor": "hotColor",
+        "lavaColor": "lavaColor",
+        "speed": "speed",
+        "time": "time"
+      },
+      "instanceName": "lavaPalette",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/lavaFinish.glsl",
+      "inputs": {
+        "baseColor": "lavaPalette",
+        "fields": "lavaFields",
+        "glow": "glow",
+        "hotColor": "hotColor",
+        "uv": "uv"
+      },
+      "instanceName": "lavaFinish",
+      "kind": "custom"
+    },
+    {
+      "inputs": {
+        "color": "lavaFinish"
+      },
+      "kind": "glFragColor"
+    }
+  ]
+}

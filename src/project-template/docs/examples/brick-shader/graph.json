@@ -1,0 +1,290 @@
+{
+  "nodes": [
+    {
+      "defaultValue": {
+        "x": 6,
+        "y": 10
+      },
+      "editor": {
+        "kind": "vector"
+      },
+      "instanceName": "brickTiling",
+      "kind": "uniform",
+      "uniformName": "uBrickTiling",
+      "valueType": "vec2"
+    },
+    {
+      "defaultValue": 0.5,
+      "editor": {
+        "kind": "slider",
+        "max": 1,
+        "min": 0
+      },
+      "instanceName": "rowOffset",
+      "kind": "uniform",
+      "uniformName": "uRowOffset",
+      "valueType": "float"
+    },
+    {
+      "defaultValue": 0.08,
+      "editor": {
+        "kind": "slider",
+        "max": 0.2,
+        "min": 0.01
+      },
+      "instanceName": "mortarSize",
+      "kind": "uniform",
+      "uniformName": "uMortarSize",
+      "valueType": "float"
+    },
+    {
+      "defaultValue": 0.02,
+      "editor": {
+        "kind": "slider",
+        "max": 0.08,
+        "min": 0.001
+      },
+      "instanceName": "edgeSoftness",
+      "kind": "uniform",
+      "uniformName": "uEdgeSoftness",
+      "valueType": "float"
+    },
+    {
+      "defaultValue": 0.12,
+      "editor": {
+        "kind": "slider",
+        "max": 0.25,
+        "min": 0.02
+      },
+      "instanceName": "bevelSize",
+      "kind": "uniform",
+      "uniformName": "uBevelSize",
+      "valueType": "float"
+    },
+    {
+      "defaultValue": 1,
+      "editor": {
+        "kind": "slider",
+        "max": 1,
+        "min": 0
+      },
+      "instanceName": "colorVariation",
+      "kind": "uniform",
+      "uniformName": "uColorVariation",
+      "valueType": "float"
+    },
+    {
+      "defaultValue": {
+        "x": -0.75,
+        "y": 0.5
+      },
+      "editor": {
+        "kind": "vector"
+      },
+      "instanceName": "lightDirection",
+      "kind": "uniform",
+      "uniformName": "uLightDirection",
+      "valueType": "vec2"
+    },
+    {
+      "defaultValue": {
+        "x": 0.41,
+        "y": 0.12,
+        "z": 0.09
+      },
+      "editor": {
+        "kind": "vector"
+      },
+      "instanceName": "brickColorA",
+      "kind": "uniform",
+      "uniformName": "uBrickColorA",
+      "valueType": "vec3"
+    },
+    {
+      "defaultValue": {
+        "x": 0.72,
+        "y": 0.29,
+        "z": 0.16
+      },
+      "editor": {
+        "kind": "vector"
+      },
+      "instanceName": "brickColorB",
+      "kind": "uniform",
+      "uniformName": "uBrickColorB",
+      "valueType": "vec3"
+    },
+    {
+      "defaultValue": {
+        "x": 0.72,
+        "y": 0.7,
+        "z": 0.66
+      },
+      "editor": {
+        "kind": "vector"
+      },
+      "instanceName": "mortarColor",
+      "kind": "uniform",
+      "uniformName": "uMortarColor",
+      "valueType": "vec3"
+    },
+    {
+      "instanceName": "uv",
+      "kind": "varying",
+      "valueType": "vec2",
+      "varyingName": "vUv"
+    },
+    {
+      "filepath": "./nodes/scale_uv.glsl",
+      "inputs": {
+        "tiling": "brickTiling",
+        "uv": "uv"
+      },
+      "instanceName": "scaleUv",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/staggered_brick_uv.glsl",
+      "inputs": {
+        "rowOffset": "rowOffset",
+        "scaledUv": "scaleUv"
+      },
+      "instanceName": "staggeredBrickUv",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/brick_cell_uv.glsl",
+      "inputs": {
+        "brickUv": "staggeredBrickUv"
+      },
+      "instanceName": "brickCellUv",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/brick_index.glsl",
+      "inputs": {
+        "brickUv": "staggeredBrickUv"
+      },
+      "instanceName": "brickIndex",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/brick_mask.glsl",
+      "inputs": {
+        "cellUv": "brickCellUv",
+        "edgeSoftness": "edgeSoftness",
+        "mortarSize": "mortarSize"
+      },
+      "instanceName": "brickMask",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/brick_noise.glsl",
+      "inputs": {
+        "brickIndex": "brickIndex"
+      },
+      "instanceName": "brickNoise",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/brick_color.glsl",
+      "inputs": {
+        "brickColorA": "brickColorA",
+        "brickColorB": "brickColorB",
+        "colorVariation": "colorVariation",
+        "noise": "brickNoise"
+      },
+      "instanceName": "brickColor",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/inner_edge_distance.glsl",
+      "inputs": {
+        "cellUv": "brickCellUv",
+        "mortarSize": "mortarSize"
+      },
+      "instanceName": "innerEdgeDistance",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/nearest_edge.glsl",
+      "inputs": {
+        "edgeDistance": "innerEdgeDistance"
+      },
+      "instanceName": "nearestEdge",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/bevel_mask.glsl",
+      "inputs": {
+        "bevelSize": "bevelSize",
+        "nearestEdge": "nearestEdge"
+      },
+      "instanceName": "bevelMask",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/edge_normal.glsl",
+      "inputs": {
+        "cellUv": "brickCellUv",
+        "edgeDistance": "innerEdgeDistance"
+      },
+      "instanceName": "edgeNormal",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/directional_light.glsl",
+      "inputs": {
+        "edgeNormal": "edgeNormal",
+        "lightDirection": "lightDirection"
+      },
+      "instanceName": "directionalLight",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/surface_light.glsl",
+      "inputs": {
+        "bevelMask": "bevelMask",
+        "bevelSize": "bevelSize",
+        "directionalLight": "directionalLight",
+        "nearestEdge": "nearestEdge"
+      },
+      "instanceName": "surfaceLight",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/global_shade.glsl",
+      "inputs": {
+        "uv": "uv"
+      },
+      "instanceName": "globalShade",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/blend_brick_color.glsl",
+      "inputs": {
+        "brickColor": "brickColor",
+        "brickMask": "brickMask",
+        "globalShade": "globalShade",
+        "mortarColor": "mortarColor",
+        "surfaceLight": "surfaceLight"
+      },
+      "instanceName": "blendBrickColor",
+      "kind": "custom"
+    },
+    {
+      "filepath": "./nodes/final_color.glsl",
+      "inputs": {
+        "color": "blendBrickColor"
+      },
+      "instanceName": "finalColor",
+      "kind": "custom"
+    },
+    {
+      "inputs": {
+        "color": "finalColor"
+      },
+      "kind": "glFragColor"
+    }
+  ]
+}
