@@ -15,6 +15,11 @@ export const layoutViewport = style({
   minHeight: 0,
   padding: 0,
   position: "relative",
+  boxSizing: "border-box",
+});
+
+export const layoutViewportProjectCollapsed = style({
+  paddingLeft: themeVars.size.controlXs,
 });
 
 export const workspaceShell = style({
@@ -26,6 +31,12 @@ export const workspaceShell = style({
 export const workspaceGrid = style({
   height: "100%",
   minHeight: 0,
+  position: "relative",
+  boxSizing: "border-box",
+});
+
+export const workspaceGridChatCollapsed = style({
+  paddingRight: themeVars.size.controlXs,
 });
 
 export const workspaceColumn = style({

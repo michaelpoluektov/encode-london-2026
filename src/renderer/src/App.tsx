@@ -11,9 +11,11 @@ import { normalizeProjectPath } from "../../shared/path-utils";
 import {
   appShell,
   layoutViewport,
+  layoutViewportProjectCollapsed,
   workspaceColumn,
   workspaceColumnWithTopRestore,
   workspaceGrid,
+  workspaceGridChatCollapsed,
   workspaceShell,
 } from "./app-shell.css";
 import { ChatPanel } from "./components/ChatPanel";
@@ -423,7 +425,7 @@ export const App = (): JSX.Element => {
       square
       variant="plain"
     >
-      <MinusIcon />
+      <ChevronRightIcon />
     </Button>
   );
 
@@ -452,11 +454,26 @@ export const App = (): JSX.Element => {
   ] as const;
 
   const workspaceGridShell = (
-    <div className={workspaceGrid}>
+    <div className={cx(workspaceGrid, collapsedPanes.chat && workspaceGridChatCollapsed)}>
+      {collapsedPanes.chat && (
+        <PaneRestoreControl
+          label="Chat"
+          placement="rightCenter"
+          restoreIcon={<ChevronLeftIcon />}
+          onRestore={() => {
+            handleTogglePaneCollapsed("chat");
+          }}
+        />
+      )}
       <SplitLayout
         key={`workspace-${layoutRevision}`}
         defaultSizes={normalizePaneSizes(workspaceColumnSizes)}
-        onChange={handleWorkspaceColumnSizesChange}
+        onChange={(sizes) => {
+          if (collapsedPanes.chat) {
+            return;
+          }
+          handleWorkspaceColumnSizesChange(sizes);
+        }}
         onDragEnd={() => {
           void persistProjectLayout();
         }}
@@ -482,24 +499,15 @@ export const App = (): JSX.Element => {
           {
             content: (
               <div className={workspaceColumn}>
-                {collapsedPanes.chat ? (
-                  <PaneRestoreControl
-                    label="Chat"
-                    placement="topRight"
-                    onRestore={() => {
-                      handleTogglePaneCollapsed("chat");
-                    }}
-                  />
-                ) : (
-                  <Panel label="Chat">
-                    <ChatPanel headerActions={chatHeaderActions} />
-                  </Panel>
-                )}
+                <Panel label="Chat">
+                  <ChatPanel headerActions={chatHeaderActions} />
+                </Panel>
               </div>
             ),
             id: "workspace-right-column",
             minSize: 360,
             preferredSize: `${workspaceColumnSizes[1]}%`,
+            visible: !collapsedPanes.chat,
           },
         ]}
       />
@@ -508,7 +516,7 @@ export const App = (): JSX.Element => {
 
   return (
     <main className={appShell}>
-      <section className={layoutViewport}>
+      <section className={cx(layoutViewport, collapsedPanes.project && layoutViewportProjectCollapsed)}>
         {collapsedPanes.project ? (
           <PaneRestoreControl
             label="Project"

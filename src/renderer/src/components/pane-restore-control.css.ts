@@ -14,8 +14,13 @@ export const paneRestorePlacement = styleVariants({
   },
   leftCenter: {
     left: 0,
-    top: "50%",
-    transform: "translateY(-50%)",
+    top: 0,
+    bottom: 0,
+  },
+  rightCenter: {
+    right: 0,
+    top: 0,
+    bottom: 0,
   },
   topRight: {
     left: 0,
@@ -45,7 +50,14 @@ export const paneRestorePlacementButton = styleVariants({
   },
   leftCenter: {
     width: themeVars.size.controlXs,
-    height: `calc(${themeVars.size.controlXs} * 2)`,
+    height: "100%",
+    padding: 0,
+    border: "none",
+    background: themeVars.color.background.panelMuted,
+  },
+  rightCenter: {
+    width: themeVars.size.controlXs,
+    height: "100%",
     padding: 0,
     border: "none",
     background: themeVars.color.background.panelMuted,

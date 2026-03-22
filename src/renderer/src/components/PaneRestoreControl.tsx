@@ -25,7 +25,7 @@ export const PaneRestoreControl = ({
   restoreIcon = <ChevronRightIcon />,
   onRestore,
 }: PaneRestoreControlProps): JSX.Element => {
-  const showsBarLabel = placement !== "leftCenter";
+  const showsBarLabel = placement !== "leftCenter" && placement !== "rightCenter";
 
   return (
     <div className={cx(paneRestoreControl, paneRestorePlacement[placement])}>
