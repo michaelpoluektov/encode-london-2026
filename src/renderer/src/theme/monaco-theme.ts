@@ -11,7 +11,7 @@ export const defineShadilyMonacoTheme = (monaco: typeof Monaco): void => {
       { token: "comment", foreground: "7d7983" },
       { token: "keyword", foreground: "c799ff" },
       { token: "number", foreground: "ff8ba0" },
-      { token: "type", foreground: "69c8eb" },
+      { token: "type", foreground: "03dac6" },
     ],
     colors: {
       "editor.background": darkThemeValues.color.editor.background,
@@ -51,7 +51,7 @@ export const defineShadilyMonacoTheme = (monaco: typeof Monaco): void => {
       "editorOverviewRuler.errorForeground": "rgba(199, 153, 255, 0.8)",
       "editorOverviewRuler.warningForeground": "rgba(199, 153, 255, 0.5)",
       "editorOverviewRuler.infoForeground": "rgba(199, 153, 255, 0.4)",
-      "editorOverviewRuler.addedForeground": "rgba(105, 200, 235, 0.5)",
+      "editorOverviewRuler.addedForeground": "rgba(3, 218, 198, 0.5)",
       "editorOverviewRuler.modifiedForeground": "rgba(199, 153, 255, 0.5)",
       "editorOverviewRuler.deletedForeground": "rgba(199, 153, 255, 0.5)",
       "editorOverviewRuler.findMatchForeground": "rgba(199, 153, 255, 0.5)",

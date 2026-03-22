@@ -57,11 +57,6 @@ import {
   chatToolCallName,
   chatToolCallPre,
   chatToolCallSection,
-  chatToolCallTable,
-  chatToolCallTableHeader,
-  chatToolCallTableKey,
-  chatToolCallTableRow,
-  chatToolCallTableValue,
   chatWarning,
 } from "./chat-panel.css";
 import { useChatRuntime } from "./chat-runtime-adapter";
@@ -100,6 +95,21 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
 const isDataImageUrl = (value: unknown): value is string =>
   typeof value === "string" && value.startsWith("data:image");
 
+const formatToolCallJson = (value: unknown): string =>
+  JSON.stringify(value, null, 2);
+
+const formatToolCallInlineValue = (value: unknown): string => {
+  if (typeof value === "string") return value;
+  return JSON.stringify(value);
+};
+
+const formatToolCallArgs = (value: Record<string, unknown>): string =>
+  Object.entries(value)
+    .map(
+      ([key, entryValue]) => `${key}: ${formatToolCallInlineValue(entryValue)}`,
+    )
+    .join("\n");
+
 const ToolCallResult = ({
   toolName,
   result,
@@ -135,7 +145,7 @@ const ToolCallResult = ({
     <pre
       className={`${chatToolCallPre}${isError === true ? ` ${chatToolCallError}` : ""}`}
     >
-      {typeof result === "string" ? result : JSON.stringify(result, null, 2)}
+      {typeof result === "string" ? result : formatToolCallJson(result)}
     </pre>
   );
 };
@@ -151,6 +161,10 @@ const ToolCallBlock = (props: ToolCallMessagePartProps): JSX.Element => {
   }
   const hasArgs = parsedArgs !== null && Object.keys(parsedArgs).length > 0;
   const displayName = TOOL_DISPLAY_NAMES[props.toolName] ?? props.toolName;
+  const argsDisplay =
+    hasArgs && parsedArgs !== null
+      ? formatToolCallArgs(parsedArgs)
+      : props.argsText;
 
   return (
     <div className={chatToolCallBlock}>
@@ -162,28 +176,8 @@ const ToolCallBlock = (props: ToolCallMessagePartProps): JSX.Element => {
           </Text>
         )}
       </div>
-      {hasArgs && parsedArgs !== null && (
-        <table className={chatToolCallTable}>
-          <thead>
-            <tr>
-              <th className={chatToolCallTableHeader}>Name</th>
-              <th className={chatToolCallTableHeader}>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(parsedArgs).map(([key, val]) => (
-              <tr key={key} className={chatToolCallTableRow}>
-                <td className={chatToolCallTableKey}>{key}</td>
-                <td className={chatToolCallTableValue}>
-                  {typeof val === "string" ? val : JSON.stringify(val)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      {!hasArgs && props.argsText && props.argsText !== "{}" && (
-        <pre className={chatToolCallPre}>{props.argsText}</pre>
+      {argsDisplay && argsDisplay !== "{}" && (
+        <pre className={chatToolCallPre}>{argsDisplay}</pre>
       )}
       <ToolCallResult
         toolName={props.toolName}

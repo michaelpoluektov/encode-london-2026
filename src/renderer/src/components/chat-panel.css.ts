@@ -441,13 +441,10 @@ export const chatFileChipKind = style({
 export const chatToolCallBlock = style({
   display: "flex",
   flexDirection: "column",
-  alignItems: "flex-start",
-  gap: themeVars.space[1],
-  padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
+  alignItems: "center",
+  gap: themeVars.space[2],
+  padding: `${themeVars.space[1]} 0`,
   width: "100%",
-  background: "rgba(38, 38, 38, 0.7)",
-  boxShadow: "inset 0 0 0 1px rgba(72, 72, 72, 0.2)",
-  backdropFilter: "blur(20px)",
   fontSize: themeVars.font.size.xs,
 });
 
@@ -455,12 +452,18 @@ export const chatToolCallHeader = style({
   display: "flex",
   alignItems: "center",
   gap: themeVars.space[2],
+  justifyContent: "center",
+  textAlign: "center",
 });
 
 export const chatToolCallName = style({
-  fontFamily: themeVars.font.family.mono,
-  fontWeight: themeVars.font.weight.strong,
-  color: themeVars.color.text.primary,
+  fontFamily: '"Space Grotesk", "Inter", sans-serif',
+  fontSize: themeVars.font.size.xs,
+  fontWeight: themeVars.font.weight.medium,
+  letterSpacing: themeVars.font.tracking.eyebrow,
+  lineHeight: themeVars.font.lineHeight.normal,
+  color: themeVars.color.text.secondary,
+  textTransform: "uppercase",
 });
 
 export const chatToolCallSection = style({
@@ -472,59 +475,20 @@ export const chatToolCallSection = style({
 });
 
 export const chatToolCallPre = style({
+  margin: 0,
+  maxWidth: "100%",
+  padding: 0,
   whiteSpace: "pre-wrap",
   wordBreak: "break-word",
   fontFamily: themeVars.font.family.mono,
   fontSize: themeVars.font.size.xs,
   lineHeight: themeVars.font.lineHeight.relaxed,
-  color: themeVars.color.text.body,
+  color: themeVars.color.text.code,
+  textAlign: "center",
 });
 
 export const chatToolCallError = style({
   color: themeVars.color.text.accent,
-});
-
-export const chatToolCallTable = style({
-  borderCollapse: "collapse",
-  display: "inline-table",
-  background: "rgba(255, 255, 255, 0.04)",
-});
-
-export const chatToolCallTableRow = style({
-  borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
-  selectors: {
-    "&:last-child": {
-      borderBottom: "none",
-    },
-  },
-});
-
-export const chatToolCallTableHeader = style({
-  fontFamily: themeVars.font.family.sans,
-  color: themeVars.color.text.muted,
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  fontSize: "0.6rem",
-  padding: `${themeVars.space[1]} ${themeVars.space[4]} ${themeVars.space[1]} ${themeVars.space[2]}`,
-  textAlign: "left",
-  fontWeight: themeVars.font.weight.medium,
-  borderBottom: "1px solid rgba(255, 255, 255, 0.12)",
-});
-
-export const chatToolCallTableKey = style({
-  fontFamily: themeVars.font.family.mono,
-  color: themeVars.color.text.secondary,
-  padding: `${themeVars.space[1]} ${themeVars.space[4]} ${themeVars.space[1]} ${themeVars.space[2]}`,
-  verticalAlign: "top",
-  whiteSpace: "nowrap",
-});
-
-export const chatToolCallTableValue = style({
-  fontFamily: themeVars.font.family.mono,
-  color: themeVars.color.text.body,
-  padding: `${themeVars.space[1]} ${themeVars.space[2]}`,
-  wordBreak: "break-word",
-  whiteSpace: "nowrap",
 });
 
 // Checkpoint divider
