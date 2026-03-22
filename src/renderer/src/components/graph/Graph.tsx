@@ -41,6 +41,7 @@ export const Graph = ({
         className={className}
         controls={controls}
         errors={runtime.errors}
+        isStale={runtime.isStale}
         setUniformValue={runtime.setUniformValue}
         uniformValues={runtime.uniformValues}
         validatedGraph={runtime.validatedGraph}

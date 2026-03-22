@@ -15,6 +15,10 @@ let chunkUnsubscribe: (() => void) | null = null;
 let fileChangeUnsubscribe: (() => void) | null = null;
 let pendingShaderReload: Promise<void> = Promise.resolve();
 let loadRequestVersion = 0;
+let queuedFileChanges = new Map<string, FileChangeInfo>();
+let fileChangeFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+const FILE_CHANGE_RELOAD_DEBOUNCE_MS = 120;
 
 export type ChatStoreState = {
   readonly currentProjectId: string | null;
@@ -49,6 +53,21 @@ const resetPendingShaderReload = (): void => {
 
 const waitForPendingShaderReload = async (): Promise<void> => {
   await pendingShaderReload.catch(() => undefined);
+};
+
+const serializeFileChange = (change: FileChangeInfo): string =>
+  `${change.kind}:${normalizeProjectPath(change.path)}`;
+
+const mergeQueuedFileChanges = (changes: readonly FileChangeInfo[]): void => {
+  for (const change of changes) {
+    queuedFileChanges.set(serializeFileChange(change), change);
+  }
+};
+
+const takeQueuedFileChanges = (): FileChangeInfo[] => {
+  const changes = [...queuedFileChanges.values()];
+  queuedFileChanges = new Map();
+  return changes;
 };
 
 const hasTouchedPath = (
@@ -122,15 +141,22 @@ const refreshTouchedProject = async (
           return;
         }
 
-        const refreshedDocument = await window.shadily.project.readEntry({
-          folderPath: currentProject.folderPath,
-          manifest: currentProject.manifest,
-          path,
-        });
+        try {
+          const refreshedDocument = await window.shadily.project.readEntry({
+            folderPath: currentProject.folderPath,
+            manifest: currentProject.manifest,
+            path,
+          });
 
-        useProjectStore
-          .getState()
-          .setExternallySavedDocument(refreshedDocument);
+          useProjectStore
+            .getState()
+            .setExternallySavedDocument(refreshedDocument);
+        } catch (error) {
+          console.warn(
+            `[chat-store] Failed to refresh project entry [${path}].`,
+            error,
+          );
+        }
       }),
     );
 
@@ -146,20 +172,36 @@ const refreshTouchedProject = async (
         selectedPath,
       )
     ) {
-      const refreshedDocument = await window.shadily.project.readEntry({
-        folderPath: selectedProject.folderPath,
-        manifest: selectedProject.manifest,
-        path: selectedPath,
-      });
+      try {
+        const refreshedDocument = await window.shadily.project.readEntry({
+          folderPath: selectedProject.folderPath,
+          manifest: selectedProject.manifest,
+          path: selectedPath,
+        });
 
-      useProjectStore.getState().setExternallySavedDocument(refreshedDocument);
+        useProjectStore
+          .getState()
+          .setExternallySavedDocument(refreshedDocument);
+      } catch (error) {
+        console.warn(
+          `[chat-store] Failed to refresh selected entry [${selectedPath}].`,
+          error,
+        );
+      }
     }
-  } catch {
-    // non-fatal — user can manually reload
+  } catch (error) {
+    console.warn("[chat-store] Failed to refresh touched project.", error);
   }
 };
 
-const queueShaderReload = (changes: FileChangeInfo[]): void => {
+const flushQueuedShaderReload = (): void => {
+  fileChangeFlushTimer = null;
+  const changes = takeQueuedFileChanges();
+
+  if (changes.length === 0) {
+    return;
+  }
+
   const project = useProjectStore.getState().project;
 
   if (project !== null) {
@@ -179,11 +221,28 @@ const queueShaderReload = (changes: FileChangeInfo[]): void => {
     .then(async () => refreshTouchedProject(changes));
 };
 
+const queueShaderReload = (changes: FileChangeInfo[]): void => {
+  mergeQueuedFileChanges(changes);
+
+  if (fileChangeFlushTimer !== null) {
+    clearTimeout(fileChangeFlushTimer);
+  }
+
+  fileChangeFlushTimer = setTimeout(() => {
+    flushQueuedShaderReload();
+  }, FILE_CHANGE_RELOAD_DEBOUNCE_MS);
+};
+
 const clearChatSubscriptions = (): void => {
   chunkUnsubscribe?.();
   chunkUnsubscribe = null;
   fileChangeUnsubscribe?.();
   fileChangeUnsubscribe = null;
+  if (fileChangeFlushTimer !== null) {
+    clearTimeout(fileChangeFlushTimer);
+    fileChangeFlushTimer = null;
+  }
+  queuedFileChanges = new Map();
 };
 
 const createOptimisticUserMessage = (

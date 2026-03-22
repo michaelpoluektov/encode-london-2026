@@ -19,7 +19,14 @@ import {
 import { cx } from "../../../lib/cx";
 import { Button } from "../../ui/Button";
 import { CrosshairIcon } from "../../ui/icons";
-import { graphCanvas, graphViewportControls } from "../graph.css";
+import { Text } from "../../ui/Text";
+import {
+  graphCanvas,
+  graphDiagnosticMessage,
+  graphDiagnosticPanel,
+  graphDiagnosticPanelStale,
+  graphViewportControls,
+} from "../graph.css";
 import type {
   GraphUniformValue,
   GraphUniformValues,
@@ -40,6 +47,7 @@ type GraphCanvasProps = {
   readonly className?: string;
   readonly controls?: ReactNode;
   readonly errors: readonly string[];
+  readonly isStale: boolean;
   readonly setUniformValue: (
     uniformBindingKey: string,
     value: GraphUniformValue,
@@ -168,6 +176,7 @@ export const GraphCanvas = ({
   className,
   controls = null,
   errors,
+  isStale,
   setUniformValue,
   uniformValues,
   validatedGraph,
@@ -222,6 +231,21 @@ export const GraphCanvas = ({
 
   return (
     <div className={cx(graphCanvas, className)}>
+      {errors.length > 0 ? (
+        <div
+          className={cx(
+            graphDiagnosticPanel,
+            isStale && graphDiagnosticPanelStale,
+          )}
+        >
+          <Text as="div" tone="default" variant="label">
+            {isStale
+              ? "Graph update failed. Showing last valid graph."
+              : "Graph error"}
+          </Text>
+          <pre className={graphDiagnosticMessage}>{errors.join("\n\n")}</pre>
+        </div>
+      ) : null}
       <ReactFlow
         edges={flowGraph.edges}
         edgesFocusable={false}

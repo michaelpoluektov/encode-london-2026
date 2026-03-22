@@ -20,6 +20,37 @@ export const graphViewportControls = style({
   boxShadow: `inset 0 0 0 1px ${themeVars.color.border.standard}`,
 });
 
+export const graphDiagnosticPanel = style({
+  position: "absolute",
+  top: themeVars.space[4],
+  left: themeVars.space[4],
+  zIndex: 4,
+  maxWidth: "min(560px, calc(100% - 32px))",
+  display: "grid",
+  gap: themeVars.space[2],
+  padding: themeVars.space[3],
+  borderRadius: "10px",
+  background: "rgba(47, 16, 16, 0.94)",
+  boxShadow: themeVars.shadow.panel,
+  border: `1px solid ${themeVars.color.surface.danger}`,
+});
+
+export const graphDiagnosticPanelStale = style({
+  background: "rgba(66, 44, 12, 0.94)",
+  borderColor: themeVars.color.surface.warning,
+});
+
+export const graphDiagnosticMessage = style({
+  margin: 0,
+  maxHeight: "180px",
+  overflow: "auto",
+  whiteSpace: "pre-wrap",
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+  lineHeight: themeVars.font.lineHeight.relaxed,
+  color: themeVars.color.text.primary,
+});
+
 globalStyle(`${graphCanvas} .react-flow`, {
   width: "100%",
   height: "100%",

@@ -100,7 +100,16 @@ export const useSubgraphPreviews = (
       }
     };
 
-    void renderAll();
+    void renderAll().catch((error) => {
+      if (cancelled) {
+        return;
+      }
+
+      console.error(
+        "[graph-preview] Failed to render subgraph previews:",
+        error,
+      );
+    });
 
     return () => {
       cancelled = true;

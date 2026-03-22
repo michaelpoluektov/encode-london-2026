@@ -5,15 +5,12 @@ import {
   type ToolCallMessagePartProps,
 } from "@assistant-ui/react";
 import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
-import { DomScrollableElement } from "monaco-editor/esm/vs/base/browser/ui/scrollbar/scrollableElement.js";
 import {
   type JSX,
   type KeyboardEvent,
   type ReactNode,
   useEffect,
-  useLayoutEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import remarkGfm from "remark-gfm";
@@ -40,7 +37,6 @@ import {
   chatMessageBubbleUser,
   chatMessageRow,
   chatMessages,
-  chatMessagesViewport,
   chatPanel,
   chatPartBlock,
   chatPartPre,
@@ -282,9 +278,6 @@ export const ChatPanel = ({
 }: {
   readonly headerActions?: ReactNode;
 }): JSX.Element => {
-  const viewportHostRef = useRef<HTMLDivElement | null>(null);
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const monacoViewportRef = useRef<DomScrollableElement | null>(null);
   const {
     currentProjectId,
     threads,
@@ -347,69 +340,6 @@ export const ChatPanel = ({
 
   const hasContent =
     messages.length > 0 || isTurnActive || warningMessage !== null;
-
-  useLayoutEffect(() => {
-    const host = viewportHostRef.current;
-    const viewport = viewportRef.current;
-
-    if (
-      host === null ||
-      viewport === null ||
-      monacoViewportRef.current !== null
-    ) {
-      return;
-    }
-
-    const scrollable = new DomScrollableElement(viewport, {
-      className: chatMessagesViewport,
-      consumeMouseWheelIfScrollbarIsNeeded: true,
-      horizontal: 2,
-      horizontalScrollbarSize: 12,
-      horizontalSliderSize: 12,
-      useShadows: false,
-      vertical: 1,
-      verticalScrollbarSize: 14,
-      verticalSliderSize: 14,
-    });
-    const wrapper = scrollable.getDomNode();
-    const resizeObserver = new ResizeObserver(() => {
-      scrollable.scanDomNode();
-    });
-    const mutationObserver = new MutationObserver(() => {
-      scrollable.scanDomNode();
-    });
-
-    monacoViewportRef.current = scrollable;
-    host.appendChild(wrapper);
-    resizeObserver.observe(host);
-    resizeObserver.observe(viewport);
-    mutationObserver.observe(viewport, {
-      characterData: true,
-      childList: true,
-      subtree: true,
-    });
-    scrollable.scanDomNode();
-
-    return () => {
-      mutationObserver.disconnect();
-      resizeObserver.disconnect();
-
-      if (viewport.parentElement === wrapper) {
-        host.appendChild(viewport);
-      }
-
-      if (wrapper.parentElement === host) {
-        host.removeChild(wrapper);
-      }
-
-      scrollable.dispose();
-      monacoViewportRef.current = null;
-    };
-  }, []);
-
-  useLayoutEffect(() => {
-    monacoViewportRef.current?.scanDomNode();
-  });
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
@@ -519,50 +449,45 @@ export const ChatPanel = ({
             )}
           </div>
         ) : (
-          <div className={chatMessagesViewport} ref={viewportHostRef}>
-            <ThreadPrimitive.Viewport
-              className={chatMessages}
-              ref={viewportRef}
-            >
-              <ThreadPrimitive.Messages>
-                {({ message }) => {
-                  if (message.role === "user") {
-                    const checkpoint = checkpoints.find(
-                      (cp) => cp.messageId === message.id,
-                    );
-                    return (
-                      <>
-                        {checkpoint !== undefined && (
-                          <CheckpointDivider
-                            key={`cp-${checkpoint.id}`}
-                            checkpoint={checkpoint}
-                          />
-                        )}
-                        <UserMessage key={message.id} />
-                      </>
-                    );
-                  }
-                  if (message.role === "assistant") {
-                    return <AssistantMessageBubble key={message.id} />;
-                  }
-                  return <SystemMessage key={message.id} />;
-                }}
-              </ThreadPrimitive.Messages>
+          <ThreadPrimitive.Viewport className={chatMessages}>
+            <ThreadPrimitive.Messages>
+              {({ message }) => {
+                if (message.role === "user") {
+                  const checkpoint = checkpoints.find(
+                    (cp) => cp.messageId === message.id,
+                  );
+                  return (
+                    <>
+                      {checkpoint !== undefined && (
+                        <CheckpointDivider
+                          key={`cp-${checkpoint.id}`}
+                          checkpoint={checkpoint}
+                        />
+                      )}
+                      <UserMessage key={message.id} />
+                    </>
+                  );
+                }
+                if (message.role === "assistant") {
+                  return <AssistantMessageBubble key={message.id} />;
+                }
+                return <SystemMessage key={message.id} />;
+              }}
+            </ThreadPrimitive.Messages>
 
-              {recentFileChanges.length > 0 && (
-                <div className={chatFileChangeRow}>
-                  {recentFileChanges.map((change) => (
-                    <FileChangeChip key={change.path} change={change} />
-                  ))}
-                </div>
-              )}
+            {recentFileChanges.length > 0 && (
+              <div className={chatFileChangeRow}>
+                {recentFileChanges.map((change) => (
+                  <FileChangeChip key={change.path} change={change} />
+                ))}
+              </div>
+            )}
 
-              {isRetrying && <div className={chatError}>Error, retrying</div>}
-              {warningMessage !== null && (
-                <div className={chatWarning}>{warningMessage}</div>
-              )}
-            </ThreadPrimitive.Viewport>
-          </div>
+            {isRetrying && <div className={chatError}>Error, retrying</div>}
+            {warningMessage !== null && (
+              <div className={chatWarning}>{warningMessage}</div>
+            )}
+          </ThreadPrimitive.Viewport>
         )}
 
         <div className={chatInputArea}>

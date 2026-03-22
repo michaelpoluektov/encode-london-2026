@@ -127,21 +127,50 @@ export const chatThreadDeleteButton = style({
 });
 
 export const chatMessages = style({
-  height: "100%",
-  minHeight: 0,
-  minWidth: 0,
-  overflow: "hidden",
+  flex: 1,
+  overflowY: "auto",
   padding: `${themeVars.space[4]} ${themeVars.space[5]}`,
   display: "flex",
   flexDirection: "column",
   gap: themeVars.space[3],
+  minHeight: 0,
+  scrollbarWidth: "auto",
+  scrollbarColor:
+    "var(--vscode-scrollbarSlider-background) transparent" as string,
 });
 
-export const chatMessagesViewport = style({
-  flex: 1,
-  minHeight: 0,
-  minWidth: 0,
-  position: "relative",
+globalStyle(`${chatMessages}::-webkit-scrollbar`, {
+  width: "14px",
+  height: "14px",
+  background: "transparent",
+});
+
+globalStyle(`${chatMessages}::-webkit-scrollbar-corner`, {
+  background: "transparent",
+});
+
+globalStyle(`${chatMessages}::-webkit-scrollbar-track`, {
+  background: "transparent",
+});
+
+globalStyle(`${chatMessages}::-webkit-scrollbar-thumb`, {
+  background: "var(--vscode-scrollbarSlider-background)",
+  border: "3px solid transparent",
+  backgroundClip: "content-box",
+  borderRadius: "0",
+  minHeight: "24px",
+});
+
+globalStyle(`${chatMessages}::-webkit-scrollbar-thumb:hover`, {
+  background: "var(--vscode-scrollbarSlider-hoverBackground)",
+  border: "3px solid transparent",
+  backgroundClip: "content-box",
+});
+
+globalStyle(`${chatMessages}::-webkit-scrollbar-thumb:active`, {
+  background: "var(--vscode-scrollbarSlider-activeBackground)",
+  border: "3px solid transparent",
+  backgroundClip: "content-box",
 });
 
 export const chatMessageRow = style({

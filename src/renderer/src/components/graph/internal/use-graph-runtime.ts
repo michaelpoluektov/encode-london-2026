@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   GraphSourceLoader,
   GraphUniformValue,
@@ -60,6 +60,7 @@ type UseGraphRuntimeOptions = {
 export type GraphRuntime = {
   readonly compiledShader: ReturnType<typeof compileFragmentShader> | null;
   readonly errors: readonly string[];
+  readonly isStale: boolean;
   readonly setUniformValue: (
     uniformBindingKey: string,
     value: GraphUniformValue,
@@ -86,37 +87,67 @@ export const useGraphRuntime = ({
   onUniformValuesChange,
 }: UseGraphRuntimeOptions): GraphRuntime => {
   const [errors, setErrors] = useState<readonly string[]>([]);
+  const [isStale, setIsStale] = useState(false);
   const [validatedGraph, setValidatedGraph] = useState<ValidatedGraph | null>(
     null,
   );
   const [uniformValues, setUniformValues] =
     useState<GraphUniformValues>(EMPTY_UNIFORM_VALUES);
+  const requestVersionRef = useRef(0);
+  const validatedGraphRef = useRef<ValidatedGraph | null>(validatedGraph);
 
   useEffect(() => {
-    let cancelled = false;
+    validatedGraphRef.current = validatedGraph;
+  }, [validatedGraph]);
 
-    void readValidatedGraph(graphSource, { loadCustomNodeSource }).then(
-      (result) => {
-        if (cancelled) {
+  useEffect(() => {
+    requestVersionRef.current += 1;
+    const requestVersion = requestVersionRef.current;
+
+    const loadRuntime = async (): Promise<void> => {
+      try {
+        const result = await readValidatedGraph(graphSource, {
+          loadCustomNodeSource,
+        });
+
+        if (requestVersion !== requestVersionRef.current) {
           return;
         }
 
         if (!result.ok) {
           setErrors(result.errors);
-          setValidatedGraph(null);
-          setUniformValues(EMPTY_UNIFORM_VALUES);
+          setIsStale(validatedGraphRef.current !== null);
+
+          if (validatedGraphRef.current === null) {
+            setUniformValues(EMPTY_UNIFORM_VALUES);
+          }
+
           return;
         }
 
         setErrors([]);
+        setIsStale(false);
         setValidatedGraph(result.graph);
         setUniformValues(createInitialUniformValues(result.graph));
-      },
-    );
+      } catch (error) {
+        if (requestVersion !== requestVersionRef.current) {
+          return;
+        }
 
-    return () => {
-      cancelled = true;
+        const message =
+          error instanceof Error ? error.message : "Unknown error.";
+
+        console.error("[graph-runtime] Failed to validate graph:", error);
+        setErrors([`Graph validation crashed unexpectedly. ${message}`]);
+        setIsStale(validatedGraphRef.current !== null);
+
+        if (validatedGraphRef.current === null) {
+          setUniformValues(EMPTY_UNIFORM_VALUES);
+        }
+      }
     };
+
+    void loadRuntime();
   }, [graphSource, loadCustomNodeSource]);
 
   const compiledShader = useMemo(
@@ -161,6 +192,7 @@ export const useGraphRuntime = ({
   return {
     compiledShader,
     errors,
+    isStale,
     setUniformValue,
     uniformValues,
     validatedGraph,
