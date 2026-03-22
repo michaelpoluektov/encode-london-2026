@@ -6,6 +6,7 @@ export const projectSidebar = style({
   flexDirection: "column",
   height: "100%",
   minHeight: 0,
+  background: themeVars.color.background.panel,
 });
 
 export const projectSection = style({
@@ -34,9 +35,7 @@ export const projectActionsToggle = style({
 
 export const treeShell = style({
   flex: 1,
-  height: "100%",
   minHeight: 0,
-  background: themeVars.color.background.panel,
   overflow: "hidden",
 });
 
@@ -159,4 +158,95 @@ export const emptyState = style({
   minHeight: 0,
   padding: themeVars.space[7],
   textAlign: "center",
+});
+
+export const previewStatusShell = style({
+  boxSizing: "border-box",
+  display: "flex",
+  alignItems: "center",
+  height: "24px",
+  minWidth: 0,
+  padding: `0 ${themeVars.space[5]}`,
+  borderTop: `1px solid ${themeVars.color.border.subtle}`,
+  background: "rgba(255, 255, 255, 0.015)",
+  position: "relative",
+});
+
+export const previewStatusButton = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: themeVars.space[2],
+  minHeight: "20px",
+  padding: `${themeVars.space[1]} ${themeVars.space[2]}`,
+  border: "none",
+  background: "transparent",
+  color: themeVars.color.text.secondary,
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+  selectors: {
+    "&:hover:not(:disabled)": {
+      color: themeVars.color.text.primary,
+    },
+    "&:focus-visible": {
+      outline: "none",
+      boxShadow: themeVars.shadow.focus,
+    },
+    "&:disabled": {
+      cursor: "default",
+      opacity: 0.72,
+    },
+  },
+});
+
+export const previewStatusButtonDirty = style({
+  color: themeVars.color.surface.danger,
+  textShadow: "0 0 12px rgba(222, 125, 125, 0.22)",
+});
+
+export const previewStatusDot = style({
+  width: "8px",
+  height: "8px",
+  background: themeVars.color.surface.success,
+  transform: "rotate(45deg)",
+  boxShadow: "0 0 10px rgba(113, 199, 154, 0.28)",
+});
+
+export const previewStatusDotDirty = style({
+  background: themeVars.color.surface.danger,
+  boxShadow: "0 0 12px rgba(222, 125, 125, 0.42)",
+});
+
+export const previewDiagnosticPopover = style({
+  position: "absolute",
+  left: themeVars.space[5],
+  right: themeVars.space[5],
+  bottom: `calc(100% + ${themeVars.space[3]})`,
+  display: "flex",
+  flexDirection: "column",
+  gap: themeVars.space[2],
+  padding: `${themeVars.space[3]} ${themeVars.space[4]}`,
+  border: "none",
+  background: "rgba(38, 38, 38, 0.78)",
+  backdropFilter: "blur(20px)",
+  boxShadow: themeVars.shadow.panel,
+  zIndex: 2,
+});
+
+export const previewDiagnosticMeta = style({
+  display: "flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: themeVars.space[3],
+  color: themeVars.color.text.muted,
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+});
+
+export const previewDiagnosticMessage = style({
+  margin: 0,
+  whiteSpace: "pre-wrap",
+  color: themeVars.color.text.body,
+  fontFamily: themeVars.font.family.mono,
+  fontSize: themeVars.font.size.xs,
+  lineHeight: themeVars.font.lineHeight.relaxed,
 });

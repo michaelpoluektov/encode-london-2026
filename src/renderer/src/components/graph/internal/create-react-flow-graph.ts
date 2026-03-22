@@ -34,12 +34,19 @@ const CONTROL_ROW_HEIGHT = 44;
 const CONTROL_ROW_GAP_HEIGHT = 8;
 const SECTION_GAP_HEIGHT = 20;
 
-type FlowGraphNode =
+export type FlowGraphNode =
   | CustomGraphFlowNode
   | GlFragColorGraphFlowNode
   | TimeGraphFlowNode
   | UniformGraphFlowNode
   | VaryingGraphFlowNode;
+
+export type GraphNodeMeasurement = {
+  readonly height?: number;
+  readonly width?: number;
+};
+
+export type GraphNodeMeasurements = ReadonlyMap<string, GraphNodeMeasurement>;
 
 type CreateReactFlowGraphOptions = {
   readonly onUniformValueChange: (
@@ -122,9 +129,22 @@ const getEstimatedNodeHeight = (node: ValidatedGraphNode): number => {
   return height;
 };
 
+const getNodeDimensions = (
+  node: ValidatedGraphNode,
+  measurements?: GraphNodeMeasurements,
+): { height: number; width: number } => {
+  const measuredDimensions = measurements?.get(node.flowId);
+
+  return {
+    height: measuredDimensions?.height ?? getEstimatedNodeHeight(node),
+    width: measuredDimensions?.width ?? NODE_WIDTH,
+  };
+};
+
 const createDagreGraph = (
   validatedGraph: ValidatedGraph,
   edges: readonly Edge[],
+  measurements?: GraphNodeMeasurements,
 ): dagre.graphlib.Graph => {
   const dagreGraph = new dagre.graphlib.Graph();
 
@@ -138,9 +158,11 @@ const createDagreGraph = (
   });
 
   for (const node of validatedGraph.nodes) {
+    const dimensions = getNodeDimensions(node, measurements);
+
     dagreGraph.setNode(node.flowId, {
-      height: getEstimatedNodeHeight(node),
-      width: NODE_WIDTH,
+      height: dimensions.height,
+      width: dimensions.width,
     });
   }
 
@@ -247,23 +269,44 @@ const createFlowEdges = (validatedGraph: ValidatedGraph): Edge[] =>
 
 const createFlowNodes = (
   validatedGraph: ValidatedGraph,
-  edges: readonly Edge[],
   options: CreateReactFlowGraphOptions,
 ): FlowGraphNode[] => {
-  const dagreGraph = createDagreGraph(validatedGraph, edges);
+  return validatedGraph.nodes.map((node) =>
+    createFlowNode(node, { x: 0, y: 0 }, options),
+  );
+};
 
-  return validatedGraph.nodes.map((node) => {
-    const dagreNode = dagreGraph.node(node.flowId);
-    const height = getEstimatedNodeHeight(node);
+const createValidatedGraphNodeLookup = (
+  validatedGraph: ValidatedGraph,
+): ReadonlyMap<string, ValidatedGraphNode> =>
+  new Map(validatedGraph.nodes.map((node) => [node.flowId, node]));
 
-    return createFlowNode(
-      node,
-      {
-        x: (dagreNode.x as number) - NODE_WIDTH / 2,
-        y: (dagreNode.y as number) - height / 2,
+export const layoutReactFlowNodes = (
+  validatedGraph: ValidatedGraph,
+  nodes: readonly FlowGraphNode[],
+  edges: readonly Edge[],
+  measurements?: GraphNodeMeasurements,
+): FlowGraphNode[] => {
+  const dagreGraph = createDagreGraph(validatedGraph, edges, measurements);
+  const validatedNodes = createValidatedGraphNodeLookup(validatedGraph);
+
+  return nodes.map((node) => {
+    const validatedNode = validatedNodes.get(node.id);
+
+    if (validatedNode === undefined) {
+      return node;
+    }
+
+    const dagreNode = dagreGraph.node(node.id);
+    const dimensions = getNodeDimensions(validatedNode, measurements);
+
+    return {
+      ...node,
+      position: {
+        x: (dagreNode.x as number) - dimensions.width / 2,
+        y: (dagreNode.y as number) - dimensions.height / 2,
       },
-      options,
-    );
+    };
   });
 };
 
@@ -272,7 +315,11 @@ export const createReactFlowGraph = (
   options: CreateReactFlowGraphOptions,
 ): { edges: Edge[]; nodes: FlowGraphNode[] } => {
   const edges = createFlowEdges(validatedGraph);
-  const nodes = createFlowNodes(validatedGraph, edges, options);
+  const nodes = layoutReactFlowNodes(
+    validatedGraph,
+    createFlowNodes(validatedGraph, options),
+    edges,
+  );
 
   return { edges, nodes };
 };

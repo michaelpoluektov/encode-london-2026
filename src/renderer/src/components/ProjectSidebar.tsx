@@ -9,6 +9,8 @@ import {
 import { type NodeRendererProps, Tree } from "react-arborist";
 import type { ProjectTreeNode } from "../../../shared/contracts";
 import { cx } from "../lib/cx";
+import { useAppStore } from "../store/app-store";
+import { getPreviewDiagnostic, usePreviewStore } from "../store/preview-store";
 import { useProjectStore } from "../store/project-store";
 import {
   binaryGlyph,
@@ -16,6 +18,14 @@ import {
   emptyState,
   folderGlyph,
   imageGlyph,
+  previewDiagnosticMessage,
+  previewDiagnosticMeta,
+  previewDiagnosticPopover,
+  previewStatusButton,
+  previewStatusButtonDirty,
+  previewStatusDot,
+  previewStatusDotDirty,
+  previewStatusShell,
   projectActions,
   projectActionsPrimary,
   projectActionsToggle,
@@ -49,6 +59,21 @@ import {
   ReadOnlyFileIcon,
 } from "./ui/icons";
 import { Text } from "./ui/Text";
+
+const getPreviewStatusLabel = (
+  isPreviewStale: boolean,
+  hasDiagnostic: boolean,
+): string => {
+  if (isPreviewStale) {
+    return "Render stale";
+  }
+
+  if (hasDiagnostic) {
+    return "Preview issue";
+  }
+
+  return "Render clean";
+};
 
 const getItemIcon = (node: ProjectTreeNode, isOpen: boolean): JSX.Element => {
   switch (node.itemKind) {
@@ -170,6 +195,14 @@ export const ProjectSidebar = (): JSX.Element => {
   const project = useProjectStore((s) => s.project);
   const openProject = useProjectStore((s) => s.openProject);
   const selectEntry = useProjectStore((s) => s.selectEntry);
+  const isPreviewDiagnosticOpen = useAppStore(
+    (state) => state.isPreviewDiagnosticOpen,
+  );
+  const togglePreviewDiagnosticOpen = useAppStore(
+    (state) => state.togglePreviewDiagnosticOpen,
+  );
+  const previewDiagnostic = usePreviewStore(getPreviewDiagnostic);
+  const isPreviewStale = usePreviewStore((state) => state.isStale);
 
   const [pendingFolder, setPendingFolder] = useState<string | null>(null);
   const [pendingName, setPendingName] = useState("");
@@ -185,6 +218,8 @@ export const ProjectSidebar = (): JSX.Element => {
     () => createInitialOpenState(filteredTree),
     [filteredTree],
   );
+  const hasPreviewDiagnostic = previewDiagnostic !== null;
+  const hasPreviewIssue = hasPreviewDiagnostic || isPreviewStale;
 
   useEffect(() => {
     const viewport = treeViewportRef.current;
@@ -349,6 +384,53 @@ export const ProjectSidebar = (): JSX.Element => {
             </div>
           )}
         </div>
+      </div>
+      <div className={previewStatusShell}>
+        <Button
+          aria-controls="preview-diagnostic"
+          aria-expanded={hasPreviewDiagnostic && isPreviewDiagnosticOpen}
+          className={cx(
+            previewStatusButton,
+            hasPreviewIssue && previewStatusButtonDirty,
+          )}
+          disabled={!hasPreviewDiagnostic}
+          onClick={() => {
+            if (!hasPreviewDiagnostic) {
+              return;
+            }
+
+            togglePreviewDiagnosticOpen();
+          }}
+          variant="plain"
+        >
+          <span
+            aria-hidden="true"
+            className={cx(
+              previewStatusDot,
+              hasPreviewIssue && previewStatusDotDirty,
+            )}
+          />
+          {getPreviewStatusLabel(isPreviewStale, hasPreviewDiagnostic)}
+        </Button>
+        {hasPreviewDiagnostic && isPreviewDiagnosticOpen ? (
+          <div id="preview-diagnostic" className={previewDiagnosticPopover}>
+            <Text as="p" tone="default" variant="label">
+              Preview Diagnostic
+            </Text>
+            <div className={previewDiagnosticMeta}>
+              <span>{previewDiagnostic.stage}</span>
+              {previewDiagnostic.revision !== null ? (
+                <span>Revision {previewDiagnostic.revision}</span>
+              ) : null}
+              <span>
+                {new Date(previewDiagnostic.timestamp).toLocaleTimeString()}
+              </span>
+            </div>
+            <pre className={previewDiagnosticMessage}>
+              {previewDiagnostic.message}
+            </pre>
+          </div>
+        ) : null}
       </div>
     </div>
   );

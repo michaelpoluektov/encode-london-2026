@@ -1,6 +1,18 @@
-import { Background, ReactFlow } from "@xyflow/react";
+import {
+  Background,
+  ReactFlow,
+  useNodesInitialized,
+  useReactFlow,
+} from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { type JSX, useMemo } from "react";
+import {
+  type Dispatch,
+  type JSX,
+  type SetStateAction,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { cx } from "../../../lib/cx";
 import { graphCanvas } from "../graph.css";
 import type {
@@ -10,7 +22,10 @@ import type {
 } from "../graph-types";
 import {
   createReactFlowGraph,
+  type FlowGraphNode,
+  type GraphNodeMeasurements,
   graphNodeTypes,
+  layoutReactFlowNodes,
   syncReactFlowGraphSubgraphPreviews,
   syncReactFlowGraphUniformValues,
 } from "./create-react-flow-graph";
@@ -32,6 +47,78 @@ const EMPTY_FLOW_GRAPH = {
   nodes: [],
 };
 
+type MeasuredGraphLayoutProps = {
+  readonly edges: ReturnType<typeof createReactFlowGraph>["edges"];
+  readonly setLayoutedNodes: Dispatch<SetStateAction<FlowGraphNode[]>>;
+  readonly validatedGraph: ValidatedGraph;
+};
+
+const areNodePositionsEqual = (
+  currentNodes: readonly FlowGraphNode[],
+  nextNodes: readonly FlowGraphNode[],
+): boolean =>
+  currentNodes.length === nextNodes.length &&
+  currentNodes.every((node, index) => {
+    const nextNode = nextNodes[index];
+
+    return (
+      nextNode !== undefined &&
+      node.id === nextNode.id &&
+      node.position.x === nextNode.position.x &&
+      node.position.y === nextNode.position.y
+    );
+  });
+
+const MeasuredGraphLayout = ({
+  edges,
+  setLayoutedNodes,
+  validatedGraph,
+}: MeasuredGraphLayoutProps): null => {
+  const nodesInitialized = useNodesInitialized();
+  const { getInternalNode } = useReactFlow<FlowGraphNode>();
+
+  useEffect(() => {
+    if (!nodesInitialized) {
+      return;
+    }
+
+    const measurements: GraphNodeMeasurements = new Map(
+      validatedGraph.nodes.map((node) => {
+        const measuredNode = getInternalNode(node.flowId);
+
+        return [
+          node.flowId,
+          {
+            height: measuredNode?.measured.height,
+            width: measuredNode?.measured.width,
+          },
+        ];
+      }),
+    );
+
+    setLayoutedNodes((currentNodes) => {
+      const nextNodes = layoutReactFlowNodes(
+        validatedGraph,
+        currentNodes,
+        edges,
+        measurements,
+      );
+
+      return areNodePositionsEqual(currentNodes, nextNodes)
+        ? currentNodes
+        : nextNodes;
+    });
+  }, [
+    edges,
+    getInternalNode,
+    nodesInitialized,
+    setLayoutedNodes,
+    validatedGraph,
+  ]);
+
+  return null;
+};
+
 export const GraphCanvas = ({
   className,
   errors,
@@ -51,15 +138,23 @@ export const GraphCanvas = ({
     });
   }, [setUniformValue, validatedGraph]);
 
+  const [layoutedNodes, setLayoutedNodes] = useState<FlowGraphNode[]>(
+    baseFlowGraph.nodes,
+  );
+
+  useEffect(() => {
+    setLayoutedNodes(baseFlowGraph.nodes);
+  }, [baseFlowGraph.nodes]);
+
   const flowGraph = useMemo(
     () => ({
       edges: baseFlowGraph.edges,
       nodes: syncReactFlowGraphSubgraphPreviews(
-        syncReactFlowGraphUniformValues(baseFlowGraph.nodes, uniformValues),
+        syncReactFlowGraphUniformValues(layoutedNodes, uniformValues),
         subgraphPreviews,
       ),
     }),
-    [baseFlowGraph.edges, baseFlowGraph.nodes, uniformValues, subgraphPreviews],
+    [baseFlowGraph.edges, layoutedNodes, uniformValues, subgraphPreviews],
   );
 
   if (errors.length > 0 && validatedGraph === null) {
@@ -98,6 +193,13 @@ export const GraphCanvas = ({
         zoomOnPinch
         zoomOnScroll
       >
+        {validatedGraph !== null ? (
+          <MeasuredGraphLayout
+            edges={baseFlowGraph.edges}
+            setLayoutedNodes={setLayoutedNodes}
+            validatedGraph={validatedGraph}
+          />
+        ) : null}
         <Background gap={24} size={1} />
       </ReactFlow>
     </div>

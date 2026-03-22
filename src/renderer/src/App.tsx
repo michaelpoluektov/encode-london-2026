@@ -10,16 +10,7 @@ import {
 import { normalizeProjectPath } from "../../shared/path-utils";
 import {
   appShell,
-  footerBar,
-  footerDiagnosticMessage,
-  footerDiagnosticMeta,
-  footerDiagnosticPopover,
-  footerStatusButton,
-  footerStatusButtonDirty,
-  footerStatusDot,
-  footerStatusDotDirty,
   layoutViewport,
-  shellFrame,
   workspaceColumn,
   workspaceGrid,
   workspaceShell,
@@ -32,21 +23,17 @@ import { PaneRestoreControl } from "./components/PaneRestoreControl";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { ShaderEditor } from "./components/ShaderEditor";
 import { SplitLayout } from "./components/SplitLayout";
-import { Button } from "./components/ui/Button";
 import {
   CaptureIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "./components/ui/icons";
-import { Text } from "./components/ui/Text";
-import { cx } from "./lib/cx";
 import { captureRegisteredPreview } from "./preview-capture";
 import {
   type CollapsiblePaneId,
   createProjectLayoutSnapshot,
   useAppStore,
 } from "./store/app-store";
-import { getPreviewDiagnostic, usePreviewStore } from "./store/preview-store";
 import { useProjectStore } from "./store/project-store";
 
 const normalizePaneSizes = (sizes: readonly number[]): number[] => {
@@ -87,93 +74,11 @@ type WorkspaceColumnLayoutProps = {
   readonly togglePaneCollapsed: (paneId: CollapsiblePaneId) => void;
 };
 
-type FooterStatusProps = {
-  readonly isPreviewDiagnosticOpen: boolean;
-  readonly isPreviewStale: boolean;
-  readonly previewDiagnostic: ReturnType<typeof getPreviewDiagnostic>;
-  readonly togglePreviewDiagnosticOpen: () => void;
-};
-
-const getPreviewStatusLabel = (
-  isPreviewStale: boolean,
-  hasDiagnostic: boolean,
-): string => {
-  if (isPreviewStale) {
-    return "Render stale";
-  }
-
-  if (hasDiagnostic) {
-    return "Preview issue";
-  }
-
-  return "Render clean";
-};
-
 const isPaneCollapseDisabled = (
   collapsedPanes: Record<CollapsiblePaneId, boolean>,
   paneId: WorkspacePaneId,
   siblingPaneId: WorkspacePaneId,
 ): boolean => collapsedPanes[siblingPaneId] && !collapsedPanes[paneId];
-
-const FooterStatus = ({
-  isPreviewDiagnosticOpen,
-  isPreviewStale,
-  previewDiagnostic,
-  togglePreviewDiagnosticOpen,
-}: FooterStatusProps): JSX.Element => {
-  const hasPreviewDiagnostic = previewDiagnostic !== null;
-  const hasPreviewIssue = hasPreviewDiagnostic || isPreviewStale;
-
-  return (
-    <div className={shellFrame}>
-      <Button
-        aria-controls="preview-diagnostic"
-        aria-expanded={hasPreviewDiagnostic && isPreviewDiagnosticOpen}
-        className={cx(
-          footerStatusButton,
-          hasPreviewIssue && footerStatusButtonDirty,
-        )}
-        disabled={!hasPreviewDiagnostic}
-        onClick={() => {
-          if (!hasPreviewDiagnostic) {
-            return;
-          }
-
-          togglePreviewDiagnosticOpen();
-        }}
-        variant="plain"
-      >
-        <span
-          aria-hidden="true"
-          className={cx(
-            footerStatusDot,
-            hasPreviewIssue && footerStatusDotDirty,
-          )}
-        />
-        {getPreviewStatusLabel(isPreviewStale, hasPreviewDiagnostic)}
-      </Button>
-      {hasPreviewDiagnostic && isPreviewDiagnosticOpen ? (
-        <div id="preview-diagnostic" className={footerDiagnosticPopover}>
-          <Text as="p" tone="default" variant="label">
-            Preview Diagnostic
-          </Text>
-          <div className={footerDiagnosticMeta}>
-            <span>{previewDiagnostic.stage}</span>
-            {previewDiagnostic.revision !== null ? (
-              <span>Revision {previewDiagnostic.revision}</span>
-            ) : null}
-            <span>
-              {new Date(previewDiagnostic.timestamp).toLocaleTimeString()}
-            </span>
-          </div>
-          <pre className={footerDiagnosticMessage}>
-            {previewDiagnostic.message}
-          </pre>
-        </div>
-      ) : null}
-    </div>
-  );
-};
 
 const WorkspaceColumnLayout = ({
   layoutRevision,
@@ -286,16 +191,10 @@ export const App = (): JSX.Element => {
     (state) => state.project?.manifest.projectId ?? null,
   );
   const collapsedPanes = useAppStore((state) => state.collapsedPanes);
-  const isPreviewDiagnosticOpen = useAppStore(
-    (state) => state.isPreviewDiagnosticOpen,
-  );
   const replaceProjectLayout = useAppStore(
     (state) => state.replaceProjectLayout,
   );
   const togglePaneCollapsed = useAppStore((state) => state.togglePaneCollapsed);
-  const togglePreviewDiagnosticOpen = useAppStore(
-    (state) => state.togglePreviewDiagnosticOpen,
-  );
   const shellPaneSizes = useAppStore((state) => state.shellPaneSizes);
   const setShellPaneSizes = useAppStore((state) => state.setShellPaneSizes);
   const workspaceColumnSizes = useAppStore(
@@ -310,8 +209,6 @@ export const App = (): JSX.Element => {
   const setWorkspaceLeftRowSizes = useAppStore(
     (state) => state.setWorkspaceLeftRowSizes,
   );
-  const previewDiagnostic = usePreviewStore(getPreviewDiagnostic);
-  const isPreviewStale = usePreviewStore((state) => state.isStale);
 
   const createLayoutSnapshot = (
     overrides: Partial<ReturnType<typeof createProjectLayoutSnapshot>> = {},
@@ -613,14 +510,6 @@ export const App = (): JSX.Element => {
           ]}
         />
       </section>
-      <footer className={footerBar}>
-        <FooterStatus
-          isPreviewDiagnosticOpen={isPreviewDiagnosticOpen}
-          isPreviewStale={isPreviewStale}
-          previewDiagnostic={previewDiagnostic}
-          togglePreviewDiagnosticOpen={togglePreviewDiagnosticOpen}
-        />
-      </footer>
     </main>
   );
 };

@@ -75,7 +75,6 @@ export const darkThemeValues = {
     9: "32px",
   },
   size: {
-    footerBarHeight: "24px",
     panelHeaderHeight: "32px",
     panelMinHeight: "420px",
     editorMinWidth: "420px",
