@@ -237,6 +237,28 @@ export const MinusIcon = ({
   </IconBase>
 );
 
+export const CrosshairIcon = ({
+  className,
+  size,
+  strokeWidth = 1.35,
+}: IconProps): JSX.Element => (
+  <IconBase className={className} size={size}>
+    <circle
+      cx="8"
+      cy="8"
+      r="3.1"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+    />
+    <path
+      d="M8 2.25v2.1M8 11.65v2.1M2.25 8h2.1M11.65 8h2.1"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth={strokeWidth}
+    />
+  </IconBase>
+);
+
 export const DocumentIcon = ({
   className,
   size,

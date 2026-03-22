@@ -12,19 +12,23 @@ import {
   PREVIEW_MODELS,
   type PreviewModelId,
 } from "../../../shared/default-project";
+import { cx } from "../lib/cx";
 import { useProjectStore } from "../store/project-store";
 import { saveCurrentProject } from "../store/save-project";
 import {
   dragHandle,
-  expandButton,
   floatingPanel,
+  floatingPanelMinimized,
   gripIcon,
+  headerButton,
+  headerButtonGroup,
   modelSelect,
   previewBody,
+  previewBodyHidden,
 } from "./floating-preview.css";
 import { PreviewFullscreen } from "./PreviewFullscreen";
 import { PreviewViewport } from "./PreviewViewport";
-import { ExpandIcon, GripIcon } from "./ui/icons";
+import { ExpandIcon, GripIcon, MinusIcon } from "./ui/icons";
 
 type Corner = "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
 
@@ -90,6 +94,7 @@ export const FloatingPreview = ({
   );
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [corner, setCorner] = useState<Corner>("bottomRight");
   const [dragging, setDragging] = useState(false);
   const [dragPos, setDragPos] = useState<{ top: number; left: number } | null>(
@@ -204,7 +209,10 @@ export const FloatingPreview = ({
 
   return (
     <>
-      <div className={floatingPanel} style={style}>
+      <div
+        className={cx(floatingPanel, isMinimized && floatingPanelMinimized)}
+        style={style}
+      >
         <div
           aria-label="Preview controls"
           className={dragHandle}
@@ -233,22 +241,37 @@ export const FloatingPreview = ({
               ))}
             </select>
           )}
-          {headerActions}
-          <button
-            aria-label="Open fullscreen preview"
-            className={expandButton}
-            type="button"
-            onMouseDown={(e) => {
-              e.stopPropagation();
-            }}
-            onClick={() => {
-              setIsFullscreen(true);
-            }}
-          >
-            <ExpandIcon />
-          </button>
+          <div className={headerButtonGroup}>
+            {headerActions}
+            <button
+              aria-label={isMinimized ? "Restore preview" : "Minimize preview"}
+              className={headerButton}
+              type="button"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+              }}
+              onClick={() => {
+                setIsMinimized((value) => !value);
+              }}
+            >
+              <MinusIcon />
+            </button>
+            <button
+              aria-label="Open fullscreen preview"
+              className={headerButton}
+              type="button"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+              }}
+              onClick={() => {
+                setIsFullscreen(true);
+              }}
+            >
+              <ExpandIcon />
+            </button>
+          </div>
         </div>
-        <div className={previewBody}>
+        <div className={cx(previewBody, isMinimized && previewBodyHidden)}>
           <PreviewViewport />
         </div>
       </div>

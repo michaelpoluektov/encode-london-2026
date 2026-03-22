@@ -57,7 +57,6 @@ import {
   chatToolCallName,
   chatToolCallPre,
   chatToolCallSection,
-  chatToolCallSectionLabel,
   chatToolCallTable,
   chatToolCallTableHeader,
   chatToolCallTableKey,
@@ -118,7 +117,6 @@ const ToolCallResult = ({
   ) {
     return (
       <div className={chatToolCallSection}>
-        <span className={chatToolCallSectionLabel}>Preview</span>
         <img alt="Shader preview" className={chatToolCallImage} src={result} />
       </div>
     );

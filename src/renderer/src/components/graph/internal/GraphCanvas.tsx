@@ -9,6 +9,7 @@ import "@xyflow/react/dist/style.css";
 import {
   type Dispatch,
   type JSX,
+  type ReactNode,
   type SetStateAction,
   useCallback,
   useEffect,
@@ -17,7 +18,8 @@ import {
 } from "react";
 import { cx } from "../../../lib/cx";
 import { Button } from "../../ui/Button";
-import { graphCanvas } from "../graph.css";
+import { CrosshairIcon } from "../../ui/icons";
+import { graphCanvas, graphViewportControls } from "../graph.css";
 import type {
   GraphUniformValue,
   GraphUniformValues,
@@ -36,6 +38,7 @@ import { useSubgraphPreviews } from "./use-subgraph-previews";
 
 type GraphCanvasProps = {
   readonly className?: string;
+  readonly controls?: ReactNode;
   readonly errors: readonly string[];
   readonly setUniformValue: (
     uniformBindingKey: string,
@@ -130,7 +133,11 @@ const MeasuredGraphLayout = ({
   return null;
 };
 
-const GraphViewportControls = (): JSX.Element => {
+const GraphViewportControls = ({
+  controls = null,
+}: {
+  readonly controls?: ReactNode;
+}): JSX.Element => {
   const { fitView, getNodes } = useReactFlow<FlowGraphNode>();
 
   const handleCenterView = useCallback(() => {
@@ -142,20 +149,24 @@ const GraphViewportControls = (): JSX.Element => {
   }, [fitView, getNodes]);
 
   return (
-    <Panel position="top-right">
+    <Panel className={graphViewportControls} position="top-right">
       <Button
         aria-label="Center graph view"
         onClick={handleCenterView}
         size="sm"
+        square
+        variant="plain"
       >
-        Center View
+        <CrosshairIcon />
       </Button>
+      {controls}
     </Panel>
   );
 };
 
 export const GraphCanvas = ({
   className,
+  controls = null,
   errors,
   setUniformValue,
   uniformValues,
@@ -236,7 +247,7 @@ export const GraphCanvas = ({
             validatedGraph={validatedGraph}
           />
         ) : null}
-        <GraphViewportControls />
+        <GraphViewportControls controls={controls} />
         <Background gap={24} size={1} />
       </ReactFlow>
     </div>

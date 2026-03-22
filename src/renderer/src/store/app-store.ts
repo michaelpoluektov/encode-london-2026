@@ -14,8 +14,8 @@ export const DEFAULT_PROJECT_LAYOUT: ProjectLayoutState = {
     chat: false,
   },
   shellPaneSizes: [18, 82],
-  workspaceColumnSizes: [65, 35],
-  workspaceLeftRowSizes: [50, 50],
+  workspaceColumnSizes: [72, 28],
+  workspaceLeftRowSizes: [70, 30],
 };
 
 export const createProjectLayoutSnapshot = (

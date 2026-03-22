@@ -11,6 +11,15 @@ export const graphCanvas = style({
   boxShadow: "inset 0 0 0 1px rgba(72, 72, 72, 0.14)",
 });
 
+export const graphViewportControls = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: themeVars.space[2],
+  padding: themeVars.space[1],
+  background: themeVars.color.surface.interactive,
+  boxShadow: `inset 0 0 0 1px ${themeVars.color.border.standard}`,
+});
+
 globalStyle(`${graphCanvas} .react-flow`, {
   width: "100%",
   height: "100%",

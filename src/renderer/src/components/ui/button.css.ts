@@ -55,6 +55,20 @@ export const buttonVariant = styleVariants({
       },
     },
   },
+  secondary: {
+    background: themeVars.color.surface.interactive,
+    color: themeVars.color.text.secondary,
+    boxShadow: `inset 0 0 0 1px ${themeVars.color.border.standard}`,
+    selectors: {
+      "&:hover:not(:disabled)": {
+        background: themeVars.color.surface.interactiveHover,
+        color: themeVars.color.text.primary,
+      },
+      "&:active:not(:disabled)": {
+        background: themeVars.color.surface.interactiveActive,
+      },
+    },
+  },
   outline: {
     background:
       "linear-gradient(135deg, rgba(199, 153, 255, 1) 0%, rgba(188, 135, 254, 1) 100%)",

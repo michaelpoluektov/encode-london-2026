@@ -7,6 +7,11 @@ export const paneRestoreControl = style({
 });
 
 export const paneRestorePlacement = styleVariants({
+  inline: {
+    left: 0,
+    right: 0,
+    top: 0,
+  },
   bottomRight: {
     left: 0,
     right: 0,
@@ -36,6 +41,13 @@ export const paneRestoreButton = style({
 });
 
 export const paneRestorePlacementButton = styleVariants({
+  inline: {
+    width: "100%",
+    height: themeVars.size.panelHeaderHeight,
+    justifyContent: "space-between",
+    padding: `0 ${themeVars.space[3]}`,
+    background: themeVars.color.background.panelMuted,
+  },
   bottomRight: {
     width: "100%",
     height: themeVars.size.panelHeaderHeight,

@@ -9,9 +9,52 @@ import { compileFragmentShader } from "./compile-fragment-shader";
 import { cloneGlslValue, isGlslValueOfType } from "./glsl-type-registry";
 import { readValidatedGraph } from "./load-and-validate-graph";
 
+export const applyUniformValuesToGraphSource = (
+  graphSource: string,
+  uniformValues: GraphUniformValues,
+): string => {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(graphSource);
+  } catch {
+    return graphSource;
+  }
+
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !Array.isArray((parsed as { nodes?: unknown }).nodes)
+  ) {
+    return graphSource;
+  }
+
+  const nodes = (parsed as { nodes: unknown[] }).nodes.map((node) => {
+    if (
+      typeof node !== "object" ||
+      node === null ||
+      (node as { kind?: unknown }).kind !== "uniform"
+    ) {
+      return node;
+    }
+
+    const uniformNode = node as { uniformName: string; [key: string]: unknown };
+    const value = uniformValues[uniformNode.uniformName];
+
+    if (value === undefined) {
+      return node;
+    }
+
+    return { ...uniformNode, defaultValue: value };
+  });
+
+  return JSON.stringify({ ...(parsed as object), nodes }, null, 2);
+};
+
 type UseGraphRuntimeOptions = {
   readonly graphSource: string;
   readonly loadCustomNodeSource?: GraphSourceLoader;
+  readonly onUniformValuesChange?: (uniformValues: GraphUniformValues) => void;
 };
 
 export type GraphRuntime = {
@@ -40,6 +83,7 @@ const createInitialUniformValues = (
 export const useGraphRuntime = ({
   graphSource,
   loadCustomNodeSource,
+  onUniformValuesChange,
 }: UseGraphRuntimeOptions): GraphRuntime => {
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [validatedGraph, setValidatedGraph] = useState<ValidatedGraph | null>(
@@ -98,12 +142,20 @@ export const useGraphRuntime = ({
         return;
       }
 
-      setUniformValues((previousUniformValues) => ({
-        ...previousUniformValues,
-        [uniformBindingKey]: cloneGlslValue(value),
-      }));
+      const clonedValue = cloneGlslValue(value);
+
+      setUniformValues((previousUniformValues) => {
+        const nextValues = {
+          ...previousUniformValues,
+          [uniformBindingKey]: clonedValue,
+        };
+
+        onUniformValuesChange?.(nextValues);
+
+        return nextValues;
+      });
     },
-    [validatedGraph],
+    [validatedGraph, onUniformValuesChange],
   );
 
   return {

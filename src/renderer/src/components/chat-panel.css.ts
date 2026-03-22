@@ -406,8 +406,10 @@ export const chatToolCallBlock = style({
   alignItems: "flex-start",
   gap: themeVars.space[1],
   padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
-  background: "rgba(14, 14, 14, 0.72)",
-  boxShadow: "inset 0 0 0 1px rgba(72, 72, 72, 0.18)",
+  width: "100%",
+  background: "rgba(38, 38, 38, 0.7)",
+  boxShadow: "inset 0 0 0 1px rgba(72, 72, 72, 0.2)",
+  backdropFilter: "blur(20px)",
   fontSize: themeVars.font.size.xs,
 });
 
@@ -427,14 +429,8 @@ export const chatToolCallSection = style({
   display: "flex",
   flexDirection: "column",
   gap: themeVars.space[1],
-});
-
-export const chatToolCallSectionLabel = style({
-  color: themeVars.color.text.secondary,
-  fontFamily: themeVars.font.family.sans,
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  fontSize: "0.6rem",
+  width: "100%",
+  alignItems: "center",
 });
 
 export const chatToolCallPre = style({
@@ -563,8 +559,8 @@ export const chatToolCallImage = style({
   height: "auto",
   maxWidth: "100%",
   maxHeight: "200px",
-  alignSelf: "flex-start",
+  alignSelf: "center",
   objectFit: "contain",
   display: "block",
-  marginTop: themeVars.space[1],
+  background: "transparent",
 });

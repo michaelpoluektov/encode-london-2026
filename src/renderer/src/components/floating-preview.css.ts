@@ -13,15 +13,21 @@ export const floatingPanel = style({
   background: themeVars.color.background.canvas,
 });
 
+export const floatingPanelMinimized = style({
+  height: "28px",
+});
+
 export const dragHandle = style({
   appearance: "none",
   display: "flex",
   alignItems: "center",
+  flexWrap: "nowrap",
   gap: themeVars.space[2],
+  position: "relative",
   width: "100%",
   height: "28px",
   flexShrink: 0,
-  padding: `0 ${themeVars.space[2]} 0 ${themeVars.space[3]}`,
+  padding: `0 76px 0 ${themeVars.space[3]}`,
   cursor: "grab",
   userSelect: "none",
   border: 0,
@@ -46,8 +52,18 @@ export const gripIcon = style({
   fontSize: themeVars.font.size.sm,
 });
 
-export const expandButton = style({
-  marginLeft: "auto",
+export const headerButtonGroup = style({
+  display: "inline-flex",
+  alignItems: "center",
+  flexShrink: 0,
+  gap: themeVars.space[1],
+  position: "absolute",
+  right: themeVars.space[2],
+  top: "50%",
+  transform: "translateY(-50%)",
+});
+
+export const headerButton = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -75,6 +91,10 @@ export const previewBody = style({
   flex: "1 1 0",
   minHeight: 0,
   position: "relative",
+});
+
+export const previewBodyHidden = style({
+  display: "none",
 });
 
 export const modelSelect = style({
