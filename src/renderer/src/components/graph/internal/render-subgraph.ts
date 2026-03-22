@@ -15,6 +15,7 @@ const PREVIEW_BACKGROUND_COLOR = 0x262626;
 let sharedRenderer: THREE.WebGLRenderer | null = null;
 let sharedRendererWidth = 0;
 let sharedRendererHeight = 0;
+let sharedRendererQueue: Promise<void> = Promise.resolve();
 
 const getSharedRenderer = (
   width: number,
@@ -66,6 +67,25 @@ const encodeCaptureDataUrl = (
   return canvas.toDataURL("image/png");
 };
 
+const runWithSharedRendererLock = async <Result>(
+  task: () => Promise<Result>,
+): Promise<Result> => {
+  const previousTask = sharedRendererQueue;
+  let releaseQueue!: () => void;
+
+  sharedRendererQueue = new Promise<void>((resolve) => {
+    releaseQueue = resolve;
+  });
+
+  await previousTask.catch(() => undefined);
+
+  try {
+    return await task();
+  } finally {
+    releaseQueue();
+  }
+};
+
 export const renderSubgraphToDataUrl = async (
   fragmentSource: string,
   uniformValues: GraphUniformValues,
@@ -73,42 +93,56 @@ export const renderSubgraphToDataUrl = async (
   height = 120,
   modelId: PreviewModelId = "sphere",
 ): Promise<string | null> => {
-  let geometry: THREE.BufferGeometry | null = null;
-  let material: THREE.ShaderMaterial | null = null;
-  let renderTarget: THREE.WebGLRenderTarget | null = null;
+  return runWithSharedRendererLock(async () => {
+    let geometry: THREE.BufferGeometry | null = null;
+    let material: THREE.ShaderMaterial | null = null;
+    let renderTarget: THREE.WebGLRenderTarget | null = null;
 
-  try {
-    const renderer = getSharedRenderer(width, height);
+    try {
+      const renderer = getSharedRenderer(width, height);
 
-    const camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 100);
-    camera.position.set(0, 0.6, 2.4);
-    camera.lookAt(0, 0, 0);
+      const camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 100);
+      camera.position.set(0, 0.6, 2.4);
+      camera.lookAt(0, 0, 0);
 
-    geometry = createPreviewGeometry(modelId);
-    material = createPreviewMaterial(
-      fragmentSource,
-      DEFAULT_VERTEX_SHADER,
-      uniformValues,
-    );
+      geometry = createPreviewGeometry(modelId);
+      material = createPreviewMaterial(
+        fragmentSource,
+        DEFAULT_VERTEX_SHADER,
+        uniformValues,
+      );
 
-    const scene = new THREE.Scene();
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
+      const scene = new THREE.Scene();
+      const mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
 
-    renderTarget = new THREE.WebGLRenderTarget(width, height);
-    renderer.setRenderTarget(renderTarget);
-    renderer.render(scene, camera);
+      renderTarget = new THREE.WebGLRenderTarget(width, height);
+      renderer.setRenderTarget(renderTarget);
+      renderer.render(scene, camera);
 
-    const pixels = new Uint8Array(width * height * 4);
-    renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, pixels);
+      const pixels = new Uint8Array(width * height * 4);
+      renderer.readRenderTargetPixels(
+        renderTarget,
+        0,
+        0,
+        width,
+        height,
+        pixels,
+      );
+      renderer.setRenderTarget(null);
 
-    return encodeCaptureDataUrl(pixels, width, height);
-  } catch {
-    return null;
-  } finally {
-    renderTarget?.dispose();
-    material?.dispose();
-    geometry?.dispose();
-    // Shared renderer is intentionally not disposed here.
-  }
+      return encodeCaptureDataUrl(pixels, width, height);
+    } catch (error) {
+      console.error(
+        "[graph-preview] Failed to render subgraph preview:",
+        error,
+      );
+      return null;
+    } finally {
+      renderTarget?.dispose();
+      material?.dispose();
+      geometry?.dispose();
+      // Shared renderer is intentionally not disposed here.
+    }
+  });
 };

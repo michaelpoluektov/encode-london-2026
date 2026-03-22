@@ -6,6 +6,11 @@ import {
   type GraphFlowNodeProps,
   GraphNodeFrame,
 } from "./GraphNode";
+import {
+  graphNodePreviewImage,
+  graphNodePreviewPlaceholder,
+  graphNodePreviewSurface,
+} from "./graph-node.css";
 
 export type CustomGraphNodeData = {
   readonly node: ValidatedCustomNode;
@@ -28,19 +33,17 @@ export const CustomGraphNode = ({
       Array.from(data.node.signature.inputTypes.keys()),
     )}
     preview={
-      data.previewDataUrl !== undefined ? (
-        <img
-          alt="subgraph preview"
-          src={data.previewDataUrl}
-          style={{
-            borderRadius: 6,
-            display: "block",
-            height: 120,
-            objectFit: "cover",
-            width: "100%",
-          }}
-        />
-      ) : undefined
+      <div className={graphNodePreviewSurface}>
+        {data.previewDataUrl !== undefined ? (
+          <img
+            alt="subgraph preview"
+            className={graphNodePreviewImage}
+            src={data.previewDataUrl}
+          />
+        ) : (
+          <div className={graphNodePreviewPlaceholder}>Rendering preview</div>
+        )}
+      </div>
     }
     title={`${data.node.displayName} (custom)`}
   />

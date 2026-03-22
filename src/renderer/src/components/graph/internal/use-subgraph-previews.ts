@@ -15,7 +15,6 @@ export const useSubgraphPreviews = (
   const [previews, setPreviews] = useState<ReadonlyMap<string, string>>(
     new Map(),
   );
-  const previewsRef = useRef<ReadonlyMap<string, string>>(previews);
   const previewMesh = useProjectStore(
     (s) => s.project?.manifest.preview.mesh ?? "sphere",
   );
@@ -23,10 +22,6 @@ export const useSubgraphPreviews = (
   const [debouncedUniformValues, setDebouncedUniformValues] =
     useState(uniformValues);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    previewsRef.current = previews;
-  }, [previews]);
 
   useEffect(() => {
     if (debounceRef.current !== null) clearTimeout(debounceRef.current);
@@ -55,7 +50,19 @@ export const useSubgraphPreviews = (
     );
 
     const renderAll = async (): Promise<void> => {
-      const nextPreviews = new Map<string, string>();
+      const activeNodeIds = new Set(valueNodes.map((node) => node.flowId));
+
+      setPreviews((previousPreviews) => {
+        const nextPreviews = new Map<string, string>();
+
+        for (const [nodeId, dataUrl] of previousPreviews) {
+          if (activeNodeIds.has(nodeId)) {
+            nextPreviews.set(nodeId, dataUrl);
+          }
+        }
+
+        return nextPreviews;
+      });
 
       for (const node of valueNodes) {
         if (cancelled) {
@@ -84,19 +91,17 @@ export const useSubgraphPreviews = (
         }
 
         if (dataUrl !== null) {
-          nextPreviews.set(node.flowId, dataUrl);
-          continue;
+          setPreviews((previousPreviews) => {
+            if (previousPreviews.get(node.flowId) === dataUrl) {
+              return previousPreviews;
+            }
+
+            const nextPreviews = new Map(previousPreviews);
+            nextPreviews.set(node.flowId, dataUrl);
+
+            return nextPreviews;
+          });
         }
-
-        const previousPreview = previewsRef.current.get(node.flowId);
-
-        if (previousPreview !== undefined) {
-          nextPreviews.set(node.flowId, previousPreview);
-        }
-      }
-
-      if (!cancelled) {
-        setPreviews(nextPreviews);
       }
     };
 

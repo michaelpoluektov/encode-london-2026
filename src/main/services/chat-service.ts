@@ -25,6 +25,7 @@ import {
   getProjectFolderPath,
   listCheckpoints,
 } from "./project-metadata";
+import { listProjectSnapshotPaths } from "./project-snapshot-files";
 
 export const listProjectThreads = async (
   projectId: string,
@@ -108,7 +109,6 @@ export const revertToCheckpoint = async (
     throw new Error("Checkpoint file snapshots not found.");
   }
 
-  const { listProjectSnapshotPaths } = await import("./project-snapshot-files");
   const currentSnapshotPaths = await listProjectSnapshotPaths(folderPath);
   const snapshotPathSet = new Set(Object.keys(snapshots));
 

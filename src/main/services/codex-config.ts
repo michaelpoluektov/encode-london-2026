@@ -13,7 +13,7 @@ export type ShadilyCodexConfig = {
 
 export const SHADILY_CODEX_CONFIG: ShadilyCodexConfig = {
   model: "gpt-5.4",
-  reasoningEffort: "medium",
+  reasoningEffort: "high",
   fastMode: true,
   webSearch: false,
 };

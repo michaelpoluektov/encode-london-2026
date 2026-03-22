@@ -14,6 +14,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { cx } from "../../../lib/cx";
@@ -59,6 +60,14 @@ type GraphCanvasProps = {
 const EMPTY_FLOW_GRAPH = {
   edges: [],
   nodes: [],
+};
+
+const GRAPH_VIEW_PADDING = 0.16;
+const GRAPH_VIEW_CENTER_DURATION_MS = 180;
+
+type GraphViewportSize = {
+  readonly height: number;
+  readonly width: number;
 };
 
 type MeasuredGraphLayoutProps = {
@@ -125,9 +134,13 @@ const MeasuredGraphLayout = ({
 
     setLayoutedNodes(nextNodes);
 
-    queueMicrotask(() => {
-      void fitView({ padding: 0.16 });
+    const animationFrameId = window.requestAnimationFrame(() => {
+      void fitView({ padding: GRAPH_VIEW_PADDING });
     });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+    };
   }, [
     edges,
     fitView,
@@ -137,6 +150,41 @@ const MeasuredGraphLayout = ({
     setLayoutedNodes,
     validatedGraph,
   ]);
+
+  return null;
+};
+
+const AutoCenterOnGraphRender = ({
+  validatedGraph,
+}: {
+  readonly validatedGraph: ValidatedGraph;
+}): null => {
+  const nodesInitialized = useNodesInitialized();
+  const { fitView, getNodes } = useReactFlow<FlowGraphNode>();
+  const lastCenteredGraphRef = useRef<ValidatedGraph | null>(null);
+
+  useEffect(() => {
+    if (!nodesInitialized || getNodes().length === 0) {
+      return;
+    }
+
+    if (lastCenteredGraphRef.current === validatedGraph) {
+      return;
+    }
+
+    lastCenteredGraphRef.current = validatedGraph;
+
+    const animationFrameId = window.requestAnimationFrame(() => {
+      void fitView({
+        duration: GRAPH_VIEW_CENTER_DURATION_MS,
+        padding: GRAPH_VIEW_PADDING,
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+    };
+  }, [fitView, getNodes, nodesInitialized, validatedGraph]);
 
   return null;
 };
@@ -153,7 +201,10 @@ const GraphViewportControls = ({
       return;
     }
 
-    void fitView({ duration: 180, padding: 0.16 });
+    void fitView({
+      duration: GRAPH_VIEW_CENTER_DURATION_MS,
+      padding: GRAPH_VIEW_PADDING,
+    });
   }, [fitView, getNodes]);
 
   return (
@@ -182,6 +233,11 @@ export const GraphCanvas = ({
   validatedGraph,
 }: GraphCanvasProps): JSX.Element => {
   const subgraphPreviews = useSubgraphPreviews(validatedGraph, uniformValues);
+  const canvasHostRef = useRef<HTMLDivElement | null>(null);
+  const [viewportSize, setViewportSize] = useState<GraphViewportSize>({
+    height: 0,
+    width: 0,
+  });
 
   const baseFlowGraph = useMemo(() => {
     if (validatedGraph === null) {
@@ -200,6 +256,33 @@ export const GraphCanvas = ({
   useEffect(() => {
     setLayoutedNodes(baseFlowGraph.nodes);
   }, [baseFlowGraph.nodes]);
+
+  useEffect(() => {
+    const host = canvasHostRef.current;
+
+    if (host === null) {
+      return;
+    }
+
+    const syncViewportSize = (): void => {
+      setViewportSize({
+        height: Math.max(Math.floor(host.clientHeight), 0),
+        width: Math.max(Math.floor(host.clientWidth), 0),
+      });
+    };
+
+    syncViewportSize();
+
+    const resizeObserver = new ResizeObserver(() => {
+      syncViewportSize();
+    });
+
+    resizeObserver.observe(host);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   const flowGraph = useMemo(
     () => ({
@@ -229,8 +312,10 @@ export const GraphCanvas = ({
     );
   }
 
+  const isViewportReady = viewportSize.width > 0 && viewportSize.height > 0;
+
   return (
-    <div className={cx(graphCanvas, className)}>
+    <div className={cx(graphCanvas, className)} ref={canvasHostRef}>
       {errors.length > 0 ? (
         <div
           className={cx(
@@ -246,34 +331,39 @@ export const GraphCanvas = ({
           <pre className={graphDiagnosticMessage}>{errors.join("\n\n")}</pre>
         </div>
       ) : null}
-      <ReactFlow
-        edges={flowGraph.edges}
-        edgesFocusable={false}
-        elementsSelectable={false}
-        fitView
-        nodes={flowGraph.nodes}
-        nodesFocusable={false}
-        nodeTypes={graphNodeTypes}
-        nodesConnectable={false}
-        nodesDraggable={false}
-        panOnDrag
-        proOptions={{ hideAttribution: true }}
-        selectionOnDrag={false}
-        zoomOnDoubleClick={false}
-        zoomOnPinch
-        zoomOnScroll
-      >
-        {validatedGraph !== null ? (
-          <MeasuredGraphLayout
-            edges={baseFlowGraph.edges}
-            layoutedNodes={layoutedNodes}
-            setLayoutedNodes={setLayoutedNodes}
-            validatedGraph={validatedGraph}
-          />
-        ) : null}
-        <GraphViewportControls controls={controls} />
-        <Background gap={24} size={1} />
-      </ReactFlow>
+      {isViewportReady ? (
+        <ReactFlow
+          edges={flowGraph.edges}
+          edgesFocusable={false}
+          elementsSelectable={false}
+          fitView
+          nodes={flowGraph.nodes}
+          nodesFocusable={false}
+          nodeTypes={graphNodeTypes}
+          nodesConnectable={false}
+          nodesDraggable={false}
+          panOnDrag
+          proOptions={{ hideAttribution: true }}
+          selectionOnDrag={false}
+          zoomOnDoubleClick={false}
+          zoomOnPinch
+          zoomOnScroll
+        >
+          {validatedGraph !== null ? (
+            <>
+              <AutoCenterOnGraphRender validatedGraph={validatedGraph} />
+              <MeasuredGraphLayout
+                edges={baseFlowGraph.edges}
+                layoutedNodes={layoutedNodes}
+                setLayoutedNodes={setLayoutedNodes}
+                validatedGraph={validatedGraph}
+              />
+            </>
+          ) : null}
+          <GraphViewportControls controls={controls} />
+          <Background gap={24} size={1} />
+        </ReactFlow>
+      ) : null}
     </div>
   );
 };

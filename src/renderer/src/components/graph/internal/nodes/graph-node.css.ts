@@ -115,6 +115,34 @@ export const graphNodePreviewSlot = style({
   minWidth: 0,
 });
 
+export const graphNodePreviewSurface = style({
+  position: "relative",
+  width: "100%",
+  height: 120,
+  overflow: "hidden",
+  borderRadius: 6,
+  background: themeVars.color.background.panelInset,
+  boxShadow: "inset 0 0 0 1px rgba(72, 72, 72, 0.18)",
+});
+
+export const graphNodePreviewImage = style({
+  display: "block",
+  width: "100%",
+  height: "100%",
+  objectFit: "cover",
+});
+
+export const graphNodePreviewPlaceholder = style({
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: themeVars.color.text.muted,
+  background:
+    "linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))",
+});
+
 const graphNodeControlBase = style({
   width: "100%",
   minWidth: 0,
