@@ -32,7 +32,13 @@ export const CustomGraphNode = ({
         <img
           alt="subgraph preview"
           src={data.previewDataUrl}
-          style={{ borderRadius: 6, display: "block", width: "100%" }}
+          style={{
+            borderRadius: 6,
+            display: "block",
+            height: 120,
+            objectFit: "cover",
+            width: "100%",
+          }}
         />
       ) : undefined
     }

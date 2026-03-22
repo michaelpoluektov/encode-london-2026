@@ -15,6 +15,7 @@ export const useSubgraphPreviews = (
   const [previews, setPreviews] = useState<ReadonlyMap<string, string>>(
     new Map(),
   );
+  const previewsRef = useRef<ReadonlyMap<string, string>>(previews);
   const previewMesh = useProjectStore(
     (s) => s.project?.manifest.preview.mesh ?? "sphere",
   );
@@ -24,10 +25,21 @@ export const useSubgraphPreviews = (
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    previewsRef.current = previews;
+  }, [previews]);
+
+  useEffect(() => {
     if (debounceRef.current !== null) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setDebouncedUniformValues(uniformValues);
     }, UNIFORM_DEBOUNCE_MS);
+
+    return () => {
+      if (debounceRef.current !== null) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+    };
   }, [uniformValues]);
 
   useEffect(() => {
@@ -73,6 +85,13 @@ export const useSubgraphPreviews = (
 
         if (dataUrl !== null) {
           nextPreviews.set(node.flowId, dataUrl);
+          continue;
+        }
+
+        const previousPreview = previewsRef.current.get(node.flowId);
+
+        if (previousPreview !== undefined) {
+          nextPreviews.set(node.flowId, previousPreview);
         }
       }
 

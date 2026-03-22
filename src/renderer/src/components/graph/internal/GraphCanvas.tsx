@@ -1,5 +1,6 @@
 import {
   Background,
+  Panel,
   ReactFlow,
   useNodesInitialized,
   useReactFlow,
@@ -9,11 +10,13 @@ import {
   type Dispatch,
   type JSX,
   type SetStateAction,
+  useCallback,
   useEffect,
   useMemo,
   useState,
 } from "react";
 import { cx } from "../../../lib/cx";
+import { Button } from "../../ui/Button";
 import { graphCanvas } from "../graph.css";
 import type {
   GraphUniformValue,
@@ -49,6 +52,7 @@ const EMPTY_FLOW_GRAPH = {
 
 type MeasuredGraphLayoutProps = {
   readonly edges: ReturnType<typeof createReactFlowGraph>["edges"];
+  readonly layoutedNodes: readonly FlowGraphNode[];
   readonly setLayoutedNodes: Dispatch<SetStateAction<FlowGraphNode[]>>;
   readonly validatedGraph: ValidatedGraph;
 };
@@ -71,11 +75,12 @@ const areNodePositionsEqual = (
 
 const MeasuredGraphLayout = ({
   edges,
+  layoutedNodes,
   setLayoutedNodes,
   validatedGraph,
 }: MeasuredGraphLayoutProps): null => {
   const nodesInitialized = useNodesInitialized();
-  const { getInternalNode } = useReactFlow<FlowGraphNode>();
+  const { fitView, getInternalNode } = useReactFlow<FlowGraphNode>();
 
   useEffect(() => {
     if (!nodesInitialized) {
@@ -96,27 +101,57 @@ const MeasuredGraphLayout = ({
       }),
     );
 
-    setLayoutedNodes((currentNodes) => {
-      const nextNodes = layoutReactFlowNodes(
-        validatedGraph,
-        currentNodes,
-        edges,
-        measurements,
-      );
+    const nextNodes = layoutReactFlowNodes(
+      validatedGraph,
+      layoutedNodes,
+      edges,
+      measurements,
+    );
 
-      return areNodePositionsEqual(currentNodes, nextNodes)
-        ? currentNodes
-        : nextNodes;
+    if (areNodePositionsEqual(layoutedNodes, nextNodes)) {
+      return;
+    }
+
+    setLayoutedNodes(nextNodes);
+
+    queueMicrotask(() => {
+      void fitView({ padding: 0.16 });
     });
   }, [
     edges,
+    fitView,
     getInternalNode,
+    layoutedNodes,
     nodesInitialized,
     setLayoutedNodes,
     validatedGraph,
   ]);
 
   return null;
+};
+
+const GraphViewportControls = (): JSX.Element => {
+  const { fitView, getNodes } = useReactFlow<FlowGraphNode>();
+
+  const handleCenterView = useCallback(() => {
+    if (getNodes().length === 0) {
+      return;
+    }
+
+    void fitView({ duration: 180, padding: 0.16 });
+  }, [fitView, getNodes]);
+
+  return (
+    <Panel position="top-right">
+      <Button
+        aria-label="Center graph view"
+        onClick={handleCenterView}
+        size="sm"
+      >
+        Center View
+      </Button>
+    </Panel>
+  );
 };
 
 export const GraphCanvas = ({
@@ -196,10 +231,12 @@ export const GraphCanvas = ({
         {validatedGraph !== null ? (
           <MeasuredGraphLayout
             edges={baseFlowGraph.edges}
+            layoutedNodes={layoutedNodes}
             setLayoutedNodes={setLayoutedNodes}
             validatedGraph={validatedGraph}
           />
         ) : null}
+        <GraphViewportControls />
         <Background gap={24} size={1} />
       </ReactFlow>
     </div>

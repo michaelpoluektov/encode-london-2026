@@ -27,12 +27,14 @@ import {
 } from "./nodes";
 
 const NODE_WIDTH = 240;
-const BASE_NODE_HEIGHT = 88;
-const INPUT_ROW_HEIGHT = 40;
-const DETAIL_ROW_HEIGHT = 28;
-const CONTROL_ROW_HEIGHT = 44;
-const CONTROL_ROW_GAP_HEIGHT = 8;
-const SECTION_GAP_HEIGHT = 20;
+const SUBGRAPH_PREVIEW_HEIGHT = 120;
+const PREVIEW_GAP_HEIGHT = 6;
+const BASE_NODE_HEIGHT = 80;
+const INPUT_ROW_HEIGHT = 34;
+const DETAIL_ROW_HEIGHT = 24;
+const CONTROL_ROW_HEIGHT = 38;
+const CONTROL_ROW_GAP_HEIGHT = 6;
+const SECTION_GAP_HEIGHT = 12;
 
 export type FlowGraphNode =
   | CustomGraphFlowNode
@@ -126,6 +128,10 @@ const getEstimatedNodeHeight = (node: ValidatedGraphNode): number => {
     height += SECTION_GAP_HEIGHT;
   }
 
+  if (node.kind === "custom") {
+    height += PREVIEW_GAP_HEIGHT + SUBGRAPH_PREVIEW_HEIGHT;
+  }
+
   return height;
 };
 
@@ -150,11 +156,11 @@ const createDagreGraph = (
 
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   dagreGraph.setGraph({
-    marginx: 24,
-    marginy: 24,
-    nodesep: 72,
+    marginx: 20,
+    marginy: 20,
+    nodesep: 40,
     rankdir: "LR",
-    ranksep: 120,
+    ranksep: 96,
   });
 
   for (const node of validatedGraph.nodes) {

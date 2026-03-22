@@ -2,7 +2,8 @@ import { style } from "@vanilla-extract/css";
 import { themeVars } from "../../../../theme";
 
 export const graphNodeRoot = style({
-  position: "relative",
+  display: "grid",
+  gap: themeVars.space[3],
   width: "100%",
   overflow: "visible",
 });
@@ -110,11 +111,8 @@ export const graphNodeOutputHandle = style({
 });
 
 export const graphNodePreviewSlot = style({
-  position: "absolute",
-  top: `calc(100% + ${themeVars.space[3]})`,
-  left: 0,
-  right: 0,
-  zIndex: 1,
+  display: "grid",
+  minWidth: 0,
 });
 
 const graphNodeControlBase = style({

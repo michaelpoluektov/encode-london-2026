@@ -16,7 +16,10 @@ let sharedRenderer: THREE.WebGLRenderer | null = null;
 let sharedRendererWidth = 0;
 let sharedRendererHeight = 0;
 
-const getSharedRenderer = (width: number, height: number): THREE.WebGLRenderer => {
+const getSharedRenderer = (
+  width: number,
+  height: number,
+): THREE.WebGLRenderer => {
   if (sharedRenderer === null) {
     const canvas = document.createElement("canvas");
     sharedRenderer = new THREE.WebGLRenderer({ canvas, antialias: false });

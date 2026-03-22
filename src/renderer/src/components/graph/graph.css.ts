@@ -39,6 +39,10 @@ globalStyle(`${graphCanvas} .react-flow__viewport`, {
   userSelect: "none",
 });
 
+globalStyle(`${graphCanvas} .react-flow__panel`, {
+  margin: themeVars.space[4],
+});
+
 globalStyle(`${graphCanvas} .react-flow__pane`, {
   cursor: "grab",
 });
