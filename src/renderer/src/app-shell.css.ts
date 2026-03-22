@@ -34,6 +34,11 @@ export const workspaceColumn = style({
   position: "relative",
 });
 
+export const workspaceColumnWithTopRestore = style({
+  boxSizing: "border-box",
+  paddingTop: themeVars.size.panelHeaderHeight,
+});
+
 export const editorFrame = style({
   display: "flex",
   flexDirection: "column",

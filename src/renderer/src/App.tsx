@@ -8,10 +8,12 @@ import {
   useState,
 } from "react";
 import { normalizeProjectPath } from "../../shared/path-utils";
+import { cx } from "./lib/cx";
 import {
   appShell,
   layoutViewport,
   workspaceColumn,
+  workspaceColumnWithTopRestore,
   workspaceGrid,
   workspaceShell,
 } from "./app-shell.css";
@@ -52,9 +54,6 @@ const toPaneSizePair = (sizes: readonly number[]): [number, number] => [
   sizes[1] ?? 50,
 ];
 
-const GRAPH_EXPANDED_ROW_SIZES: [number, number] = [70, 30];
-const SOURCE_EXPANDED_ROW_SIZES: [number, number] = [30, 70];
-
 type WorkspacePaneId = Exclude<CollapsiblePaneId, "project">;
 type RestorePlacement = ComponentProps<typeof PaneRestoreControl>["placement"];
 
@@ -77,8 +76,6 @@ type WorkspaceColumnLayoutProps = {
   readonly togglePaneCollapsed: (paneId: CollapsiblePaneId) => void;
 };
 
-const COLLAPSED_PANE_BAR_SIZE = 32;
-
 const isPaneCollapseDisabled = (
   collapsedPanes: Record<CollapsiblePaneId, boolean>,
   paneId: WorkspacePaneId,
@@ -96,11 +93,27 @@ const WorkspaceColumnLayout = ({
 }: WorkspaceColumnLayoutProps): JSX.Element => {
   const [topPane, bottomPane] = panes;
   const hasCollapsedPane = panes.some((pane) => collapsedPanes[pane.paneId]);
-  const topPaneCollapsed = collapsedPanes[topPane.paneId];
-  const bottomPaneCollapsed = collapsedPanes[bottomPane.paneId];
 
   return (
-    <div className={workspaceColumn}>
+    <div
+      className={cx(
+        workspaceColumn,
+        collapsedPanes[topPane.paneId] && workspaceColumnWithTopRestore,
+      )}
+    >
+      {panes.map((pane) =>
+        collapsedPanes[pane.paneId] ? (
+          <PaneRestoreControl
+            key={`${pane.id}-restore`}
+            label={pane.label}
+            placement={pane.restorePlacement}
+            restoreIcon={<ChevronRightIcon />}
+            onRestore={() => {
+              togglePaneCollapsed(pane.paneId);
+            }}
+          />
+        ) : null,
+      )}
       <SplitLayout
         key={`${layoutRevision}-${topPane.id}-${bottomPane.id}`}
         defaultSizes={normalizePaneSizes(rowSizes)}
@@ -115,50 +128,20 @@ const WorkspaceColumnLayout = ({
         orientation="vertical"
         panes={[
           {
-            content: topPaneCollapsed ? (
-              <PaneRestoreControl
-                label={topPane.label}
-                placement="inline"
-                restoreIcon={<ChevronRightIcon />}
-                onRestore={() => {
-                  togglePaneCollapsed(topPane.paneId);
-                }}
-              />
-            ) : (
-              <Panel label={topPane.label}>{topPane.content}</Panel>
-            ),
+            content: <Panel label={topPane.label}>{topPane.content}</Panel>,
             id: topPane.id,
-            maxSize: topPaneCollapsed ? COLLAPSED_PANE_BAR_SIZE : undefined,
-            minSize: topPaneCollapsed ? COLLAPSED_PANE_BAR_SIZE : topPane.minSize,
-            preferredSize: topPaneCollapsed
-              ? `${COLLAPSED_PANE_BAR_SIZE}px`
-              : `${rowSizes[0]}%`,
-            visible: true,
+            minSize: topPane.minSize,
+            preferredSize: `${rowSizes[0]}%`,
+            visible: !collapsedPanes[topPane.paneId],
           },
           {
-            content: bottomPaneCollapsed ? (
-              <PaneRestoreControl
-                label={bottomPane.label}
-                placement="inline"
-                restoreIcon={<ChevronRightIcon />}
-                onRestore={() => {
-                  togglePaneCollapsed(bottomPane.paneId);
-                }}
-              />
-            ) : (
+            content: (
               <Panel label={bottomPane.label}>{bottomPane.content}</Panel>
             ),
             id: bottomPane.id,
-            maxSize: bottomPaneCollapsed
-              ? COLLAPSED_PANE_BAR_SIZE
-              : undefined,
-            minSize: bottomPaneCollapsed
-              ? COLLAPSED_PANE_BAR_SIZE
-              : bottomPane.minSize,
-            preferredSize: bottomPaneCollapsed
-              ? `${COLLAPSED_PANE_BAR_SIZE}px`
-              : `${rowSizes[1]}%`,
-            visible: true,
+            minSize: bottomPane.minSize,
+            preferredSize: `${rowSizes[1]}%`,
+            visible: !collapsedPanes[bottomPane.paneId],
           },
         ]}
       />
@@ -255,30 +238,13 @@ export const App = (): JSX.Element => {
   });
 
   const handleTogglePaneCollapsed = (paneId: CollapsiblePaneId): void => {
-    const currentWorkspaceLeftRowSizes = toPaneSizePair(workspaceLeftRowSizes);
-    const isExpandingPane = collapsedPanes[paneId];
-    const nextCollapsedPanes = {
-      ...collapsedPanes,
-      [paneId]: !collapsedPanes[paneId],
-    };
-    const nextWorkspaceLeftRowSizes: [number, number] =
-      isExpandingPane && paneId === "graph"
-        ? GRAPH_EXPANDED_ROW_SIZES
-        : isExpandingPane && paneId === "source"
-          ? SOURCE_EXPANDED_ROW_SIZES
-          : currentWorkspaceLeftRowSizes;
-
     pendingLayoutSnapshotRef.current = createLayoutSnapshot({
-      collapsedPanes: nextCollapsedPanes,
-      workspaceLeftRowSizes: nextWorkspaceLeftRowSizes,
+      collapsedPanes: {
+        ...collapsedPanes,
+        [paneId]: !collapsedPanes[paneId],
+      },
     });
-
-    if (nextWorkspaceLeftRowSizes !== currentWorkspaceLeftRowSizes) {
-      setWorkspaceLeftRowSizes(nextWorkspaceLeftRowSizes);
-    }
-
     togglePaneCollapsed(paneId);
-    setLayoutRevision((revision) => revision + 1);
     void persistProjectLayout();
   };
 
