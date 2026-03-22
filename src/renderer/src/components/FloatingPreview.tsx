@@ -1,6 +1,7 @@
 import {
   type CSSProperties,
   type JSX,
+  type ReactNode,
   type RefObject,
   useCallback,
   useEffect,
@@ -11,10 +12,8 @@ import {
   PREVIEW_MODELS,
   type PreviewModelId,
 } from "../../../shared/default-project";
-import {
-  createProjectSavePayload,
-  useProjectStore,
-} from "../store/project-store";
+import { useProjectStore } from "../store/project-store";
+import { saveCurrentProject } from "../store/save-project";
 import {
   dragHandle,
   expandButton,
@@ -32,6 +31,7 @@ type Corner = "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
 const PANEL_WIDTH = 340;
 const PANEL_HEIGHT = 220;
 const SNAP_INSET = 16;
+const TOP_SNAP_INSET = 52;
 
 const SNAP_TRANSITION = "top 0.18s, left 0.18s, right 0.18s, bottom 0.18s";
 
@@ -39,14 +39,14 @@ const getCornerStyle = (corner: Corner): CSSProperties => {
   switch (corner) {
     case "topLeft":
       return {
-        top: SNAP_INSET,
+        top: TOP_SNAP_INSET,
         left: SNAP_INSET,
         right: "unset",
         bottom: "unset",
       };
     case "topRight":
       return {
-        top: SNAP_INSET,
+        top: TOP_SNAP_INSET,
         right: SNAP_INSET,
         left: "unset",
         bottom: "unset",
@@ -70,10 +70,12 @@ const getCornerStyle = (corner: Corner): CSSProperties => {
 
 type FloatingPreviewProps = {
   readonly containerRef: RefObject<HTMLDivElement | null>;
+  readonly headerActions?: ReactNode;
 };
 
 export const FloatingPreview = ({
   containerRef,
+  headerActions = null,
 }: FloatingPreviewProps): JSX.Element => {
   const project = useProjectStore((s) => s.project);
   const previewMesh = project?.manifest.preview.mesh ?? "sphere";
@@ -82,15 +84,7 @@ export const FloatingPreview = ({
   const handleSelectMesh = useCallback(
     (mesh: PreviewModelId) => {
       updatePreviewMesh(mesh);
-      setTimeout(() => {
-        const p = useProjectStore.getState().project;
-        if (!p) return;
-        void window.shadily.project
-          .save(createProjectSavePayload(p))
-          .then((saved) =>
-            useProjectStore.getState().commitSavedProject(saved),
-          );
-      }, 0);
+      void saveCurrentProject();
     },
     [updatePreviewMesh],
   );
@@ -211,10 +205,11 @@ export const FloatingPreview = ({
   return (
     <>
       <div className={floatingPanel} style={style}>
-        <button
+        <div
+          aria-label="Preview controls"
           className={dragHandle}
           onMouseDown={handleMouseDown}
-          type="button"
+          role="toolbar"
         >
           <span aria-hidden="true" className={gripIcon}>
             <GripIcon />
@@ -238,6 +233,7 @@ export const FloatingPreview = ({
               ))}
             </select>
           )}
+          {headerActions}
           <button
             aria-label="Open fullscreen preview"
             className={expandButton}
@@ -251,7 +247,7 @@ export const FloatingPreview = ({
           >
             <ExpandIcon />
           </button>
-        </button>
+        </div>
         <div className={previewBody}>
           <PreviewViewport />
         </div>

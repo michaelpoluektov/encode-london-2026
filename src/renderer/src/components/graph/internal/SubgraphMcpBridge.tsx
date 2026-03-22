@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useProjectStore } from "../../../store/project-store";
 import type { GraphUniformValues, ValidatedGraph } from "../graph-types";
 import { compileSubgraphFragmentShader } from "./compile-fragment-shader";
 import { renderSubgraphToDataUrl } from "./render-subgraph";
@@ -69,6 +70,7 @@ export const SubgraphMcpBridge = ({
           uniformValuesRef.current,
           SUBGRAPH_MCP_PREVIEW_WIDTH,
           SUBGRAPH_MCP_PREVIEW_HEIGHT,
+          useProjectStore.getState().project?.manifest.preview.mesh ?? "sphere",
         );
 
         await window.shadily.preview.respondRenderSubgraph(

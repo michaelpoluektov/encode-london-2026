@@ -1,6 +1,6 @@
 import Editor, { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
-import { type JSX, useEffect, useRef, useState } from "react";
+import { type JSX, type ReactNode, useEffect, useRef, useState } from "react";
 import {
   editorContent,
   editorEmptyState,
@@ -11,11 +11,11 @@ import {
 } from "../app-shell.css";
 import { GLSL_LANGUAGE_ID, registerGlslLanguage } from "../monaco-glsl";
 import {
-  createProjectSavePayload,
   getProjectDocument,
   getSavedProjectDocument,
   useProjectStore,
 } from "../store/project-store";
+import { saveCurrentProject } from "../store/save-project";
 import {
   darkThemeValues,
   defineShadilyMonacoTheme,
@@ -74,7 +74,11 @@ const getBasename = (path: string): string => {
   return parts[parts.length - 1] ?? path;
 };
 
-export const ShaderEditor = (): JSX.Element => {
+export const ShaderEditor = ({
+  headerActions = null,
+}: {
+  readonly headerActions?: ReactNode;
+}): JSX.Element => {
   const project = useProjectStore((s) => s.project);
   const setSavedDocument = useProjectStore((s) => s.setSavedDocument);
   const updateDraft = useProjectStore((s) => s.updateDraft);
@@ -163,31 +167,20 @@ export const ShaderEditor = (): JSX.Element => {
     }
 
     saveTimerRef.current = setTimeout(() => {
-      const currentProject = useProjectStore.getState().project;
-
-      if (currentProject === null) {
-        return;
-      }
-
-      void window.shadily.project
-        .save(createProjectSavePayload(currentProject))
-        .then((savedProject) => {
-          useProjectStore.getState().commitSavedProject(savedProject);
-        })
-        .catch(() => undefined);
+      void saveCurrentProject().catch(() => undefined);
     }, 1000);
   };
 
-  const tabBar =
-    openTabPaths.length > 0 ? (
-      <EditorTabBar
-        aiNotifiedTabs={aiNotifiedTabs}
-        openTabPaths={openTabPaths}
-        selectedEntryPath={selectedEntryPath}
-        onCloseTab={closeTab}
-        onSelectTab={openTab}
-      />
-    ) : null;
+  const tabBar = (
+    <EditorTabBar
+      aiNotifiedTabs={aiNotifiedTabs}
+      openTabPaths={openTabPaths}
+      selectedEntryPath={selectedEntryPath}
+      trailingActions={headerActions}
+      onCloseTab={closeTab}
+      onSelectTab={openTab}
+    />
+  );
 
   if (project === null) {
     return (

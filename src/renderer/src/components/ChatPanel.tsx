@@ -8,6 +8,7 @@ import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
 import {
   type JSX,
   type KeyboardEvent,
+  type ReactNode,
   useEffect,
   useMemo,
   useState,
@@ -274,7 +275,11 @@ const getThreadLabel = (title: string | null, fallbackIndex: number): string =>
 
 // ─── Main panel ──────────────────────────────────────────────────────────────
 
-export const ChatPanel = (): JSX.Element => {
+export const ChatPanel = ({
+  headerActions = null,
+}: {
+  readonly headerActions?: ReactNode;
+}): JSX.Element => {
   const {
     currentProjectId,
     threads,
@@ -429,6 +434,7 @@ export const ChatPanel = (): JSX.Element => {
               <PlusIcon />
             </Button>
           </div>
+          {headerActions}
         </div>
 
         {!hasContent ? (

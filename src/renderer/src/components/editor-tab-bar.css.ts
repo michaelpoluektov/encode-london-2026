@@ -17,6 +17,11 @@ export const tabBar = style({
   },
 });
 
+export const tabBarSpacer = style({
+  flex: 1,
+  minWidth: 0,
+});
+
 export const tab = style({
   display: "flex",
   alignItems: "center",

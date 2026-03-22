@@ -1,10 +1,11 @@
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { getPathBasename } from "../../../shared/path-utils";
 import { cx } from "../lib/cx";
 import {
   tab,
   tabActive,
   tabBar,
+  tabBarSpacer,
   tabBell,
   tabClose,
   tabLabel,
@@ -17,6 +18,7 @@ type EditorTabBarProps = {
   readonly aiNotifiedTabs: string[];
   readonly onSelectTab: (path: string) => void;
   readonly onCloseTab: (path: string) => void;
+  readonly trailingActions?: ReactNode;
 };
 
 export const EditorTabBar = ({
@@ -25,6 +27,7 @@ export const EditorTabBar = ({
   aiNotifiedTabs,
   onSelectTab,
   onCloseTab,
+  trailingActions = null,
 }: EditorTabBarProps): JSX.Element => {
   return (
     <div className={tabBar} role="tablist">
@@ -74,6 +77,8 @@ export const EditorTabBar = ({
           </div>
         );
       })}
+      <div className={tabBarSpacer} />
+      {trailingActions}
     </div>
   );
 };

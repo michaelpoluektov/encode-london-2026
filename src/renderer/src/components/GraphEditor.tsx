@@ -1,13 +1,19 @@
-import { type JSX, useCallback, useRef } from "react";
+import { type JSX, type ReactNode, useCallback, useRef } from "react";
 import { editorFrame } from "../app-shell.css";
 import { getProjectGraphSource, useProjectStore } from "../store/project-store";
 import { FloatingPreview } from "./FloatingPreview";
 import { EXAMPLE_GRAPH_SOURCE } from "./graph/example";
 import { Graph } from "./graph/Graph";
 import type { GraphSourceLoader } from "./graph/graph-types";
-import { graphContainer } from "./graph-panel.css";
+import { graphCollapseAction, graphContainer } from "./graph-panel.css";
 
-export const GraphEditor = (): JSX.Element => {
+export const GraphEditor = ({
+  collapseAction = null,
+  previewHeaderActions = null,
+}: {
+  readonly collapseAction?: ReactNode;
+  readonly previewHeaderActions?: ReactNode;
+}): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null);
   const project = useProjectStore((s) => s.project);
   const graphSource = getProjectGraphSource(project);
@@ -36,6 +42,9 @@ export const GraphEditor = (): JSX.Element => {
   return (
     <div className={editorFrame}>
       <div className={graphContainer} ref={containerRef}>
+        {collapseAction !== null ? (
+          <div className={graphCollapseAction}>{collapseAction}</div>
+        ) : null}
         {project === null ? (
           <Graph graphSource={EXAMPLE_GRAPH_SOURCE} />
         ) : (
@@ -44,7 +53,10 @@ export const GraphEditor = (): JSX.Element => {
             loadCustomNodeSource={loadCustomNodeSource}
           />
         )}
-        <FloatingPreview containerRef={containerRef} />
+        <FloatingPreview
+          containerRef={containerRef}
+          headerActions={previewHeaderActions}
+        />
       </div>
     </div>
   );

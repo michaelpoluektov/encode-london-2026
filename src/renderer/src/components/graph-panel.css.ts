@@ -17,6 +17,13 @@ export const graphContainer = style({
   overflow: "hidden",
 });
 
+export const graphCollapseAction = style({
+  position: "absolute",
+  top: themeVars.space[3],
+  right: themeVars.space[3],
+  zIndex: 12,
+});
+
 export const graphPlaceholder = style({
   fontFamily: themeVars.font.family.mono,
   letterSpacing: "0.08em",

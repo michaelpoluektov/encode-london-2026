@@ -17,7 +17,6 @@ import {
 } from "./app-shell.css";
 import { ChatPanel } from "./components/ChatPanel";
 import { GraphEditor } from "./components/GraphEditor";
-import type { PanelHeaderAction } from "./components/Panel";
 import { Panel } from "./components/Panel";
 import { PaneRestoreControl } from "./components/PaneRestoreControl";
 import { ProjectSidebar } from "./components/ProjectSidebar";
@@ -27,6 +26,7 @@ import {
   CaptureIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  MinusIcon,
 } from "./components/ui/icons";
 import { captureRegisteredPreview } from "./preview-capture";
 import {
@@ -61,7 +61,6 @@ type WorkspacePaneConfig = {
   readonly content: JSX.Element;
   readonly minSize: number;
   readonly restorePlacement: RestorePlacement;
-  readonly headerActions?: readonly PanelHeaderAction[];
 };
 
 type WorkspaceColumnLayoutProps = {
@@ -121,22 +120,7 @@ const WorkspaceColumnLayout = ({
         orientation="vertical"
         panes={[
           {
-            content: (
-              <Panel
-                collapseDisabled={isPaneCollapseDisabled(
-                  collapsedPanes,
-                  topPane.paneId,
-                  bottomPane.paneId,
-                )}
-                headerActions={topPane.headerActions}
-                label={topPane.label}
-                onToggleCollapsed={() => {
-                  togglePaneCollapsed(topPane.paneId);
-                }}
-              >
-                {topPane.content}
-              </Panel>
-            ),
+            content: <Panel label={topPane.label}>{topPane.content}</Panel>,
             id: topPane.id,
             minSize: topPane.minSize,
             preferredSize: `${rowSizes[0]}%`,
@@ -144,20 +128,7 @@ const WorkspaceColumnLayout = ({
           },
           {
             content: (
-              <Panel
-                collapseDisabled={isPaneCollapseDisabled(
-                  collapsedPanes,
-                  bottomPane.paneId,
-                  topPane.paneId,
-                )}
-                headerActions={bottomPane.headerActions}
-                label={bottomPane.label}
-                onToggleCollapsed={() => {
-                  togglePaneCollapsed(bottomPane.paneId);
-                }}
-              >
-                {bottomPane.content}
-              </Panel>
+              <Panel label={bottomPane.label}>{bottomPane.content}</Panel>
             ),
             id: bottomPane.id,
             minSize: bottomPane.minSize,
@@ -365,28 +336,105 @@ export const App = (): JSX.Element => {
     openTab(relativePath);
   }, [openTab, refreshProject, setSavedDocument]);
 
-  const captureAction: PanelHeaderAction = {
-    ariaLabel: "Capture preview",
-    content: <CaptureIcon />,
-    disabled: project === null,
-    key: "capture",
-    onClick: () => {
-      void handleCapture();
-    },
-  };
+  const graphCollapseDisabled = isPaneCollapseDisabled(
+    collapsedPanes,
+    "graph",
+    "source",
+  );
+  const sourceCollapseDisabled = isPaneCollapseDisabled(
+    collapsedPanes,
+    "source",
+    "graph",
+  );
+  const projectHeaderActions = (
+    <Button
+      aria-label="Collapse Project"
+      onClick={() => {
+        handleTogglePaneCollapsed("project");
+      }}
+      size="sm"
+      square
+      variant="plain"
+    >
+      <ChevronLeftIcon />
+    </Button>
+  );
+
+  const graphPreviewHeaderActions = (
+    <Button
+      aria-label="Capture preview"
+      disabled={project === null}
+      onClick={() => {
+        void handleCapture();
+      }}
+      size="sm"
+      square
+      variant="plain"
+    >
+      <CaptureIcon />
+    </Button>
+  );
+
+  const graphCollapseAction = (
+    <Button
+      aria-label="Collapse Graph"
+      disabled={graphCollapseDisabled}
+      onClick={() => {
+        handleTogglePaneCollapsed("graph");
+      }}
+      size="sm"
+      square
+      variant="plain"
+    >
+      <MinusIcon />
+    </Button>
+  );
+
+  const sourceHeaderActions = (
+    <Button
+      aria-label="Collapse Source"
+      disabled={sourceCollapseDisabled}
+      onClick={() => {
+        handleTogglePaneCollapsed("source");
+      }}
+      size="sm"
+      square
+      variant="plain"
+    >
+      <MinusIcon />
+    </Button>
+  );
+
+  const chatHeaderActions = (
+    <Button
+      aria-label="Collapse Chat"
+      onClick={() => {
+        handleTogglePaneCollapsed("chat");
+      }}
+      size="sm"
+      square
+      variant="plain"
+    >
+      <MinusIcon />
+    </Button>
+  );
 
   const leftColumnPanes = [
     {
-      content: <GraphEditor />,
+      content: (
+        <GraphEditor
+          collapseAction={graphCollapseAction}
+          previewHeaderActions={graphPreviewHeaderActions}
+        />
+      ),
       id: "graph-panel",
       label: "Graph",
       minSize: 180,
       paneId: "graph",
       restorePlacement: "topRight",
-      headerActions: [captureAction],
     },
     {
-      content: <ShaderEditor />,
+      content: <ShaderEditor headerActions={sourceHeaderActions} />,
       id: "source-panel",
       label: "Source",
       minSize: 220,
@@ -435,13 +483,8 @@ export const App = (): JSX.Element => {
                     }}
                   />
                 ) : (
-                  <Panel
-                    label="Chat"
-                    onToggleCollapsed={() => {
-                      handleTogglePaneCollapsed("chat");
-                    }}
-                  >
-                    <ChatPanel />
+                  <Panel label="Chat">
+                    <ChatPanel headerActions={chatHeaderActions} />
                   </Panel>
                 )}
               </div>
@@ -484,14 +527,8 @@ export const App = (): JSX.Element => {
           panes={[
             {
               content: (
-                <Panel
-                  collapseSymbol={<ChevronLeftIcon />}
-                  label="Project"
-                  onToggleCollapsed={() => {
-                    handleTogglePaneCollapsed("project");
-                  }}
-                >
-                  <ProjectSidebar />
+                <Panel label="Project">
+                  <ProjectSidebar headerActions={projectHeaderActions} />
                 </Panel>
               ),
               id: "project-sidebar",

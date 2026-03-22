@@ -1,6 +1,7 @@
 import {
   type JSX,
   type KeyboardEvent,
+  type ReactNode,
   useEffect,
   useMemo,
   useRef,
@@ -191,7 +192,11 @@ const filterTreeNodes = (
   });
 };
 
-export const ProjectSidebar = (): JSX.Element => {
+export const ProjectSidebar = ({
+  headerActions = null,
+}: {
+  readonly headerActions?: ReactNode;
+}): JSX.Element => {
   const project = useProjectStore((s) => s.project);
   const openProject = useProjectStore((s) => s.openProject);
   const selectEntry = useProjectStore((s) => s.selectEntry);
@@ -328,6 +333,7 @@ export const ProjectSidebar = (): JSX.Element => {
           >
             {showHiddenFiles ? <EyeOffIcon /> : <EyeIcon />}
           </Button>
+          {headerActions}
         </div>
       </section>
       {pendingFolder !== null ? (

@@ -19,10 +19,8 @@ import {
   createPreviewMaterial,
 } from "../preview-compile";
 import { createPreviewGeometry } from "../preview-geometry";
-import {
-  createProjectSavePayload,
-  useProjectStore,
-} from "../store/project-store";
+import { useProjectStore } from "../store/project-store";
+import { saveCurrentProject } from "../store/save-project";
 import { darkThemeValues } from "../theme";
 import type { GraphUniformValues } from "./graph/graph-types";
 import { usePreviewGraphShader } from "./graph/internal/use-preview-graph-shader";
@@ -68,15 +66,7 @@ export const PreviewFullscreen = ({
   const handleSelectMesh = useCallback(
     (mesh: PreviewModelId) => {
       updatePreviewMesh(mesh);
-      setTimeout(() => {
-        const p = useProjectStore.getState().project;
-        if (!p) return;
-        void window.shadily.project
-          .save(createProjectSavePayload(p))
-          .then((saved) =>
-            useProjectStore.getState().commitSavedProject(saved),
-          );
-      }, 0);
+      void saveCurrentProject();
     },
     [updatePreviewMesh],
   );
