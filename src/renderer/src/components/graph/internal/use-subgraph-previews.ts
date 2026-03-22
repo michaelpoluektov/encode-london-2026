@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "../../../store/project-store";
 import type { GraphUniformValues, ValidatedGraph } from "../graph-types";
 import { compileSubgraphFragmentShader } from "./compile-fragment-shader";
@@ -6,6 +6,7 @@ import { renderSubgraphToDataUrl } from "./render-subgraph";
 
 const SUBGRAPH_PREVIEW_WIDTH = 240;
 const SUBGRAPH_PREVIEW_HEIGHT = 120;
+const UNIFORM_DEBOUNCE_MS = 150;
 
 export const useSubgraphPreviews = (
   validatedGraph: ValidatedGraph | null,
@@ -17,6 +18,17 @@ export const useSubgraphPreviews = (
   const previewMesh = useProjectStore(
     (s) => s.project?.manifest.preview.mesh ?? "sphere",
   );
+
+  const [debouncedUniformValues, setDebouncedUniformValues] =
+    useState(uniformValues);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedUniformValues(uniformValues);
+    }, UNIFORM_DEBOUNCE_MS);
+  }, [uniformValues]);
 
   useEffect(() => {
     if (validatedGraph === null) {
@@ -49,7 +61,7 @@ export const useSubgraphPreviews = (
 
         const dataUrl = await renderSubgraphToDataUrl(
           compiled.shaderSource,
-          uniformValues,
+          debouncedUniformValues,
           SUBGRAPH_PREVIEW_WIDTH,
           SUBGRAPH_PREVIEW_HEIGHT,
           previewMesh,
@@ -74,7 +86,7 @@ export const useSubgraphPreviews = (
     return () => {
       cancelled = true;
     };
-  }, [validatedGraph, previewMesh, uniformValues]);
+  }, [validatedGraph, previewMesh, debouncedUniformValues]);
 
   return previews;
 };
