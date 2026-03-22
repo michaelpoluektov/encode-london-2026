@@ -26,13 +26,20 @@ export const chatThreadHeader = style({
   gap: themeVars.space[2],
   minWidth: 0,
   padding: `0 ${themeVars.space[4]} 0 0`,
+  overflowX: "auto",
+  overflowY: "hidden",
+  scrollbarWidth: "none",
+  selectors: {
+    "&::-webkit-scrollbar": {
+      display: "none",
+    },
+  },
 });
 
 export const chatThreadList = style({
   display: "flex",
-  flex: 1,
+  flex: "0 0 auto",
   gap: 0,
-  overflowX: "auto",
   minWidth: 0,
 });
 
@@ -396,6 +403,7 @@ export const chatFileChipKind = style({
 export const chatToolCallBlock = style({
   display: "flex",
   flexDirection: "column",
+  alignItems: "flex-start",
   gap: themeVars.space[1],
   padding: `${themeVars.space[2]} ${themeVars.space[3]}`,
   background: "rgba(14, 14, 14, 0.72)",
@@ -440,6 +448,49 @@ export const chatToolCallPre = style({
 
 export const chatToolCallError = style({
   color: themeVars.color.text.accent,
+});
+
+export const chatToolCallTable = style({
+  borderCollapse: "collapse",
+  display: "inline-table",
+  background: "rgba(255, 255, 255, 0.04)",
+});
+
+export const chatToolCallTableRow = style({
+  borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+  selectors: {
+    "&:last-child": {
+      borderBottom: "none",
+    },
+  },
+});
+
+export const chatToolCallTableHeader = style({
+  fontFamily: themeVars.font.family.sans,
+  color: themeVars.color.text.muted,
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  fontSize: "0.6rem",
+  padding: `${themeVars.space[1]} ${themeVars.space[4]} ${themeVars.space[1]} ${themeVars.space[2]}`,
+  textAlign: "left",
+  fontWeight: themeVars.font.weight.medium,
+  borderBottom: "1px solid rgba(255, 255, 255, 0.12)",
+});
+
+export const chatToolCallTableKey = style({
+  fontFamily: themeVars.font.family.mono,
+  color: themeVars.color.text.secondary,
+  padding: `${themeVars.space[1]} ${themeVars.space[4]} ${themeVars.space[1]} ${themeVars.space[2]}`,
+  verticalAlign: "top",
+  whiteSpace: "nowrap",
+});
+
+export const chatToolCallTableValue = style({
+  fontFamily: themeVars.font.family.mono,
+  color: themeVars.color.text.body,
+  padding: `${themeVars.space[1]} ${themeVars.space[2]}`,
+  wordBreak: "break-word",
+  whiteSpace: "nowrap",
 });
 
 // Checkpoint divider

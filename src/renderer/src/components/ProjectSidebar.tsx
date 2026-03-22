@@ -136,8 +136,8 @@ const createInitialOpenState = (
     }),
   );
 
-const HIDDEN_FILENAMES = new Set(["AGENTS.md", "shadily.json"]);
-const HIDDEN_DIRECTORY_NAMES = new Set([".shadily", "docs"]);
+const HIDDEN_FILENAMES = new Set([".git", "AGENTS.md", "shadily.json"]);
+const HIDDEN_DIRECTORY_NAMES = new Set([".git", ".shadily", "docs"]);
 
 const filterTreeNodes = (
   nodes: readonly ProjectTreeNode[],

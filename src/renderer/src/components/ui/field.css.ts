@@ -45,8 +45,8 @@ export const textareaField = style([
     fontSize: themeVars.font.size.sm,
     lineHeight: "20px",
     resize: "none",
-    minHeight: themeVars.size.controlSm,
-    maxHeight: "8rem",
+    minHeight: "calc((20px * 3) + 8px)",
+    maxHeight: "calc((20px * 3) + 8px)",
     overflowY: "auto",
   },
 ]);
