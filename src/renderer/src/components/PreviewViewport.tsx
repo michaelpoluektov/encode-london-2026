@@ -1,6 +1,7 @@
 import { type JSX, useDeferredValue, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { shadilyApi } from "../api/shadily-api";
 import {
   previewFrame,
   previewFrameStale,
@@ -134,7 +135,7 @@ export const PreviewViewport = (): JSX.Element => {
 
   // Handle MCP compile-check requests from the main process.
   useEffect(() => {
-    const unsub = window.shadily.preview.onCompileCheck((requestId) => {
+    const unsub = shadilyApi.preview.onCompileCheck((requestId) => {
       const currentFragmentSource = fragmentSourceRef.current;
       const currentGraphErrors = graphErrorsRef.current;
 
@@ -149,7 +150,7 @@ export const PreviewViewport = (): JSX.Element => {
           message: error,
           revision: null,
         });
-        void window.shadily.preview.respondCompile(requestId, {
+        void shadilyApi.preview.respondCompile(requestId, {
           success: false,
           error,
         });
@@ -167,7 +168,7 @@ export const PreviewViewport = (): JSX.Element => {
           message: error,
           revision: null,
         });
-        void window.shadily.preview.respondCompile(requestId, {
+        void shadilyApi.preview.respondCompile(requestId, {
           success: false,
           error,
         });
@@ -188,7 +189,7 @@ export const PreviewViewport = (): JSX.Element => {
           stage: "compile",
           message: compileResult.message,
         });
-        void window.shadily.preview.respondCompile(requestId, {
+        void shadilyApi.preview.respondCompile(requestId, {
           success: false,
           error: compileResult.message,
         });
@@ -197,7 +198,7 @@ export const PreviewViewport = (): JSX.Element => {
 
       compileResult.material.dispose();
       usePreviewStore.getState().clearFailureStage("compile");
-      void window.shadily.preview.respondCompile(requestId, {
+      void shadilyApi.preview.respondCompile(requestId, {
         success: true,
       });
     });
@@ -206,20 +207,14 @@ export const PreviewViewport = (): JSX.Element => {
 
   // Handle MCP capture-at requests from the main process.
   useEffect(() => {
-    const unsub = window.shadily.preview.onCaptureAt(
-      async (requestId, _uTime) => {
-        const result = await captureRegisteredPreview();
-        if (result.kind === "success") {
-          void window.shadily.preview.respondCapture(requestId, result.dataUrl);
-        } else {
-          void window.shadily.preview.respondCapture(
-            requestId,
-            null,
-            result.message,
-          );
-        }
-      },
-    );
+    const unsub = shadilyApi.preview.onCaptureAt(async (requestId, _uTime) => {
+      const result = await captureRegisteredPreview();
+      if (result.kind === "success") {
+        void shadilyApi.preview.respondCapture(requestId, result.dataUrl);
+      } else {
+        void shadilyApi.preview.respondCapture(requestId, null, result.message);
+      }
+    });
     return unsub;
   }, []);
 
@@ -556,8 +551,15 @@ export const PreviewViewport = (): JSX.Element => {
   }, [previewMesh]);
 
   return (
-    <div className={cx(previewFrame, isPreviewStale && previewFrameStale)}>
-      <div className={viewportHost} ref={hostRef} />
+    <div
+      className={cx(previewFrame, isPreviewStale && previewFrameStale)}
+      data-testid="preview-frame"
+    >
+      <div
+        className={viewportHost}
+        data-testid="preview-viewport"
+        ref={hostRef}
+      />
     </div>
   );
 };

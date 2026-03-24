@@ -3,6 +3,7 @@ import {
   DEFAULT_GRAPH_SOURCE,
   DEFAULT_NODE_GLSL_FILES,
 } from "../../../../../shared/default-project";
+import { shadilyApi } from "../../../api/shadily-api";
 import { useGraphPreviewStore } from "../../../store/graph-preview-store";
 import {
   getProjectGraphSource,
@@ -56,7 +57,7 @@ export const usePreviewGraphShader = (): PreviewGraphShaderState => {
         return loadDefaultNodeSource(filepath);
       }
 
-      const entry = await window.shadily.project.readEntry({
+      const entry = await shadilyApi.project.readEntry({
         folderPath: project.folderPath,
         manifest: project.manifest,
         path: filepath,

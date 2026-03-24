@@ -8,6 +8,7 @@
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
+    "dev:browser": "vite --config vite.renderer.config.ts",
     "build": "electron-vite build",
     "start": "electron-vite preview --skipBuild",
     "dist": "bun run build && electron-builder",
@@ -65,6 +66,7 @@
     "electron": "^37.10.3",
     "electron-builder": "^26.8.1",
     "electron-vite": "^4.0.0",
+    "playwright": "^1.58.2",
     "typescript": "^5.9.3"
   }
 }

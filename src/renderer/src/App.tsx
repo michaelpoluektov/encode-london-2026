@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { normalizeProjectPath } from "../../shared/path-utils";
+import { shadilyApi } from "./api/shadily-api";
 import {
   appShell,
   layoutViewport,
@@ -211,7 +212,7 @@ export const App = (): JSX.Element => {
     replaceProjectLayout(null);
     setLayoutRevision((revision) => revision + 1);
 
-    const layout = await window.shadily.project.getLayout(nextProjectId);
+    const layout = await shadilyApi.project.getLayout(nextProjectId);
 
     if (activeProjectIdRef.current !== nextProjectId) {
       return;
@@ -233,7 +234,7 @@ export const App = (): JSX.Element => {
 
     pendingLayoutSnapshotRef.current = null;
 
-    await window.shadily.project.saveLayout({
+    await shadilyApi.project.saveLayout({
       projectId,
       layout,
     });
@@ -257,7 +258,7 @@ export const App = (): JSX.Element => {
 
     hasBootstrappedRef.current = true;
 
-    void window.shadily.getBootstrapPayload().then((payload) => {
+    void shadilyApi.getBootstrapPayload().then((payload) => {
       if (payload.initialProject !== null) {
         openProject(payload.initialProject);
       }
@@ -317,12 +318,12 @@ export const App = (): JSX.Element => {
       return;
     }
 
-    const { imagePath } = await window.shadily.project.saveCapture({
+    const { imagePath } = await shadilyApi.project.saveCapture({
       folderPath: currentProject.folderPath,
       dataUrl: captureResult.dataUrl,
     });
 
-    const freshProject = await window.shadily.project.reload(
+    const freshProject = await shadilyApi.project.reload(
       currentProject.folderPath,
     );
 

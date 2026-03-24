@@ -38,8 +38,9 @@ import {
   projectOpenResultSchema,
   projectSaveCaptureResultSchema,
 } from "../shared/contracts";
+import type { ShadilyApi } from "../shared/shadily-api";
 
-const shadilyDesktopApi = {
+const shadilyDesktopApi: ShadilyApi = {
   getBootstrapPayload: async (): Promise<BootstrapPayload> =>
     bootstrapPayloadSchema.parse(
       await ipcRenderer.invoke("app:get-bootstrap-payload"),

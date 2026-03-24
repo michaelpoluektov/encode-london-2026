@@ -94,11 +94,16 @@ export const useGraphRuntime = ({
   const [uniformValues, setUniformValues] =
     useState<GraphUniformValues>(EMPTY_UNIFORM_VALUES);
   const requestVersionRef = useRef(0);
+  const uniformValuesRef = useRef<GraphUniformValues>(uniformValues);
   const validatedGraphRef = useRef<ValidatedGraph | null>(validatedGraph);
 
   useEffect(() => {
     validatedGraphRef.current = validatedGraph;
   }, [validatedGraph]);
+
+  useEffect(() => {
+    uniformValuesRef.current = uniformValues;
+  }, [uniformValues]);
 
   useEffect(() => {
     requestVersionRef.current += 1;
@@ -174,17 +179,13 @@ export const useGraphRuntime = ({
       }
 
       const clonedValue = cloneGlslValue(value);
+      const nextValues = {
+        ...uniformValuesRef.current,
+        [uniformBindingKey]: clonedValue,
+      };
 
-      setUniformValues((previousUniformValues) => {
-        const nextValues = {
-          ...previousUniformValues,
-          [uniformBindingKey]: clonedValue,
-        };
-
-        onUniformValuesChange?.(nextValues);
-
-        return nextValues;
-      });
+      setUniformValues(nextValues);
+      onUniformValuesChange?.(nextValues);
     },
     [validatedGraph, onUniformValuesChange],
   );

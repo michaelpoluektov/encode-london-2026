@@ -9,6 +9,7 @@ import {
 } from "react";
 import { type NodeRendererProps, Tree } from "react-arborist";
 import type { ProjectTreeNode } from "../../../shared/contracts";
+import { shadilyApi } from "../api/shadily-api";
 import { cx } from "../lib/cx";
 import { useAppStore } from "../store/app-store";
 import { getPreviewDiagnostic, usePreviewStore } from "../store/preview-store";
@@ -253,7 +254,7 @@ export const ProjectSidebar = ({
   }, []);
 
   const handleNewProject = async (): Promise<void> => {
-    const folder = await window.shadily.project.pickFolder();
+    const folder = await shadilyApi.project.pickFolder();
     if (folder !== null) {
       setPendingFolder(folder);
       setPendingName("my-shader");
@@ -262,7 +263,7 @@ export const ProjectSidebar = ({
 
   const handleCreateConfirm = async (): Promise<void> => {
     if (pendingFolder === null || pendingName.trim() === "") return;
-    const result = await window.shadily.project.create(
+    const result = await shadilyApi.project.create(
       pendingFolder,
       pendingName.trim(),
     );
@@ -285,7 +286,7 @@ export const ProjectSidebar = ({
   };
 
   const handleOpenProject = async (): Promise<void> => {
-    const result = await window.shadily.project.open();
+    const result = await shadilyApi.project.open();
     if (result !== null) {
       openProject(result);
     }

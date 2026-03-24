@@ -1,3 +1,4 @@
+import { shadilyApi } from "../api/shadily-api";
 import { createProjectSavePayload, useProjectStore } from "./project-store";
 
 export const saveCurrentProject = async (): Promise<void> => {
@@ -7,7 +8,7 @@ export const saveCurrentProject = async (): Promise<void> => {
     return;
   }
 
-  const savedProject = await window.shadily.project.save(
+  const savedProject = await shadilyApi.project.save(
     createProjectSavePayload(project),
   );
   useProjectStore.getState().commitSavedProject(savedProject);

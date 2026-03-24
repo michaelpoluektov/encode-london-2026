@@ -1,24 +1,7 @@
 /// <reference types="vite/client" />
 
-import type {
-  BootstrapPayload,
-  ChatSendPayload,
-  ChatThreadDetail,
-  ChatThreadSummary,
-  ChatThreadRequest,
-  FileChangeInfo,
-  HistoryListRequest,
-  HistoryRevertRequest,
-  ProjectCheckpoint,
-  ProjectEntryRequest,
-  ProjectEntryResult,
-  ProjectLayoutSavePayload,
-  ProjectLayoutState,
-  ProjectOpenResult,
-  ProjectSaveCapturePayload,
-  ProjectSaveCaptureResult,
-  ProjectSavePayload,
-} from "../../shared/contracts";
+import type { ShadilyApi } from "../../shared/shadily-api";
+import type { ShadilyBrowserDebugApi } from "./api/shadily-api";
 
 declare global {
   interface MonacoWorkerEnvironment {
@@ -26,69 +9,8 @@ declare global {
   }
 
   interface Window {
-    shadily: {
-      getBootstrapPayload: () => Promise<BootstrapPayload>;
-      project: {
-        pickFolder: () => Promise<string | null>;
-        create: (
-          dir: string,
-          name: string,
-        ) => Promise<ProjectOpenResult | null>;
-        open: () => Promise<ProjectOpenResult | null>;
-        reload: (folderPath: string) => Promise<ProjectOpenResult>;
-        save: (payload: ProjectSavePayload) => Promise<ProjectOpenResult>;
-        saveCapture: (
-          payload: ProjectSaveCapturePayload,
-        ) => Promise<ProjectSaveCaptureResult>;
-        readEntry: (
-          payload: ProjectEntryRequest,
-        ) => Promise<ProjectEntryResult>;
-        getLayout: (projectId: string) => Promise<ProjectLayoutState | null>;
-        saveLayout: (payload: ProjectLayoutSavePayload) => Promise<void>;
-      };
-      chat: {
-        listThreads: (
-          projectId: string,
-        ) => Promise<readonly ChatThreadSummary[]>;
-        getActiveThread: (projectId: string) => Promise<ChatThreadDetail>;
-        createThread: (projectId: string) => Promise<ChatThreadDetail>;
-        switchThread: (payload: ChatThreadRequest) => Promise<ChatThreadDetail>;
-        deleteThread: (payload: ChatThreadRequest) => Promise<ChatThreadDetail>;
-        send: (payload: ChatSendPayload) => Promise<ChatThreadDetail>;
-        stop: () => Promise<void>;
-        onChunk: (cb: (text: string) => void) => () => void;
-        onFileChange: (cb: (changes: FileChangeInfo[]) => void) => () => void;
-      };
-      preview: {
-        onCompileCheck: (cb: (requestId: string) => void) => () => void;
-        respondCompile: (
-          requestId: string,
-          result: { success: boolean; error?: string },
-        ) => Promise<void>;
-        onCaptureAt: (
-          cb: (requestId: string, uTime: number | null) => void,
-        ) => () => void;
-        respondCapture: (
-          requestId: string,
-          dataUrl: string | null,
-          error?: string,
-        ) => Promise<void>;
-        onRenderSubgraph: (
-          cb: (requestId: string, nodeInstanceName: string) => void,
-        ) => () => void;
-        respondRenderSubgraph: (
-          requestId: string,
-          dataUrl: string | null,
-          error?: string,
-        ) => Promise<void>;
-      };
-      history: {
-        listCheckpoints: (
-          payload: HistoryListRequest,
-        ) => Promise<ProjectCheckpoint[]>;
-        revert: (payload: HistoryRevertRequest) => Promise<ChatThreadDetail>;
-      };
-    };
+    shadily?: ShadilyApi;
+    __SHADILY_BROWSER__?: ShadilyBrowserDebugApi;
   }
 
   var MonacoEnvironment: MonacoWorkerEnvironment | undefined;

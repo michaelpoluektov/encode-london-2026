@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { shadilyApi } from "../api/shadily-api";
 import {
   type ChatStoreState,
   createChatThread,
@@ -36,7 +37,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   sendMessage: async (prompt) => sendChatMessage(set, get, prompt),
 
   cancelGeneration: () => {
-    void window.shadily.chat.stop();
+    void shadilyApi.chat.stop();
   },
 
   revertToCheckpoint: async (checkpointId) =>

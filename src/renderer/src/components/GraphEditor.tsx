@@ -1,4 +1,5 @@
 import { type JSX, type ReactNode, useCallback, useRef } from "react";
+import { shadilyApi } from "../api/shadily-api";
 import { editorFrame } from "../app-shell.css";
 import {
   createProjectSavePayload,
@@ -39,7 +40,7 @@ export const GraphEditor = ({
         throw new Error("A project must be open to load node source files.");
       }
 
-      const entry = await window.shadily.project.readEntry({
+      const entry = await shadilyApi.project.readEntry({
         folderPath: project.folderPath,
         manifest: project.manifest,
         path: filepath,
@@ -79,7 +80,7 @@ export const GraphEditor = ({
           return;
         }
 
-        void window.shadily.project
+        void shadilyApi.project
           .save(createProjectSavePayload(currentProject))
           .then((savedProject) => {
             useProjectStore.getState().commitSavedProject(savedProject);

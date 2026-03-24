@@ -1,6 +1,7 @@
 import Editor, { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
 import { type JSX, type ReactNode, useEffect, useRef, useState } from "react";
+import { shadilyApi } from "../api/shadily-api";
 import {
   editorContent,
   editorEmptyState,
@@ -114,7 +115,7 @@ export const ShaderEditor = ({
     let cancelled = false;
     setDocumentLoadState("loading");
 
-    void window.shadily.project
+    void shadilyApi.project
       .readEntry({
         folderPath: project.folderPath,
         manifest: project.manifest,

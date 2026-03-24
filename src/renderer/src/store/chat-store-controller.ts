@@ -7,6 +7,7 @@ import type {
   ProjectCheckpoint,
 } from "../../../shared/contracts";
 import { normalizeProjectPath } from "../../../shared/path-utils";
+import { shadilyApi } from "../api/shadily-api";
 import { captureRegisteredPreview } from "../preview-capture";
 import { useGraphPreviewStore } from "./graph-preview-store";
 import { useProjectStore } from "./project-store";
@@ -111,9 +112,7 @@ const refreshTouchedProject = async (
   }
 
   try {
-    const freshProject = await window.shadily.project.reload(
-      project.folderPath,
-    );
+    const freshProject = await shadilyApi.project.reload(project.folderPath);
     useProjectStore.getState().refreshProject(freshProject);
 
     const touchedPaths = [
@@ -142,7 +141,7 @@ const refreshTouchedProject = async (
         }
 
         try {
-          const refreshedDocument = await window.shadily.project.readEntry({
+          const refreshedDocument = await shadilyApi.project.readEntry({
             folderPath: currentProject.folderPath,
             manifest: currentProject.manifest,
             path,
@@ -173,7 +172,7 @@ const refreshTouchedProject = async (
       )
     ) {
       try {
-        const refreshedDocument = await window.shadily.project.readEntry({
+        const refreshedDocument = await shadilyApi.project.readEntry({
           folderPath: selectedProject.folderPath,
           manifest: selectedProject.manifest,
           path: selectedPath,
@@ -309,11 +308,11 @@ const loadThreadCollection = async (
   checkpoints: readonly ProjectCheckpoint[];
 }> => {
   const [detail, threads] = await Promise.all([
-    window.shadily.chat.getActiveThread(projectId),
-    window.shadily.chat.listThreads(projectId),
+    shadilyApi.chat.getActiveThread(projectId),
+    shadilyApi.chat.listThreads(projectId),
   ]);
 
-  const checkpoints = await window.shadily.history
+  const checkpoints = await shadilyApi.history
     .listCheckpoints({ projectId, threadId: detail.thread.id })
     .catch(() => []);
 
@@ -324,18 +323,16 @@ const loadCheckpoints = async (
   projectId: string,
   threadId: string,
 ): Promise<readonly ProjectCheckpoint[]> =>
-  window.shadily.history
-    .listCheckpoints({ projectId, threadId })
-    .catch(() => []);
+  shadilyApi.history.listCheckpoints({ projectId, threadId }).catch(() => []);
 
 const beginChatTurn = (setState: ChatStoreSetter): void => {
   resetPendingShaderReload();
   clearChatSubscriptions();
-  chunkUnsubscribe = window.shadily.chat.onChunk((text) => {
+  chunkUnsubscribe = shadilyApi.chat.onChunk((text) => {
     setState({ streamingText: text });
   });
 
-  fileChangeUnsubscribe = window.shadily.chat.onFileChange((changes) => {
+  fileChangeUnsubscribe = shadilyApi.chat.onFileChange((changes) => {
     setState({ recentFileChanges: changes });
     queueShaderReload(changes);
   });
@@ -425,8 +422,8 @@ export const createChatThread = async (
 
   try {
     const [detail, threads] = await Promise.all([
-      window.shadily.chat.createThread(projectId),
-      window.shadily.chat.listThreads(projectId),
+      shadilyApi.chat.createThread(projectId),
+      shadilyApi.chat.listThreads(projectId),
     ]);
 
     if (get().currentProjectId !== projectId) {
@@ -461,8 +458,8 @@ export const switchChatThread = async (
 
   try {
     const [detail, threads] = await Promise.all([
-      window.shadily.chat.switchThread({ projectId, threadId }),
-      window.shadily.chat.listThreads(projectId),
+      shadilyApi.chat.switchThread({ projectId, threadId }),
+      shadilyApi.chat.listThreads(projectId),
     ]);
 
     if (get().currentProjectId !== projectId) {
@@ -501,8 +498,8 @@ export const deleteChatThread = async (
 
   try {
     const [detail, threads] = await Promise.all([
-      window.shadily.chat.deleteThread({ projectId, threadId }),
-      window.shadily.chat.listThreads(projectId),
+      shadilyApi.chat.deleteThread({ projectId, threadId }),
+      shadilyApi.chat.listThreads(projectId),
     ]);
 
     if (get().currentProjectId !== projectId) {
@@ -560,7 +557,7 @@ export const sendChatMessage = async (
     try {
       const captureResult = await captureRegisteredPreview();
       if (captureResult.kind === "success") {
-        const saved = await window.shadily.project
+        const saved = await shadilyApi.project
           .saveCapture({
             folderPath: project.folderPath,
             dataUrl: captureResult.dataUrl,
@@ -576,12 +573,11 @@ export const sendChatMessage = async (
   beginChatTurn(set);
 
   try {
-    let detail: Awaited<ReturnType<typeof window.shadily.chat.send>> | null =
-      null;
+    let detail: Awaited<ReturnType<typeof shadilyApi.chat.send>> | null = null;
 
     while (detail === null) {
       try {
-        detail = await window.shadily.chat.send({
+        detail = await shadilyApi.chat.send({
           projectId: currentProjectId,
           threadId: activeThread.id,
           prompt: trimmedPrompt,
@@ -605,7 +601,7 @@ export const sendChatMessage = async (
     }
 
     const [threadListResult, freshCheckpoints] = await Promise.all([
-      window.shadily.chat.listThreads(currentProjectId).catch(() => null),
+      shadilyApi.chat.listThreads(currentProjectId).catch(() => null),
       loadCheckpoints(currentProjectId, activeThread.id),
     ]);
     await waitForPendingShaderReload();
@@ -621,8 +617,8 @@ export const sendChatMessage = async (
     replaceThreadState(set, detail, threadListResult, freshCheckpoints);
   } catch (error) {
     const [detailResult, threadListResult] = await Promise.all([
-      window.shadily.chat.getActiveThread(currentProjectId).catch(() => null),
-      window.shadily.chat.listThreads(currentProjectId).catch(() => null),
+      shadilyApi.chat.getActiveThread(currentProjectId).catch(() => null),
+      shadilyApi.chat.listThreads(currentProjectId).catch(() => null),
     ]);
 
     if (get().currentProjectId !== currentProjectId) {
@@ -659,7 +655,7 @@ export const revertChatToCheckpoint = async (
     return;
   }
 
-  const detail = await window.shadily.history.revert({ checkpointId });
+  const detail = await shadilyApi.history.revert({ checkpointId });
   const freshCheckpoints = await loadCheckpoints(
     currentProjectId,
     detail.thread.id,
@@ -672,9 +668,7 @@ export const revertChatToCheckpoint = async (
 
   if (project !== null) {
     try {
-      const freshProject = await window.shadily.project.reload(
-        project.folderPath,
-      );
+      const freshProject = await shadilyApi.project.reload(project.folderPath);
       useProjectStore.getState().revertProject(freshProject);
     } catch {
       // non-fatal

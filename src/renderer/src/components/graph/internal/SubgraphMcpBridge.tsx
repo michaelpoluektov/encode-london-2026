@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { shadilyApi } from "../../../api/shadily-api";
 import { useProjectStore } from "../../../store/project-store";
 import type { GraphUniformValues, ValidatedGraph } from "../graph-types";
 import { compileSubgraphFragmentShader } from "./compile-fragment-shader";
@@ -28,12 +29,12 @@ export const SubgraphMcpBridge = ({
   }, [uniformValues]);
 
   useEffect(() => {
-    return window.shadily.preview.onRenderSubgraph(
+    return shadilyApi.preview.onRenderSubgraph(
       async (requestId, nodeInstanceName) => {
         const graph = validatedGraphRef.current;
 
         if (graph === null) {
-          await window.shadily.preview.respondRenderSubgraph(
+          await shadilyApi.preview.respondRenderSubgraph(
             requestId,
             null,
             "Graph not ready.",
@@ -46,7 +47,7 @@ export const SubgraphMcpBridge = ({
         );
 
         if (node === undefined || node.kind === "glFragColor") {
-          await window.shadily.preview.respondRenderSubgraph(
+          await shadilyApi.preview.respondRenderSubgraph(
             requestId,
             null,
             `Node "${nodeInstanceName}" not found.`,
@@ -57,7 +58,7 @@ export const SubgraphMcpBridge = ({
         const compiled = compileSubgraphFragmentShader(graph, node.flowId);
 
         if (!compiled.ok) {
-          await window.shadily.preview.respondRenderSubgraph(
+          await shadilyApi.preview.respondRenderSubgraph(
             requestId,
             null,
             compiled.errors.join("\n"),
@@ -73,7 +74,7 @@ export const SubgraphMcpBridge = ({
           useProjectStore.getState().project?.manifest.preview.mesh ?? "sphere",
         );
 
-        await window.shadily.preview.respondRenderSubgraph(
+        await shadilyApi.preview.respondRenderSubgraph(
           requestId,
           dataUrl,
           dataUrl === null ? "Render failed." : undefined,
