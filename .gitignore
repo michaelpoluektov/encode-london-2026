@@ -6,6 +6,7 @@ out
 release
 *.tsbuildinfo
 .DS_Store
+projects/
 
 .claude/*
 .claire/*
